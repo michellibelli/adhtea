@@ -12,6 +12,9 @@ export const getDoneToday = () => api.get('/tasks/done')
 // Triage summary + low-focus critical list
 export const getTriageSummary = () => api.get('/tasks/triage-summary')
 export const getCriticalList  = () => api.get('/tasks/critical-list')
+export const getBacklog       = () => api.get('/tasks/backlog')
+export const getBonusTasks    = () => api.get('/tasks/bonus')
+export const searchTasks      = (q) => api.get(`/tasks/search?q=${encodeURIComponent(q)}`)
 
 // Actions
 export const scheduleToday = (id, meta = {}) => api.post(`/tasks/${id}/schedule-today`, meta)

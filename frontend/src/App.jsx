@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn } from './api/client'
 import { getMe, logout } from './api/auth'
-import { getInbox } from './api/tasks'
 import { getTodayLog } from './api/selfcare'
 import Login from './pages/Login'
 import Capture from './pages/Capture'
-import Triage, { wasTriageDoneToday } from './pages/Triage'
+import Triage from './pages/Triage'
 import Focus from './pages/Focus'
 import Today from './pages/Today'
 import Inbox from './pages/Inbox'
@@ -15,6 +14,7 @@ import Routines from './pages/Routines'
 import SelfCare from './pages/SelfCare'
 import EODGate from './pages/EODGate'
 import Settings from './pages/Settings'
+import AllTasks from './pages/AllTasks'
 import BottomNav from './components/BottomNav'
 import './App.css'
 
@@ -34,19 +34,7 @@ function isEODWindow(user) {
   return hour >= 17 && hour <= eveningHour
 }
 
-// Determine the right opening screen:
-// morning + triage not done today + inbox has items → triage
-// otherwise → today
-async function getOpeningScreen(user) {
-  // Show triage if: it's at/after triage start hour AND not done today AND inbox has items
-  const hour  = new Date().getHours()
-  const start = user?.triage_start_hour ?? 8
-  if (hour >= start && !wasTriageDoneToday()) {
-    try {
-      const inbox = await getInbox()
-      if (inbox.length > 0) return 'triage'
-    } catch { /* fall through */ }
-  }
+async function getOpeningScreen() {
   return 'focus'
 }
 
@@ -61,7 +49,7 @@ function AppShell() {
     getMe()
       .then(async (u) => {
         setUser(u)
-        const opening = await getOpeningScreen(u)
+        const opening = await getOpeningScreen()
         setScreen(opening)
         // Check EOD gate: evening window + no log yet today
         if (isEODWindow(u)) {
@@ -120,6 +108,7 @@ function AppShell() {
         {screen === 'routines' && <Routines />}
         {screen === 'selfcare'  && <SelfCare />}
         {screen === 'settings'  && <Settings onNavigate={setScreen} />}
+        {screen === 'tasks'     && <AllTasks />}
       </main>
 
       {/* Desktop sign out */}

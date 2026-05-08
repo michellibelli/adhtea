@@ -1,0 +1,339 @@
+import { useState, useEffect } from 'react'
+import { getBacklog, updateTask, snoozeTask, unsnoozeTask } from '../api/tasks'
+import Card from '../components/Card'
+import { Input } from '../components/Input'
+
+const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+
+function fmtDate(iso) {
+  if (!iso) return null
+  const d = new Date(iso.includes('T') ? iso : iso + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function oneMonthFromNow() {
+  const d = new Date(); d.setMonth(d.getMonth() + 1); d.setHours(0, 0, 0, 0); return d.toISOString()
+}
+
+const STATUS_STYLE = {
+  today:   'bg-ui-accent/20 text-ui-accent',
+  snoozed: 'bg-amber-500/20 text-amber-400',
+  done:    'bg-emerald-500/20 text-emerald-400',
+}
+
+// ── Snooze icon ───────────────────────────────────────────────────────────────
+
+function MoonIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  )
+}
+
+function SnoozeIcon({ active }) {
+  return (
+    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+      active ? 'ring-2 ring-emerald-400 text-emerald-400' : 'text-ui-subtext/40'
+    }`}>
+      <MoonIcon />
+    </div>
+  )
+}
+
+// ── Task row ─────────────────────────────────────────────────────────────────
+
+function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditing, onStartEdit, onCancelEdit }) {
+  const [localDate, setLocalDate] = useState(task.due_date || '')
+  const isSnoozed = !!task.snooze_until
+  const badge = STATUS_STYLE[task.status]
+
+  return (
+    <div className={`border-b border-ui-border last:border-0 transition-colors ${selected ? 'bg-ui-accent/5' : ''}`}>
+      <div className="flex items-center gap-2 py-3">
+        {/* Checkbox */}
+        <button
+          onClick={() => onToggle(task.id)}
+          className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+            selected ? 'bg-ui-accent border-ui-accent' : 'border-ui-border'
+          }`}
+        >
+          {selected && (
+            <svg viewBox="0 0 10 8" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
+              <polyline points="1 4 3.5 6.5 9 1" />
+            </svg>
+          )}
+        </button>
+
+        <span className="text-[11px] flex-shrink-0 text-ui-accent">{TYPE_ICONS[task.task_type] || '✦'}</span>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-ui-text leading-snug truncate">{task.title}</p>
+          {badge && (
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge}`}>
+              {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+            </span>
+          )}
+        </div>
+
+        {/* Date pill */}
+        <button
+          onClick={() => isEditing ? onCancelEdit() : onStartEdit(task.id)}
+          className={`flex-shrink-0 text-[11px] px-2 py-0.5 rounded-full border whitespace-nowrap transition-colors ${
+            task.due_date
+              ? 'border-ui-accent/40 text-ui-accent hover:bg-ui-accent/10'
+              : 'border-ui-border/50 text-ui-subtext/40 hover:border-ui-border'
+          }`}
+        >
+          {task.due_date ? fmtDate(task.due_date) : '—'}
+        </button>
+
+        {/* Snooze toggle */}
+        <button onClick={() => onSnoozeToggle(task)} title={isSnoozed ? 'Remove snooze' : 'Snooze 1 month'}>
+          <SnoozeIcon active={isSnoozed} />
+        </button>
+      </div>
+
+      {/* Inline date picker */}
+      {isEditing && (
+        <div className="flex items-center gap-2 pb-3 pl-7">
+          <input
+            type="date"
+            value={localDate}
+            onChange={(e) => setLocalDate(e.target.value)}
+            className="text-xs bg-ui-surface border border-ui-border rounded-lg px-2 py-1 text-ui-text focus:outline-none focus:border-ui-accent"
+            autoFocus
+          />
+          <button
+            onClick={() => { onDateSave(task.id, localDate || null); onCancelEdit() }}
+            className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity"
+          >
+            Set
+          </button>
+          {task.due_date && (
+            <button
+              onClick={() => { onDateSave(task.id, null); onCancelEdit() }}
+              className="text-xs text-ui-subtext hover:opacity-70 transition-opacity"
+            >
+              Clear
+            </button>
+          )}
+          <button onClick={onCancelEdit} className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity">✕</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default function AllTasks() {
+  const [tasks,         setTasks]         = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [query,         setQuery]         = useState('')
+  const [selected,      setSelected]      = useState(new Set())
+  const [editingId,     setEditingId]     = useState(null)
+  const [batchDateMode, setBatchDateMode] = useState(false)
+  const [batchDate,     setBatchDate]     = useState('')
+
+  useEffect(() => {
+    getBacklog()
+      .then(setTasks)
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filtered = query.trim()
+    ? tasks.filter((t) =>
+        t.title.toLowerCase().includes(query.toLowerCase()) ||
+        (t.notes || '').toLowerCase().includes(query.toLowerCase())
+      )
+    : tasks
+
+  // ── Selection ──
+
+  function toggleOne(id) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+    setEditingId(null)
+  }
+
+  function toggleAll() {
+    if (selected.size === filtered.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filtered.map((t) => t.id)))
+    }
+  }
+
+  // ── Single-task actions ──
+
+  async function handleDateSave(id, due_date) {
+    try {
+      await updateTask(id, { due_date })
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, due_date } : t))
+    } catch (err) { console.error(err) }
+  }
+
+  async function handleSnoozeToggle(task) {
+    try {
+      if (task.snooze_until) {
+        await unsnoozeTask(task.id)
+        setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, snooze_until: null, status: 'inbox' } : t))
+      } else {
+        const snooze_until = oneMonthFromNow()
+        await snoozeTask(task.id, snooze_until)
+        setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, snooze_until, status: 'snoozed' } : t))
+      }
+    } catch (err) { console.error(err) }
+  }
+
+  // ── Batch actions ──
+
+  async function handleBatchSnooze() {
+    const ids = [...selected]
+    const allSnoozed = ids.every((id) => tasks.find((t) => t.id === id)?.snooze_until)
+    try {
+      if (allSnoozed) {
+        await Promise.all(ids.map((id) => unsnoozeTask(id)))
+        setTasks((prev) => prev.map((t) => selected.has(t.id) ? { ...t, snooze_until: null, status: 'inbox' } : t))
+      } else {
+        const snooze_until = oneMonthFromNow()
+        await Promise.all(ids.map((id) => snoozeTask(id, snooze_until)))
+        setTasks((prev) => prev.map((t) => selected.has(t.id) ? { ...t, snooze_until, status: 'snoozed' } : t))
+      }
+      setSelected(new Set())
+    } catch (err) { console.error(err) }
+  }
+
+  async function handleBatchDate() {
+    if (!batchDate) return
+    const ids = [...selected]
+    try {
+      await Promise.all(ids.map((id) => updateTask(id, { due_date: batchDate })))
+      setTasks((prev) => prev.map((t) => selected.has(t.id) ? { ...t, due_date: batchDate } : t))
+      setSelected(new Set())
+      setBatchDateMode(false)
+      setBatchDate('')
+    } catch (err) { console.error(err) }
+  }
+
+  const allSelected  = filtered.length > 0 && selected.size === filtered.length
+  const batchVisible = selected.size >= 2
+
+  return (
+    <div className="aria-page">
+      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+
+        <h1 className="text-2xl font-semibold text-ui-text mb-4">All Tasks</h1>
+
+        {/* Search / filter */}
+        <div className="mb-3">
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter tasks…" />
+        </div>
+
+        {/* Select-all row */}
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between mb-2 px-1">
+            <button onClick={toggleAll} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
+              {allSelected ? 'Deselect all' : `Select all (${filtered.length})`}
+            </button>
+            {selected.size > 0 && (
+              <button onClick={() => setSelected(new Set())} className="text-xs text-ui-subtext/60 hover:opacity-70 transition-opacity">
+                Clear selection
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Sticky batch bubble bar ── */}
+        {/* Shows when 2+ selected. Sticks 10px below the mobile header (h-14 = 56px → top-[66px]).
+            On desktop sidebar layout there's no top header → top-[10px]. */}
+        {batchVisible && (
+          <div className="sticky top-[66px] md:top-[10px] z-30 -mx-4 px-4 py-2 bg-ui-nav/95 backdrop-blur-md border-b border-ui-border mb-3">
+            <div className="max-w-2xl mx-auto space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBatchSnooze}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
+                >
+                  <MoonIcon className="w-3.5 h-3.5" />
+                  Snooze ({selected.size})
+                </button>
+                <button
+                  onClick={() => { setBatchDateMode((v) => !v); setBatchDate('') }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    batchDateMode
+                      ? 'bg-ui-accent text-white border-transparent'
+                      : 'bg-ui-accent/20 text-ui-accent border-ui-accent/30 hover:bg-ui-accent/30'
+                  }`}
+                >
+                  ◷ Date ({selected.size})
+                </button>
+              </div>
+              {batchDateMode && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={batchDate}
+                    onChange={(e) => setBatchDate(e.target.value)}
+                    className="text-xs bg-ui-surface border border-ui-border rounded-lg px-2 py-1 text-ui-text focus:outline-none focus:border-ui-accent"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleBatchDate}
+                    disabled={!batchDate}
+                    className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity disabled:opacity-40"
+                  >
+                    Set
+                  </button>
+                  <button
+                    onClick={() => { setBatchDateMode(false); setBatchDate('') }}
+                    className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Task list */}
+        {loading ? (
+          <p className="text-sm text-ui-subtext px-1">…</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-ui-subtext px-1">
+            {query ? `No results for "${query}"` : 'No active tasks'}
+          </p>
+        ) : (
+          <Card className="px-4">
+            {filtered.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                selected={selected.has(task.id)}
+                onToggle={toggleOne}
+                onDateSave={handleDateSave}
+                onSnoozeToggle={handleSnoozeToggle}
+                isEditing={editingId === task.id}
+                onStartEdit={setEditingId}
+                onCancelEdit={() => setEditingId(null)}
+              />
+            ))}
+          </Card>
+        )}
+
+        {tasks.length > 0 && (
+          <p className="text-xs text-ui-subtext/50 mt-3 px-1 text-center">
+            {query ? `${filtered.length} of ${tasks.length}` : `${tasks.length} total`}
+          </p>
+        )}
+
+      </div>
+    </div>
+  )
+}

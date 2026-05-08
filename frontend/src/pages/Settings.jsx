@@ -101,21 +101,37 @@ export default function Settings({ onNavigate }) {
         <h1 className="text-2xl font-semibold text-ui-text mb-6">Settings</h1>
 
         <section className="mb-6">
-          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Waiting Tasks</h2>
-          <Card className="px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-ui-text">Snoozed items</p>
-                <p className="text-xs text-ui-subtext mt-0.5">Tasks with a scheduled return date</p>
+          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Tasks</h2>
+          <div className="space-y-2">
+            <Card className="px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ui-text">Triage inbox</p>
+                  <p className="text-xs text-ui-subtext mt-0.5">Review and schedule new items</p>
+                </div>
+                <button
+                  onClick={() => onNavigate?.('triage')}
+                  className="text-sm text-ui-accent hover:opacity-70 transition-opacity font-medium"
+                >
+                  Open →
+                </button>
               </div>
-              <button
-                onClick={() => onNavigate?.('waiting')}
-                className="text-sm text-ui-accent hover:opacity-70 transition-opacity font-medium"
-              >
-                Open →
-              </button>
-            </div>
-          </Card>
+            </Card>
+            <Card className="px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ui-text">All tasks</p>
+                  <p className="text-xs text-ui-subtext mt-0.5">Browse, search, and batch-schedule</p>
+                </div>
+                <button
+                  onClick={() => onNavigate?.('tasks')}
+                  className="text-sm text-ui-accent hover:opacity-70 transition-opacity font-medium"
+                >
+                  Open →
+                </button>
+              </div>
+            </Card>
+          </div>
         </section>
 
         <section className="mb-6">

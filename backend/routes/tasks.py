@@ -89,7 +89,8 @@ def generate_routine_instances(user: User, db: Session):
                 title=routine.title,
                 notes=routine.notes,
                 task_type=TaskType.routine,
-                status=TaskStatus.inbox,
+                status=TaskStatus.today,
+                is_critical=routine.is_critical,
                 routine_id=routine.id,
                 scheduled_date=today_dt,
             ))
@@ -115,8 +116,12 @@ def carry_forward(user: User, db: Session):
         .all()
     )
     for task in stale:
-        task.status = TaskStatus.inbox
-        task.scheduled_date = None
+        if task.task_type == TaskType.routine and task.routine_id:
+            # Routine instances don't return to inbox — soft-delete so today gets a fresh instance
+            task.status = TaskStatus.deleted
+        else:
+            task.status = TaskStatus.inbox
+            task.scheduled_date = None
     if stale:
         db.commit()
     return len(stale)
@@ -143,6 +148,37 @@ def resolve_snoozes(user: User, db: Session):
     if snoozed:
         db.commit()
     return len(snoozed)
+
+
+# ---------------------------------------------------------------------------
+# Auto-promote: inbox tasks with due_date <= today move into Today list
+# ---------------------------------------------------------------------------
+
+def promote_due_tasks(user: User, db: Session):
+    today = date.today()
+    due = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user.id,
+            Task.status == TaskStatus.inbox,
+            Task.task_type != TaskType.routine,
+            Task.due_date.isnot(None),
+            Task.due_date <= today,
+        )
+        .all()
+    )
+    if not due:
+        return
+    existing_count = (
+        db.query(Task)
+        .filter(Task.owner_id == user.id, Task.status == TaskStatus.today)
+        .count()
+    )
+    for i, task in enumerate(due):
+        task.status = TaskStatus.today
+        task.scheduled_date = today_start()
+        task.sort_order = float(existing_count + i)
+    db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +316,91 @@ def _maybe_sync_gcal(user_id: int, db: Session):
 
 
 # ---------------------------------------------------------------------------
+# Backlog — all active tasks (inbox + today + snoozed) for timeline view
+# ---------------------------------------------------------------------------
+
+@router.get("/tasks/bonus", response_model=list[TaskResponse])
+def get_bonus_tasks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Future-dated inbox tasks + snoozed items — shown in Focus when today's list clears."""
+    today = date.today()
+    tasks = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.status.in_([TaskStatus.inbox, TaskStatus.snoozed]),
+            Task.task_type != TaskType.routine,
+            or_(
+                and_(Task.status == TaskStatus.inbox,  Task.due_date > today),
+                Task.status == TaskStatus.snoozed,
+            ),
+        )
+        .order_by(
+            Task.due_date.asc().nullslast(),
+            Task.snooze_until.asc().nullslast(),
+            Task.created_at.asc(),
+        )
+        .all()
+    )
+    return tasks
+
+
+@router.get("/tasks/search", response_model=list[TaskResponse])
+def search_tasks(
+    q: str = Query("", min_length=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    q = q.strip()
+    if not q:
+        return []
+    pattern = f"%{q}%"
+    tasks = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.status != TaskStatus.deleted,
+            or_(
+                Task.title.ilike(pattern),
+                Task.notes.ilike(pattern),
+            ),
+        )
+        .order_by(
+            Task.due_date.asc().nullslast(),
+            Task.created_at.asc(),
+        )
+        .all()
+    )
+    return tasks
+
+
+@router.get("/tasks/backlog", response_model=list[TaskResponse])
+def get_backlog(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    carry_forward(current_user, db)
+    resolve_snoozes(current_user, db)
+    generate_routine_instances(current_user, db)
+    tasks = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.status.in_([TaskStatus.inbox, TaskStatus.today, TaskStatus.snoozed]),
+        )
+        .order_by(
+            Task.due_date.asc().nullslast(),
+            Task.snooze_until.asc().nullslast(),
+            Task.created_at.asc(),
+        )
+        .all()
+    )
+    return tasks
+
+
+# ---------------------------------------------------------------------------
 # Inbox
 # ---------------------------------------------------------------------------
 
@@ -293,11 +414,14 @@ def get_inbox(
     generate_routine_instances(current_user, db)
     # Lazy gcal sync if token exists and not synced today
     _maybe_sync_gcal(current_user.id, db)
+    today = date.today()
     tasks = (
         db.query(Task)
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.inbox,
+            # Hide tasks deferred to a future date — they surface when their date arrives
+            or_(Task.due_date == None, Task.due_date <= today),
             # Exclude stale routine instances (past-day, untriaged) — they go in /routines/missed
             or_(
                 Task.task_type != TaskType.routine,
@@ -323,6 +447,7 @@ def get_today(
     carry_forward(current_user, db)
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
+    promote_due_tasks(current_user, db)
 
     tasks = (
         db.query(Task)
@@ -391,7 +516,7 @@ def schedule_today(
 ):
     task = own_task(task_id, current_user, db)
     task.status = TaskStatus.today
-    task.scheduled_date = datetime.now(timezone.utc).replace(tzinfo=None)
+    task.scheduled_date = today_start()   # local midnight — consistent with carry_forward and get_today
     task.snooze_until = None
     # Apply any priority metadata set during triage
     if body.priority   is not None: task.priority   = body.priority
@@ -479,6 +604,7 @@ def defer_task(
     task = own_task(task_id, current_user, db)
     task.status = TaskStatus.inbox
     task.scheduled_date = None
+    task.due_date = None
     task.sort_order = None
     db.commit()
     db.refresh(task)
