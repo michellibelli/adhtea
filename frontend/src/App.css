@@ -1,0 +1,16 @@
+/* App-level styles — most styling is handled by Tailwind in components */
+
+/* Safe area insets for notched phones */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent iOS tap highlight */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}

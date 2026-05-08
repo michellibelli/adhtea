@@ -1,0 +1,195 @@
+import { useState, useEffect, useCallback } from 'react'
+import { getToday, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, reorderTasks } from '../api/tasks'
+import { getTodayCapacity } from '../api/selfcare'
+import TaskCard from '../components/TaskCard'
+import CapacityBar from '../components/CapacityBar'
+import Card from '../components/Card'
+import Button from '../components/Button'
+
+const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
+
+function computeLoad(tasks) {
+  if (!tasks.length) return { label: 'All clear', color: 'text-emerald-400', bar: 'bg-emerald-400', pct: 0, level: 'clear' }
+  const sum = tasks.reduce((a, t) => a + (WEIGHTS[t.weight] || 2), 0)
+  if (sum <= 6)  return { label: 'Light day',  color: 'text-emerald-400', bar: 'bg-emerald-400', pct: 25,  level: 'light' }
+  if (sum <= 12) return { label: 'Manageable', color: 'text-blue-400',    bar: 'bg-blue-400',    pct: 55,  level: 'manageable' }
+  if (sum <= 18) return { label: 'Heavy day',  color: 'text-amber-400',   bar: 'bg-amber-400',   pct: 80,  level: 'heavy' }
+  return              { label: 'Overloaded',  color: 'text-red-400',     bar: 'bg-red-400',     pct: 100, level: 'overloaded' }
+}
+
+const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3, null: 4, undefined: 4 }
+const DESIRE_RANK   = { high: 0, medium: 1, low: 2, null: 3, undefined: 3 }
+
+function sortTasks(tasks, sortBy) {
+  const copy = [...tasks]
+  if (sortBy === 'priority') {
+    return copy.sort((a, b) => {
+      const pa = PRIORITY_RANK[a.priority] ?? 4
+      const pb = PRIORITY_RANK[b.priority] ?? 4
+      if (pa !== pb) return pa - pb
+      return (a.sort_order ?? 999) - (b.sort_order ?? 999)
+    })
+  }
+  if (sortBy === 'desire') {
+    return copy.sort((a, b) => {
+      const da = DESIRE_RANK[a.desire] ?? 3
+      const db = DESIRE_RANK[b.desire] ?? 3
+      if (da !== db) return da - db
+      return (a.sort_order ?? 999) - (b.sort_order ?? 999)
+    })
+  }
+  // manual (default)
+  return copy.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
+}
+
+export default function Today({ visibleLimit = 10, carriedOver = false, onTriage }) {
+  const [tasks, setTasks]       = useState([])
+  const [doneTasks, setDone]    = useState([])
+  const [capacity, setCapacity] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [showDone, setShowDone] = useState(false)
+  const [sortBy, setSortBy]     = useState('manual')
+  const [dismissOverload, setDismissOverload] = useState(false)
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const [todayList, doneList, cap] = await Promise.all([getToday(), getDoneToday(), getTodayCapacity()])
+      setTasks(todayList)
+      setDone(doneList)
+      setCapacity(cap)
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  const sorted  = sortTasks(tasks, sortBy)
+  const visible = sorted.slice(0, visibleLimit)
+  const queued  = sorted.slice(visibleLimit)
+  const load    = computeLoad(visible)
+
+  async function handleComplete(id) { await completeTask(id); fetchTasks() }
+  async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
+  async function handleDefer(id) { await deferTask(id); fetchTasks() }
+  async function handleDelete(id) { await deleteTask(id); fetchTasks() }
+
+  if (loading) return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
+
+  return (
+    <div className="aria-page">
+      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-2xl font-semibold text-ui-text">Today</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
+            {onTriage && (
+              <button onClick={onTriage} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
+                Triage →
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Capacity */}
+        <CapacityBar capacity={capacity} compact />
+
+        {/* Load bar */}
+        {tasks.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-xs mb-1 px-0.5">
+              <span className="text-ui-subtext">Load</span>
+              <span className={`font-medium ${load.color}`}>{load.label}</span>
+            </div>
+            <div className="h-1 rounded-full bg-ui-border overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-500 ${load.bar}`} style={{ width: `${load.pct}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* Carried-over banner */}
+        {carriedOver && (
+          <Card className="mb-4 px-4 py-2.5">
+            <p className="text-xs text-ui-subtext">Some items carried over from yesterday</p>
+          </Card>
+        )}
+
+        {/* Overloaded prompt */}
+        {load.level === 'overloaded' && !dismissOverload && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between gap-3">
+            <p className="text-sm text-red-400">You have more than a full day here. What moves?</p>
+            <button onClick={() => setDismissOverload(true)} className="text-red-400/60 hover:text-red-400 text-xs flex-shrink-0">✕</button>
+          </div>
+        )}
+
+        {/* Sort controls */}
+        {tasks.length > 1 && (
+          <div className="flex gap-1.5 mb-4">
+            {[['manual', 'My order'], ['priority', 'Urgent first'], ['desire', 'Want to do']].map(([val, lbl]) => (
+              <button
+                key={val}
+                onClick={() => setSortBy(val)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                  sortBy === val
+                    ? 'bg-ui-primary text-ui-primary-text border-transparent'
+                    : 'border-ui-border text-ui-subtext hover:text-ui-accent'
+                }`}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Task list */}
+        {tasks.length === 0 ? (
+          <Card className="mt-16 text-center px-8 py-12">
+            <div className="text-4xl mb-4">✦</div>
+            <p className="text-base font-medium text-ui-text mb-2">Nothing on your list</p>
+            <p className="text-sm text-ui-subtext">Head to Inbox to schedule tasks, or Capture to add something new.</p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {visible.map((task) => (
+              <TaskCard key={task.id} task={task} variant="today"
+                onComplete={handleComplete} onSnooze={handleSnooze}
+                onDefer={handleDefer} onDelete={handleDelete}
+              />
+            ))}
+            {queued.length > 0 && (
+              <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">
+                {queued.length} more waiting — complete or snooze items above to reveal them
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Done today */}
+        {doneTasks.length > 0 && (
+          <div className="mt-8">
+            <button
+              onClick={() => setShowDone(!showDone)}
+              className="flex items-center gap-2 text-sm text-ui-subtext hover:opacity-70 transition-opacity mb-3"
+            >
+              <span>{showDone ? '▾' : '▸'}</span>
+              <span>Done today ({doneTasks.length})</span>
+            </button>
+            {showDone && (
+              <div className="space-y-2">
+                {doneTasks.map((task) => (
+                  <Card key={task.id} className="px-4 py-3 opacity-50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-ui-accent">✓</span>
+                      <span className="text-sm line-through text-ui-subtext">{task.title}</span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

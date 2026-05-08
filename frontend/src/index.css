@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   ARIA Design Tokens
+
+   All colours live here. To restyle the whole app:
+   1. Tweak values in the [data-theme="..."] blocks below.
+   2. To add a new token, add it to @theme inline AND all four theme blocks.
+   Never hardcode colours in components — always use the ui-* utility classes.
+   ============================================================================= */
+
+@theme inline {
+  /* Surface — cards, panels, sheets */
+  --color-ui-surface:       var(--aria-surface);
+  --color-ui-border:        var(--aria-border);
+
+  /* Text */
+  --color-ui-text:          var(--aria-text);
+  --color-ui-subtext:       var(--aria-subtext);
+  --color-ui-accent:        var(--aria-accent);
+
+  /* Primary action (buttons, active states) */
+  --color-ui-primary:       var(--aria-primary);
+  --color-ui-primary-hover: var(--aria-primary-hover);
+  --color-ui-primary-text:  var(--aria-primary-text);
+
+  /* Navigation bar */
+  --color-ui-nav:           var(--aria-nav);
+  --color-ui-nav-border:    var(--aria-nav-border);
+
+  /* Inputs */
+  --color-ui-input:         var(--aria-input);
+  --color-ui-input-border:  var(--aria-input-border);
+  --color-ui-input-focus:   var(--aria-input-focus);
+
+  /* Badges / chips */
+  --color-ui-badge:         var(--aria-badge);
+  --color-ui-badge-text:    var(--aria-badge-text);
+}
+
+/* =============================================================================
+   Per-theme variable definitions
+   Applied via data-theme="dawn|morning|afternoon|evening" on <html>
+   ============================================================================= */
+
+[data-theme="dawn"] {
+  --aria-surface:       oklch(25% 0.02 260 / 80%);
+  --aria-border:        oklch(35% 0.03 260 / 60%);
+  --aria-text:          oklch(93% 0.01 260);
+  --aria-subtext:       oklch(62% 0.02 260);
+  --aria-accent:        oklch(68% 0.18 270);
+  --aria-primary:       oklch(58% 0.20 270);
+  --aria-primary-hover: oklch(65% 0.20 270);
+  --aria-primary-text:  oklch(100% 0 0);
+  --aria-nav:           oklch(18% 0.02 260 / 95%);
+  --aria-nav-border:    oklch(30% 0.03 260);
+  --aria-input:         oklch(22% 0.02 260);
+  --aria-input-border:  oklch(38% 0.03 260);
+  --aria-input-focus:   oklch(58% 0.20 270);
+  --aria-badge:         oklch(28% 0.10 270 / 60%);
+  --aria-badge-text:    oklch(72% 0.15 270);
+}
+
+[data-theme="morning"] {
+  --aria-surface:       oklch(100% 0 0 / 80%);
+  --aria-border:        oklch(88% 0.04 15 / 60%);
+  --aria-text:          oklch(22% 0.01 260);
+  --aria-subtext:       oklch(50% 0.02 260);
+  --aria-accent:        oklch(55% 0.22 15);
+  --aria-primary:       oklch(55% 0.22 15);
+  --aria-primary-hover: oklch(62% 0.22 15);
+  --aria-primary-text:  oklch(100% 0 0);
+  --aria-nav:           oklch(100% 0 0 / 95%);
+  --aria-nav-border:    oklch(88% 0.04 15);
+  --aria-input:         oklch(100% 0 0);
+  --aria-input-border:  oklch(82% 0.06 15);
+  --aria-input-focus:   oklch(55% 0.22 15);
+  --aria-badge:         oklch(94% 0.04 15);
+  --aria-badge-text:    oklch(45% 0.18 15);
+}
+
+[data-theme="afternoon"] {
+  --aria-surface:       oklch(100% 0 0 / 80%);
+  --aria-border:        oklch(88% 0.05 160 / 60%);
+  --aria-text:          oklch(22% 0.01 260);
+  --aria-subtext:       oklch(50% 0.02 260);
+  --aria-accent:        oklch(48% 0.18 175);
+  --aria-primary:       oklch(48% 0.18 175);
+  --aria-primary-hover: oklch(55% 0.18 175);
+  --aria-primary-text:  oklch(100% 0 0);
+  --aria-nav:           oklch(100% 0 0 / 95%);
+  --aria-nav-border:    oklch(88% 0.05 160);
+  --aria-input:         oklch(100% 0 0);
+  --aria-input-border:  oklch(82% 0.07 160);
+  --aria-input-focus:   oklch(48% 0.18 175);
+  --aria-badge:         oklch(94% 0.05 175);
+  --aria-badge-text:    oklch(38% 0.15 175);
+}
+
+[data-theme="evening"] {
+  --aria-surface:       oklch(22% 0.05 300 / 80%);
+  --aria-border:        oklch(32% 0.07 300 / 60%);
+  --aria-text:          oklch(92% 0.02 300);
+  --aria-subtext:       oklch(62% 0.05 300);
+  --aria-accent:        oklch(68% 0.18 300);
+  --aria-primary:       oklch(58% 0.20 300);
+  --aria-primary-hover: oklch(65% 0.20 300);
+  --aria-primary-text:  oklch(100% 0 0);
+  --aria-nav:           oklch(16% 0.05 300 / 95%);
+  --aria-nav-border:    oklch(28% 0.07 300);
+  --aria-input:         oklch(20% 0.05 300);
+  --aria-input-border:  oklch(35% 0.07 300);
+  --aria-input-focus:   oklch(58% 0.20 300);
+  --aria-badge:         oklch(25% 0.10 300 / 60%);
+  --aria-badge-text:    oklch(72% 0.15 300);
+}
+
+/* =============================================================================
+   Page gradient backgrounds
+   Used as .aria-page on the root div of each screen
+   ============================================================================= */
+
+.aria-page {
+  min-height: 100dvh;
+}
+
+[data-theme="dawn"] .aria-page {
+  background: linear-gradient(to bottom, oklch(14% 0.03 260), oklch(18% 0.08 270), oklch(14% 0.03 260));
+}
+[data-theme="morning"] .aria-page {
+  background: linear-gradient(to bottom, oklch(97% 0.02 15), oklch(97% 0.02 40), oklch(97% 0.02 60));
+}
+[data-theme="afternoon"] .aria-page {
+  background: linear-gradient(to bottom, oklch(96% 0.03 160), oklch(96% 0.03 185), oklch(96% 0.03 200));
+}
+[data-theme="evening"] .aria-page {
+  background: linear-gradient(to bottom, oklch(16% 0.06 300), oklch(14% 0.08 310), oklch(13% 0.06 270));
+}
+
+/* =============================================================================
+   Global resets
+   ============================================================================= */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html { scroll-behavior: smooth; }
+
+button, a { -webkit-tap-highlight-color: transparent; }
+
+/* Safe area inset for notched phones */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }

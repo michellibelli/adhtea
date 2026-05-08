@@ -1,0 +1,164 @@
+import secrets
+import bcrypt
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models import User, SessionToken, ActuatorCategory, UserRole, utcnow
+from schemas import LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate
+
+router = APIRouter()
+security = HTTPBearer()
+
+TOKEN_EXPIRY_DAYS = 30
+
+PRESET_ACTUATORS = [
+    {"name": "Engineering", "description": "Technical problem solving, building, and systems thinking."},
+    {"name": "Parenting", "description": "Active engagement with the kids — logistics, school, appointments, play."},
+    {"name": "Social", "description": "Friendships, community connection, conversations outside the family."},
+    {"name": "Romantic", "description": "Intimate relationship investment and connection."},
+    {"name": "Community", "description": "Contribution beyond the immediate family — neighbors, causes, groups."},
+    {"name": "Artistic", "description": "Creative expression; making things for their own sake."},
+    {"name": "Self Care", "description": "Rest, maintenance, and restoration of the self."},
+]
+
+
+# ---------------------------------------------------------------------------
+# Dependency: get current user from bearer token
+# ---------------------------------------------------------------------------
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
+    token_str = credentials.credentials
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    session = (
+        db.query(SessionToken)
+        .filter(SessionToken.token == token_str, SessionToken.expires_at > now)
+        .first()
+    )
+    if not session:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session")
+    return session.user
+
+
+# ---------------------------------------------------------------------------
+# Setup — create the primary account (only works if no users exist)
+# ---------------------------------------------------------------------------
+
+@router.post("/setup", response_model=LoginResponse)
+def setup(req: SetupRequest, db: Session = Depends(get_db)):
+    existing = db.query(User).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Setup already complete")
+
+    hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
+    user = User(
+        name=req.name,
+        username=req.username.lower().strip(),
+        hashed_password=hashed,
+        role=UserRole.primary,
+    )
+    db.add(user)
+    db.flush()  # get user.id
+
+    # Seed preset actuator categories
+    for p in PRESET_ACTUATORS:
+        db.add(ActuatorCategory(
+            user_id=user.id,
+            name=p["name"],
+            description=p["description"],
+            is_preset=True,
+        ))
+
+    # Create session token
+    token_str = secrets.token_hex(32)
+    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
+    session = SessionToken(user_id=user.id, token=token_str, expires_at=expires)
+    db.add(session)
+    db.commit()
+
+    return LoginResponse(
+        token=token_str,
+        user_id=user.id,
+        name=user.name,
+        role=user.role,
+        task_visible_limit=user.task_visible_limit,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Login
+# ---------------------------------------------------------------------------
+
+@router.post("/login", response_model=LoginResponse)
+def login(req: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == req.username.lower().strip()).first()
+    if not user or not bcrypt.checkpw(req.password.encode(), user.hashed_password.encode()):
+        raise HTTPException(status_code=401, detail="Could not sign in")
+
+    token_str = secrets.token_hex(32)
+    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
+    session = SessionToken(user_id=user.id, token=token_str, expires_at=expires)
+    db.add(session)
+    db.commit()
+
+    return LoginResponse(
+        token=token_str,
+        user_id=user.id,
+        name=user.name,
+        role=user.role,
+        task_visible_limit=user.task_visible_limit,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Logout
+# ---------------------------------------------------------------------------
+
+@router.post("/logout")
+def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    token_str = credentials.credentials
+    session = db.query(SessionToken).filter(SessionToken.token == token_str).first()
+    if session:
+        db.delete(session)
+        db.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Me — current user profile + settings
+# ---------------------------------------------------------------------------
+
+@router.get("/me", response_model=UserResponse)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me/settings", response_model=UserResponse)
+def update_settings(
+    update: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if update.task_visible_limit is not None:
+        if not (1 <= update.task_visible_limit <= 50):
+            raise HTTPException(status_code=400, detail="task_visible_limit must be between 1 and 50")
+        current_user.task_visible_limit = update.task_visible_limit
+    if update.notification_morning is not None:
+        current_user.notification_morning = update.notification_morning
+    if update.notification_evening is not None:
+        current_user.notification_evening = update.notification_evening
+    if update.triage_start_hour is not None:
+        current_user.triage_start_hour = update.triage_start_hour
+    if update.triage_end_hour is not None:
+        current_user.triage_end_hour = update.triage_end_hour
+    db.commit()
+    db.refresh(current_user)
+    return current_user
