@@ -1,50 +1,10 @@
-const NAV_ITEMS = [
-  {
-    id: 'capture',
-    label: 'Capture',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
-      </svg>
-    ),
-  },
-  {
-    id: 'focus',
-    label: 'Now',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="8" opacity=".4" />
-      </svg>
-    ),
-  },
-  {
-    id: 'today',
-    label: 'Today',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-    ),
-  },
-  {
-    id: 'inbox',
-    label: 'Inbox',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'waiting',
-    label: 'Waiting',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" />
-      </svg>
-    ),
-  },
+const CAPTURE_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+    <circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+  </svg>
+)
+
+const MOBILE_NAV_ITEMS = [
   {
     id: 'routines',
     label: 'Routines',
@@ -70,55 +30,74 @@ const NAV_ITEMS = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
         <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     ),
   },
 ]
 
-export default function BottomNav({ active, onNavigate, inboxCount = 0 }) {
+const DESKTOP_NAV_ITEMS = [
+  {
+    id: 'capture',
+    label: 'Capture',
+    icon: CAPTURE_ICON,
+  },
+  {
+    id: 'today',
+    label: 'Today',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+        <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  ...MOBILE_NAV_ITEMS,
+]
+
+export default function BottomNav({ active, onNavigate, onCapture }) {
   return (
     <>
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch border-t border-ui-nav-border bg-ui-nav backdrop-blur-md pb-safe md:hidden">
-        {NAV_ITEMS.map((item) => {
+        {MOBILE_NAV_ITEMS.map((item) => {
           const isActive = active === item.id
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 px-1 min-h-[60px] transition-colors duration-150 relative ${isActive ? 'text-ui-accent' : 'text-ui-subtext'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 px-1 min-h-[60px] transition-colors duration-150 ${isActive ? 'text-ui-accent' : 'text-ui-subtext'}`}
             >
               {item.icon}
               <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
-              {item.id === 'inbox' && inboxCount > 0 && (
-                <span className="absolute top-2 right-1/4 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center bg-ui-badge text-ui-badge-text">
-                  {inboxCount > 99 ? '99+' : inboxCount}
-                </span>
-              )}
             </button>
           )
         })}
       </nav>
 
+      {/* Mobile FAB — capture */}
+      <button
+        onClick={onCapture}
+        className="fixed bottom-[76px] right-4 z-50 w-14 h-14 rounded-full bg-ui-accent shadow-lg flex items-center justify-center text-white active:scale-95 transition-transform md:hidden"
+        aria-label="Capture"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+
       {/* Desktop sidebar */}
       <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r border-ui-nav-border bg-ui-nav backdrop-blur-md pt-6 pb-6 gap-2">
         <div className="text-xs font-bold tracking-widest mb-4 text-ui-accent">ARIA</div>
-        {NAV_ITEMS.map((item) => {
+        {DESKTOP_NAV_ITEMS.map((item) => {
           const isActive = active === item.id
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-colors duration-150 relative ${isActive ? 'text-ui-accent border-r-2 border-ui-accent/40' : 'text-ui-subtext'}`}
+              onClick={() => item.id === 'capture' ? onCapture() : onNavigate(item.id)}
+              className={`w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-colors duration-150 ${isActive ? 'text-ui-accent border-r-2 border-ui-accent/40' : 'text-ui-subtext'}`}
             >
               {item.icon}
               <span className="text-[10px] font-medium">{item.label}</span>
-              {item.id === 'inbox' && inboxCount > 0 && (
-                <span className="absolute top-2 right-2 min-w-[16px] h-[16px] px-0.5 rounded-full text-[9px] font-bold flex items-center justify-center bg-ui-badge text-ui-badge-text">
-                  {inboxCount > 99 ? '99+' : inboxCount}
-                </span>
-              )}
             </button>
           )
         })}

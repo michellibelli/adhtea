@@ -173,6 +173,7 @@ Phase 3 (self-care logs), Phase 5 (full context)
 **Goal:** Multi-device access (home PC + work PC + phone). Stable and shareable.
 
 ### To Build
+- **Domain:** adh-tea.fun (purchased) — frontend at adh-tea.fun, backend at api.adh-tea.fun
 - **Deployment:** Railway (backend + PostgreSQL) + Vercel (frontend)
 - Migrate SQLite → PostgreSQL (update DATABASE_URL in .env)
 - Error states: every screen handles API failure gracefully

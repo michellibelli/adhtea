@@ -5,4 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    host: true,   // listen on 0.0.0.0 so phone can reach it on LAN
+    port: 5173,
+  },
 })

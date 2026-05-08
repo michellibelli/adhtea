@@ -93,12 +93,30 @@ function GoogleCalendarCard() {
 }
 
 
-export default function Settings() {
+export default function Settings({ onNavigate }) {
   return (
     <div className="aria-page">
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
 
         <h1 className="text-2xl font-semibold text-ui-text mb-6">Settings</h1>
+
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Waiting Tasks</h2>
+          <Card className="px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-ui-text">Snoozed items</p>
+                <p className="text-xs text-ui-subtext mt-0.5">Tasks with a scheduled return date</p>
+              </div>
+              <button
+                onClick={() => onNavigate?.('waiting')}
+                className="text-sm text-ui-accent hover:opacity-70 transition-opacity font-medium"
+              >
+                Open →
+              </button>
+            </div>
+          </Card>
+        </section>
 
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Integrations</h2>

@@ -31,6 +31,9 @@ router = APIRouter()
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
+# Temporary in-memory store for PKCE code verifiers (connect → callback window)
+_code_verifiers: dict[str, str] = {}
+
 
 def _gcal_available():
     return (
@@ -104,6 +107,12 @@ def gcal_connect(
         prompt="consent",
         state=str(current_user.id),
     )
+    # Persist PKCE code verifier if the library generated one
+    verifier = getattr(flow, "code_verifier", None) or getattr(
+        getattr(flow, "oauth2session", None), "_code_verifier", None
+    )
+    if verifier:
+        _code_verifiers[str(current_user.id)] = verifier
     return {"auth_url": auth_url}
 
 
@@ -117,7 +126,11 @@ def gcal_callback(
         raise HTTPException(status_code=503, detail="Google Calendar not configured")
     try:
         flow = _build_flow()
-        flow.fetch_token(code=code)
+        verifier = _code_verifiers.pop(state, None)
+        fetch_kwargs = {"code": code}
+        if verifier:
+            fetch_kwargs["code_verifier"] = verifier
+        flow.fetch_token(**fetch_kwargs)
         creds = flow.credentials
 
         user_id = int(state)
