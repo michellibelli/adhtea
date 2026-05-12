@@ -2,39 +2,33 @@
   <!-- Background -->
   <rect width="512" height="512" fill="#2A0E58" rx="80"/>
 
-  <!-- Pride stripe top -->
-  <rect x="0" y="0" width="512" height="24" fill="url(#pride)"/>
-  <!-- Pride stripe bottom -->
-  <rect x="0" y="488" width="512" height="24" fill="url(#pride)"/>
+  <!-- Pride stripe top (3x bigger) -->
+  <rect x="0" y="0" width="512" height="72" fill="url(#pride)"/>
+  <!-- Pride stripe bottom (3x bigger) -->
+  <rect x="0" y="440" width="512" height="72" fill="url(#pride)"/>
 
   <!--
-    Layout: "adh" sits above "ea" of "Tea"
-      T
-      Tea
-    adh
-    i.e. "T" hangs left, "adh" is above "ea"
-
-    At font-size 148, bold sans-serif:
-      "T" width ≈ 82px
-    "Tea" starts at x=108  → "e" starts at ~190
-    "adh" starts at x=190  → aligns above "ea"
+    "e" left edge centered at x=256
+    At font-size 150, "T" width ≈ 82px
+    "Tea" x = 256 - 82 = 174
+    "adh" x = 256 (aligns with "e")
   -->
 
-  <!-- "adh" — lavender, above the "ea" -->
+  <!-- "adh" — lavender, smaller -->
   <text
-    x="190" y="270"
+    x="256" y="278"
     font-family="Arial, Helvetica, sans-serif"
-    font-size="148"
+    font-size="146"
     font-weight="900"
     fill="#C4B8F0"
     letter-spacing="-2"
   >adh</text>
 
-  <!-- "Tea" — white, offset left so T hangs out -->
+  <!-- "Tea" — white, larger, T hangs left of center -->
   <text
-    x="108" y="410"
+    x="174" y="418"
     font-family="Arial, Helvetica, sans-serif"
-    font-size="148"
+    font-size="150"
     font-weight="900"
     fill="#FFFFFF"
     letter-spacing="-2"
