@@ -180,7 +180,7 @@ export default function Capture() {
       setTimeout(() => setSaved(null), 2500)
     } catch (err) {
       console.error(err)
-      setError('Could not save — check connection and try again.')
+      setError(err?.message || 'Could not save — check connection and try again.')
     } finally {
       setSaving(false)
     }

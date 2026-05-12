@@ -3,7 +3,7 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const TOKEN_KEY = 'aria_token'
 const LAST_SUCCESS_KEY = 'aria_last_api_success'
-const SLEEP_THRESHOLD_MS = 14 * 60 * 1000  // Render sleeps after 15 min idle
+const SLEEP_THRESHOLD_MS = 10 * 60 * 1000  // Render sleeps after 15 min; check at 10
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -37,8 +37,16 @@ export function likelySleeping() {
 
 // Proactive wake — call before app init if likelySleeping().
 // onLog(msg) fires for each status update. Resolves when server responds or gives up.
+let _warmUpPromise = null
+
 export async function warmUp(onLog) {
-  const delays = [5000, 8000, 12000]
+  if (_warmUpPromise) return _warmUpPromise
+  _warmUpPromise = _doWarmUp(onLog).finally(() => { _warmUpPromise = null })
+  return _warmUpPromise
+}
+
+async function _doWarmUp(onLog) {
+  const delays = [5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000]
   onLog('Checking server...')
   for (let i = 0; i <= delays.length; i++) {
     try {
@@ -68,11 +76,13 @@ async function request(method, path, body = undefined, isForm = false) {
   if (!isForm) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const opts = {
     method,
     headers,
     body: isForm ? body : body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, opts)
 
   if (res.status === 401) {
     clearToken()

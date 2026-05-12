@@ -98,7 +98,7 @@ export default function Settings({ onNavigate }) {
     <div className="aria-page">
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
 
-        <h1 className="text-2xl font-semibold text-ui-text mb-6">Settings</h1>
+        <h1 className="text-2xl font-semibold text-ui-text mb-6">Menu</h1>
 
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Tasks</h2>

@@ -18,25 +18,25 @@ const S = 'url(#navRainbow)'
 
 const TeacupIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
-    <path d="M8 7 C8 5.5 9 4.5 8 3"/>
-    <path d="M12 6 C12 4.5 13 3.5 12 2"/>
-    <path d="M4 9h16l-2 9H6z"/>
-    <path d="M18 11a3 3 0 0 1 0 5"/>
-    <line x1="2" y1="20" x2="22" y2="20"/>
+    <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+    <line x1="6" y1="2" x2="6" y2="5"/>
+    <line x1="10" y1="2" x2="10" y2="5"/>
+    <line x1="14" y1="2" x2="14" y2="5"/>
   </svg>
 )
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" className="w-8 h-8">
-    <circle cx="12" cy="12" r="4"/>
-    <line x1="12" y1="2"    x2="12" y2="5"/>
-    <line x1="12" y1="19"   x2="12" y2="22"/>
-    <line x1="2"  y1="12"   x2="5"  y2="12"/>
-    <line x1="19" y1="12"   x2="22" y2="12"/>
-    <line x1="5.64"  y1="5.64"  x2="7.76"  y2="7.76"/>
-    <line x1="16.24" y1="16.24" x2="18.36" y2="18.36"/>
-    <line x1="5.64"  y1="18.36" x2="7.76"  y2="16.24"/>
-    <line x1="16.24" y1="7.76"  x2="18.36" y2="5.64"/>
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1"    x2="12" y2="3"/>
+    <line x1="12" y1="21"   x2="12" y2="23"/>
+    <line x1="1"  y1="12"   x2="3"  y2="12"/>
+    <line x1="21" y1="12"   x2="23" y2="12"/>
+    <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+    <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
   </svg>
 )
 
@@ -69,7 +69,7 @@ const FlowerIcon = () => (
 const MOBILE_NAV_ITEMS = [
   { id: 'routines', label: 'Routines', icon: <MoonIcon /> },
   { id: 'selfcare', label: 'Log',      icon: <HeartSparkleIcon /> },
-  { id: 'settings', label: '',         icon: <FlowerIcon /> },
+  { id: 'settings', label: 'Menu',      icon: <FlowerIcon /> },
 ]
 
 const DESKTOP_NAV_ITEMS = [
@@ -88,8 +88,12 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
         style={{ background: 'linear-gradient(135deg, #C490D1, #B4A8E0)' }}
         aria-label="Capture"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="w-6 h-6">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+          <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+          <line x1="6" y1="2" x2="6" y2="5"/>
+          <line x1="10" y1="2" x2="10" y2="5"/>
+          <line x1="14" y1="2" x2="14" y2="5"/>
         </svg>
       </button>
 

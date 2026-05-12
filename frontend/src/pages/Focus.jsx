@@ -132,7 +132,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   // All done — no today tasks AND no bonus tasks
   if (!task) {
     return (
-      <div className="aria-page flex items-center justify-center">
+      <div className="aria-page flex items-center justify-center md:pl-20">
         <div className="px-6 pb-32 md:pb-8 max-w-sm w-full text-center">
           <div className="text-4xl mb-4 sparkle" style={{color:'#C490D1'}}>✦</div>
           <h2 className="text-sm pixel-heading text-ui-text mb-2">
@@ -278,7 +278,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             <Button
               size="lg"
               onClick={handleComplete}
-              className={`w-full ${isBonusMode ? 'bg-amber-500 hover:bg-amber-400 text-white border-transparent' : ''}`}
+              className={`w-full ${isBonusMode ? 'bg-amber-500 hover:bg-amber-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}
             >
               Done ✓
             </Button>

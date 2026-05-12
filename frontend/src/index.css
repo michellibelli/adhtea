@@ -58,8 +58,14 @@
    Page background — pixel dawn sky + tiled star/cloud texture
    ============================================================================= */
 
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .aria-page {
   min-height: 100dvh;
+  animation: page-in 300ms ease-out both;
 }
 
 [data-theme="adhtea"] .aria-page {
@@ -88,17 +94,28 @@
   background-size: 200px 200px, 100% !important;
 }
 
-.pixel-card::before {
+.pixel-card::before,
+.pixel-card::after {
   content: '';
   position: absolute;
-  top: 0;
   left: 0;
   right: 0;
   height: 28px;
   background: linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pixel-card::before {
+  top: 0;
   -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
   mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
-  z-index: 1;
+}
+
+.pixel-card::after {
+  bottom: 0;
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
 }
 
 .pixel-btn {
@@ -113,6 +130,13 @@
 .pixel-btn:active {
   box-shadow: none;
   transform: translate(3px, 3px);
+}
+
+.pixel-btn-rainbow {
+  border: 4px solid transparent !important;
+  background:
+    linear-gradient(var(--aria-primary), var(--aria-primary-hover)) padding-box,
+    linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6) border-box !important;
 }
 
 /* =============================================================================
@@ -134,6 +158,57 @@
   50%       { opacity: 0.7; text-shadow: 0 0 20px currentColor; }
 }
 .sparkle { animation: sparkle-pulse 2.8s ease-in-out infinite; }
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: var(--star-opacity, 0.3); transform: scale(1); }
+  50%       { opacity: calc(var(--star-opacity, 0.3) * 0.25); transform: scale(0.75); }
+}
+.star-field-star {
+  position: fixed;
+  pointer-events: none;
+  animation: star-twinkle var(--star-dur, 5s) ease-in-out infinite var(--star-delay, 0s);
+  z-index: 0;
+  user-select: none;
+}
+
+/* =============================================================================
+   WakeScreen animations
+   ============================================================================= */
+
+@keyframes steam-rise {
+  0%   { opacity: 0;    transform: translateY(0)    scaleX(1); }
+  20%  { opacity: 0.55; transform: translateY(-8px)  scaleX(1.05); }
+  60%  { opacity: 0.35; transform: translateY(-22px) scaleX(1.12); }
+  100% { opacity: 0;    transform: translateY(-38px) scaleX(0.9); }
+}
+.steam-wisp {
+  position: absolute;
+  width: 6px;
+  border-radius: 50%;
+  background: rgba(180, 168, 224, 0.55);
+  filter: blur(3px);
+  animation: steam-rise var(--steam-dur, 2.2s) ease-out infinite var(--steam-delay, 0s);
+  pointer-events: none;
+}
+
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0)   rotate(var(--bob-rot-a, -4deg)); }
+  50%       { transform: translateY(-14px) rotate(var(--bob-rot-b,  4deg)); }
+}
+.float-art {
+  position: fixed;
+  pointer-events: none;
+  user-select: none;
+  animation: float-bob var(--bob-dur, 5s) ease-in-out infinite var(--bob-delay, 0s);
+  opacity: var(--bob-opacity, 0.55);
+  font-size: var(--bob-size, 22px);
+  z-index: 0;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
+  40%           { opacity: 1;   transform: scale(1); }
+}
 
 /* =============================================================================
    Pride gradient bar

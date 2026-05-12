@@ -5,29 +5,21 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 
-// ── Date helpers ─────────────────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
-// Date-only string for due_date (defer)
-function dateStr(d) { return d.toISOString().slice(0, 10) }
-
-// Full ISO datetime string for snooze_until
 function datetimeStr(d) { return d.toISOString().split('T')[0] + 'T00:00:00.000Z' }
-
-function tomorrow()   { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return dateStr(d) }
-function endOfWeek()  {
-  const d = new Date()
-  const dow = d.getDay()
-  const toFriday = dow <= 5 ? 5 - dow || 7 : 6
-  d.setDate(d.getDate() + toFriday); d.setHours(0,0,0,0); return dateStr(d)
+function tomorrow() {
+  const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0)
+  return datetimeStr(d)
 }
-function nextMonday() {
-  const d = new Date()
-  const toMon = (8 - d.getDay()) % 7 || 7
-  d.setDate(d.getDate() + toMon); d.setHours(0,0,0,0); return dateStr(d)
-}
-function oneMonth()   { const d = new Date(); d.setMonth(d.getMonth() + 1); d.setHours(0,0,0,0); return datetimeStr(d) }
 
-// ── Load config ───────────────────────────────────────────────────────────────
+// ── Triage persistence ────────────────────────────────────────────────────────
+
+const TRIAGE_KEY = 'aria_triage_done'
+export function markTriageDone()    { localStorage.setItem(TRIAGE_KEY, new Date().toDateString()) }
+export function wasTriageDoneToday() { return localStorage.getItem(TRIAGE_KEY) === new Date().toDateString() }
+
+// ── Load helpers ──────────────────────────────────────────────────────────────
 
 const LOAD_CONFIG = {
   clear:      { label: 'No tasks yet', color: 'text-ui-subtext',  bar: 'bg-ui-border',   pct: 0   },
@@ -36,7 +28,6 @@ const LOAD_CONFIG = {
   heavy:      { label: 'Heavy day',    color: 'text-amber-400',   bar: 'bg-amber-400',   pct: 80  },
   overloaded: { label: 'Overloaded',   color: 'text-red-400',     bar: 'bg-red-400',     pct: 100 },
 }
-
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 function computeLoad(tasks) {
   if (!tasks.length) return 'clear'
@@ -47,18 +38,13 @@ function computeLoad(tasks) {
   return 'overloaded'
 }
 
-// ── Triage persistence ────────────────────────────────────────────────────────
-
-const TRIAGE_KEY = 'aria_triage_done'
-export function markTriageDone()    { localStorage.setItem(TRIAGE_KEY, new Date().toDateString()) }
-export function wasTriageDoneToday() { return localStorage.getItem(TRIAGE_KEY) === new Date().toDateString() }
-
-const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+const TYPE_LABELS = { task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note' }
 
 // ── Critical list ─────────────────────────────────────────────────────────────
 
 function CriticalList({ onDone }) {
-  const [items, setItems]   = useState([])
+  const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -137,122 +123,71 @@ function CriticalList({ onDone }) {
 }
 
 
-// ── One-at-a-time triage card ─────────────────────────────────────────────────
+// ── Tournament card ───────────────────────────────────────────────────────────
 
-function TriageOne({ task, index, total, scheduledCount, onToday, onDefer, onSnooze, onDelete, capacity }) {
-  const [showCal, setShowCal]     = useState(false)
-  const [calDate, setCalDate]     = useState('')
-  const [leaving, setLeaving]     = useState(false)
-  const [direction, setDirection] = useState(1)
-
-  function animate(dir, fn) {
-    setDirection(dir)
-    setLeaving(true)
-    setTimeout(fn, 280)
-  }
-
-  function handleToday()     { animate( 1, onToday) }
-  function handleTomorrow()  { animate(-1, () => onDefer(tomorrow())) }
-  function handleEndWeek()   { animate(-1, () => onDefer(endOfWeek())) }
-  function handleNextWeek()  { animate(-1, () => onDefer(nextMonday())) }
-  function handleSnoozeLong(){ animate(-1, () => onSnooze(oneMonth())) }
-  function handleDelete()    { animate(-1, onDelete) }
-  function handleCalSubmit() {
-    if (!calDate) return
-    animate(-1, () => onDefer(calDate))
-  }
-
+function TournamentCard({ task, onPick, picking }) {
   return (
-    <div className={`transition-all duration-280 ${leaving
-      ? direction > 0 ? 'opacity-0 translate-x-8' : 'opacity-0 -translate-x-8'
-      : 'opacity-100 translate-x-0'
-    }`}>
-      <Card className="px-6 py-8 mb-4">
-        {/* Type + counter */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-ui-accent text-lg">{TYPE_ICONS[task.task_type] || '✦'}</span>
-            <span className="text-xs text-ui-subtext capitalize">{task.task_type}</span>
+    <button
+      onClick={() => !picking && onPick(task.id)}
+      disabled={picking}
+      className={`w-full text-left transition-all duration-200 ${picking ? 'opacity-40 scale-95' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
+    >
+      <Card className="px-5 py-4">
+        <div className="flex items-start gap-3">
+          <span className="text-ui-accent text-base mt-0.5 flex-shrink-0">
+            {TYPE_ICONS[task.task_type] || '✦'}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-ui-text leading-snug">{task.title}</p>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="text-[10px] text-ui-subtext">{TYPE_LABELS[task.task_type]}</span>
+              {task.due_date && (
+                <span className="text-[10px] text-ui-subtext">· {task.due_date}</span>
+              )}
+              {task.due_time && (
+                <span className="text-[10px] text-amber-400">· {task.due_time}</span>
+              )}
+              {task.notes && (
+                <span className="text-[10px] text-ui-subtext/60 truncate max-w-[140px]">· {task.notes}</span>
+              )}
+            </div>
           </div>
-          <span className="text-xs text-ui-subtext/60">{index + 1} of {total}</span>
+          <span className="text-ui-border text-lg flex-shrink-0">→</span>
         </div>
-
-        {/* Title */}
-        <h2 className="text-2xl font-semibold text-ui-text leading-snug mb-3">
-          {task.title}
-        </h2>
-
-        {/* Meta */}
-        {(task.due_date || task.due_time) && (
-          <div className="flex items-center gap-1.5 mb-2 text-sm text-ui-subtext">
-            <span>◷</span>
-            <span>{task.due_time ?? ''}{task.due_time && task.due_date ? ' · ' : ''}{task.due_date ?? ''}</span>
-          </div>
-        )}
-        {task.location_detail && (
-          <p className="text-sm text-ui-subtext mb-2">📍 {task.location_detail}</p>
-        )}
-        {task.notes && (
-          <p className="text-sm text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-3">
-            {task.notes}
-          </p>
-        )}
       </Card>
-
-      {/* Primary action */}
-      <Button size="lg" onClick={handleToday} className="w-full mb-3">
-        → Today
-      </Button>
-
-      {/* Defer row */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <Button variant="secondary" onClick={handleTomorrow}>Tomorrow</Button>
-        <Button variant="secondary" onClick={handleEndWeek}>End of week</Button>
-        <Button variant="secondary" onClick={handleNextWeek}>Next week</Button>
-        <Button variant="secondary" onClick={() => setShowCal((v) => !v)}>
-          {showCal ? 'Cancel' : 'Pick date ◷'}
-        </Button>
-      </div>
-
-      {showCal && (
-        <div className="flex gap-2 mb-2">
-          <input
-            type="date"
-            value={calDate}
-            onChange={(e) => setCalDate(e.target.value)}
-            className="flex-1 bg-ui-surface border border-ui-border rounded-xl px-3 py-2 text-sm text-ui-text focus:outline-none focus:border-ui-accent"
-          />
-          <Button variant="secondary" onClick={handleCalSubmit} disabled={!calDate}>Set</Button>
-        </div>
-      )}
-
-      {/* Bottom row */}
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant="ghost" onClick={handleSnoozeLong} className="text-ui-subtext/70">
-          Snooze 1 month
-        </Button>
-        <Button variant="danger" onClick={handleDelete}>Delete</Button>
-      </div>
-    </div>
+    </button>
   )
 }
 
 
 // ── Main triage ───────────────────────────────────────────────────────────────
 
+const TODAY_LIMIT = 10
+
 export default function Triage({ onTriageDone }) {
-  const [inboxItems,   setInboxItems]   = useState([])
+  const [pool,         setPool]         = useState([])   // inbox items not yet handled
   const [todayItems,   setTodayItems]   = useState([])
   const [capacity,     setCapacity]     = useState(null)
   const [loading,      setLoading]      = useState(true)
   const [showCritical, setShowCritical] = useState(false)
-  const [currentIdx,   setCurrentIdx]   = useState(0)
   const [scheduledToday, setScheduledToday] = useState(0)
+  const [picking,      setPicking]      = useState(false) // debounce mid-animation
 
   const fetchAll = useCallback(async () => {
     try {
       const [inbox, today, cap] = await Promise.all([getInbox(), getToday(), getTodayCapacity()])
-      setInboxItems(inbox)
+      const todayStr = new Date().toISOString().slice(0, 10)
+      inbox.sort((a, b) => {
+        const aOver = a.due_date && a.due_date < todayStr
+        const bOver = b.due_date && b.due_date < todayStr
+        if (aOver && !bOver) return -1
+        if (bOver && !aOver) return 1
+        if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
+        if (a.due_date) return -1
+        if (b.due_date) return 1
+        return new Date(a.created_at) - new Date(b.created_at)
+      })
+      setPool(inbox)
       setTodayItems(today)
       setCapacity(cap)
     } catch (err) { console.error(err) }
@@ -264,38 +199,31 @@ export default function Triage({ onTriageDone }) {
   const load    = computeLoad(todayItems)
   const loadCfg = LOAD_CONFIG[load]
 
-  // Current item is whichever inbox item is at currentIdx
-  const currentItem = inboxItems[currentIdx] ?? null
-  const remaining   = inboxItems.length
+  // Today's limit — stop when reached
+  const todayFull = todayItems.length >= TODAY_LIMIT
 
-  function advance() {
-    // Don't advance index — after removal the same index points to next item
-  }
+  // The 3 current candidates
+  const trio = pool.slice(0, 3)
 
-  async function handleToday() {
-    if (!currentItem) return
-    await scheduleToday(currentItem.id, {})
-    setInboxItems((prev) => prev.filter((t) => t.id !== currentItem.id))
-    setTodayItems((prev) => [...prev, { ...currentItem, status: 'today' }])
+  async function handlePick(taskId) {
+    if (picking) return
+    setPicking(true)
+    const task = pool.find((t) => t.id === taskId)
+    await scheduleToday(taskId, {})
+    setPool((prev) => prev.filter((t) => t.id !== taskId))
+    setTodayItems((prev) => [...prev, { ...task, status: 'today' }])
     setScheduledToday((n) => n + 1)
+    setPicking(false)
   }
 
-  async function handleDefer(dueDate) {
-    if (!currentItem) return
-    await updateTask(currentItem.id, { due_date: dueDate })
-    setInboxItems((prev) => prev.filter((t) => t.id !== currentItem.id))
-  }
-
-  async function handleSnooze(until) {
-    if (!currentItem) return
-    await snoozeTask(currentItem.id, until)
-    setInboxItems((prev) => prev.filter((t) => t.id !== currentItem.id))
-  }
-
-  async function handleDelete() {
-    if (!currentItem) return
-    await deleteTask(currentItem.id)
-    setInboxItems((prev) => prev.filter((t) => t.id !== currentItem.id))
+  async function handleSnoozeAll() {
+    if (picking || trio.length === 0) return
+    setPicking(true)
+    const until = tomorrow()
+    await Promise.all(trio.map((t) => snoozeTask(t.id, until)))
+    const ids = new Set(trio.map((t) => t.id))
+    setPool((prev) => prev.filter((t) => !ids.has(t.id)))
+    setPicking(false)
   }
 
   function handleDone() {
@@ -306,17 +234,19 @@ export default function Triage({ onTriageDone }) {
   if (loading) return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
   if (showCritical) return <CriticalList onDone={handleDone} />
 
-  // All done
-  if (remaining === 0) {
+  // All done or today full
+  if (pool.length === 0 || todayFull) {
     return (
       <div className="aria-page">
         <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
           <Card className="mt-16 text-center px-8 py-12">
             <div className="text-4xl mb-4">✦</div>
-            <h2 className="text-lg font-semibold text-ui-text mb-2">Triage complete</h2>
+            <h2 className="text-lg font-semibold text-ui-text mb-2">
+              {todayFull ? "Today's list is full" : 'Triage complete'}
+            </h2>
             <p className="text-sm text-ui-subtext mb-1">
               {scheduledToday > 0
-                ? `${scheduledToday} added to today · ${todayItems.length} total on your list.`
+                ? `${scheduledToday} added · ${todayItems.length} total on your list.`
                 : 'Everything pushed out. Today is yours.'}
             </p>
             {todayItems.length > 0 && (
@@ -342,52 +272,71 @@ export default function Triage({ onTriageDone }) {
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-2">
           <div>
             <h1 className="text-2xl font-semibold text-ui-text">Triage</h1>
-            <p className="text-sm text-ui-subtext mt-0.5">
-              {remaining} left · {scheduledToday} added today
-            </p>
+            <p className="text-sm text-ui-subtext mt-0.5">Which matters most right now?</p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowCritical(true)} className="mt-1">
             Low focus →
           </Button>
         </div>
 
-        {/* Load bar */}
-        <CapacityBar capacity={capacity} compact />
-        <div className="mb-5">
+        {/* Progress */}
+        <div className="mb-4">
           <div className="flex items-center justify-between text-xs mb-1.5 px-0.5">
-            <span className="text-ui-subtext">Today's load · {todayItems.length} scheduled</span>
+            <span className="text-ui-subtext">
+              Today: <span className="font-medium text-ui-text">{todayItems.length}</span> / {TODAY_LIMIT}
+            </span>
             <span className={`font-medium ${loadCfg.color}`}>{loadCfg.label}</span>
           </div>
           <div className="h-1.5 rounded-full bg-ui-border overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${loadCfg.bar}`} style={{ width: `${loadCfg.pct}%` }} />
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${loadCfg.bar}`}
+              style={{ width: `${Math.min((todayItems.length / TODAY_LIMIT) * 100, 100)}%` }}
+            />
           </div>
         </div>
 
-        {/* One card at a time */}
-        {currentItem && (
-          <TriageOne
-            key={currentItem.id}
-            task={currentItem}
-            index={0}
-            total={remaining}
-            scheduledCount={scheduledToday}
-            onToday={handleToday}
-            onDefer={handleDefer}
-            onSnooze={handleSnooze}
-            onDelete={handleDelete}
-            capacity={capacity}
-          />
-        )}
+        <CapacityBar capacity={capacity} compact />
 
-        {/* Done early */}
-        <div className="mt-4 text-center">
-          <Button variant="ghost" size="sm" onClick={handleDone} className="text-ui-subtext/60">
-            Done for now →
-          </Button>
+        {/* The trio */}
+        <div className="mt-5 space-y-3">
+          {trio.map((task) => (
+            <TournamentCard
+              key={task.id}
+              task={task}
+              onPick={handlePick}
+              picking={picking}
+            />
+          ))}
         </div>
+
+        {/* Snooze all + done */}
+        <div className="mt-5 flex flex-col items-center gap-2">
+          {trio.length > 0 && (
+            <button
+              onClick={handleSnoozeAll}
+              disabled={picking}
+              className="text-xs text-ui-subtext/60 hover:text-ui-subtext transition-colors disabled:opacity-40"
+            >
+              None of these — snooze all to tomorrow
+            </button>
+          )}
+          <button
+            onClick={handleDone}
+            className="text-xs text-ui-subtext/60 hover:text-ui-subtext transition-colors"
+          >
+            Done for now →
+          </button>
+        </div>
+
+        {/* Remaining pool count */}
+        {pool.length > 3 && (
+          <p className="text-center text-[10px] text-ui-subtext/40 mt-4">
+            {pool.length - 3} more in inbox
+          </p>
+        )}
 
       </div>
     </div>
