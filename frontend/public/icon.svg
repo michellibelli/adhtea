@@ -7,32 +7,38 @@
   <!-- Pride stripe bottom -->
   <rect x="0" y="488" width="512" height="24" fill="url(#pride)"/>
 
-  <!-- Steam wisps -->
-  <rect x="196" y="148" width="12" height="44" rx="6" fill="#C4B8F0" opacity="0.7"/>
-  <rect x="191" y="138" width="20" height="14" rx="7" fill="#C4B8F0" opacity="0.45"/>
+  <!--
+    Layout: "adh" sits above "ea" of "Tea"
+      T
+      Tea
+    adh
+    i.e. "T" hangs left, "adh" is above "ea"
 
-  <rect x="250" y="130" width="12" height="58" rx="6" fill="#F7B685" opacity="0.65"/>
-  <rect x="245" y="120" width="20" height="14" rx="7" fill="#F7B685" opacity="0.4"/>
+    At font-size 148, bold sans-serif:
+      "T" width ≈ 82px
+    "Tea" starts at x=108  → "e" starts at ~190
+    "adh" starts at x=190  → aligns above "ea"
+  -->
 
-  <rect x="304" y="142" width="12" height="48" rx="6" fill="#C4B8F0" opacity="0.7"/>
-  <rect x="299" y="132" width="20" height="14" rx="7" fill="#C4B8F0" opacity="0.45"/>
+  <!-- "adh" — lavender, above the "ea" -->
+  <text
+    x="190" y="270"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="148"
+    font-weight="900"
+    fill="#C4B8F0"
+    letter-spacing="-2"
+  >adh</text>
 
-  <!-- Cup rim (wide, shallow) -->
-  <rect x="118" y="200" width="276" height="26" rx="8" fill="#C4B8F0"/>
-
-  <!-- Cup body (wide, not too tall) -->
-  <rect x="130" y="222" width="252" height="110" rx="6" fill="#B4A8E0"/>
-
-  <!-- Handle: outer shape then cutout -->
-  <rect x="374" y="234" width="52" height="82" rx="26" fill="#9D8FD6"/>
-  <rect x="386" y="254" width="30" height="46" rx="15" fill="#2A0E58"/>
-
-  <!-- Saucer -->
-  <rect x="100" y="332" width="312" height="18" rx="9" fill="#9D8FD6"/>
-  <rect x="80"  y="346" width="352" height="14" rx="7" fill="#7A6BC0"/>
-
-  <!-- Shine on cup -->
-  <rect x="148" y="230" width="10" height="50" rx="5" fill="white" opacity="0.18"/>
+  <!-- "Tea" — white, offset left so T hangs out -->
+  <text
+    x="108" y="410"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="148"
+    font-weight="900"
+    fill="#FFFFFF"
+    letter-spacing="-2"
+  >Tea</text>
 
   <defs>
     <linearGradient id="pride" x1="0" y1="0" x2="512" y2="0" gradientUnits="userSpaceOnUse">
