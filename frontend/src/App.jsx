@@ -44,6 +44,18 @@ function AppShell() {
   const [carriedOver, setCarriedOver] = useState(false)
   const [ready, setReady]             = useState(false)
   const [showEOD, setShowEOD]         = useState(false)
+  const [sleeping, setSleeping]       = useState(false)
+
+  useEffect(() => {
+    const onSleeping = () => setSleeping(true)
+    const onAwake    = () => setSleeping(false)
+    window.addEventListener('api:sleeping', onSleeping)
+    window.addEventListener('api:awake',    onAwake)
+    return () => {
+      window.removeEventListener('api:sleeping', onSleeping)
+      window.removeEventListener('api:awake',    onAwake)
+    }
+  }, [])
 
   useEffect(() => {
     getMe()
@@ -80,6 +92,14 @@ function AppShell() {
 
   return (
     <div className="min-h-screen">
+      {/* Sleeping banner */}
+      {sleeping && (
+        <div className="fixed top-0 left-0 right-0 z-[100] text-center text-xs py-1.5 font-medium md:left-20"
+          style={{background:'linear-gradient(to right,#ED8E89,#F7B685,#F3EBA5,#94C691,#9BD6D9,#B4A8E0)', color:'#3D2B1F'}}>
+          ☕ Server waking up — hang tight...
+        </div>
+      )}
+
       {/* Mobile top bar */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden" style={{background:'#2A0E58', borderBottom:'4px solid #6A3090'}}>
         <div className="pride-stripe" />
