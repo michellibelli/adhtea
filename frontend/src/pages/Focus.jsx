@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getToday, completeTask, snoozeTask, deferTask, getBonusTasks } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
+import { logout } from '../api/auth'
 import SnoozeSheet from '../components/SnoozeSheet'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import HamburgerMenu from '../components/HamburgerMenu'
 
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 const TYPE_LABELS = { task: 'Task', appointment: 'Appointment', routine: 'Routine', note: 'Note' }
@@ -13,23 +15,37 @@ const PRIORITY_BADGE = {
   high:   'bg-amber-500/20 text-amber-400',
 }
 
+function isImminent(task) {
+  if (task.task_type !== 'appointment' || !task.due_time) return false
+  const [h, m] = task.due_time.split(':').map(Number)
+  const now = new Date()
+  const appt = new Date(now)
+  appt.setHours(h, m, 0, 0)
+  const diffMin = (appt - now) / 60000
+  return diffMin <= 5
+}
+
 function pickNext(tasks) {
   const copy = [...tasks]
   copy.sort((a, b) => {
-    if (a.task_type === 'appointment' && a.due_time && !(b.task_type === 'appointment' && b.due_time)) return -1
-    if (b.task_type === 'appointment' && b.due_time && !(a.task_type === 'appointment' && a.due_time)) return 1
+    const aImm = isImminent(a)
+    const bImm = isImminent(b)
+    if (aImm && !bImm) return -1
+    if (bImm && !aImm) return 1
     return (a.sort_order ?? 999) - (b.sort_order ?? 999)
   })
   return copy[0] ?? null
 }
 
-export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
+export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [capacity,    setCapacity]    = useState(null)
   const [loading,     setLoading]     = useState(true)
   const [leaving,     setLeaving]     = useState(false)
+  const [celebrate,   setCelebrate]   = useState(false)
   const [showSnooze,  setShowSnooze]  = useState(false)
+  const [showMenu,    setShowMenu]    = useState(false)
   const [localDone,   setLocalDone]   = useState(0)
 
   const fetchAll = useCallback(async () => {
@@ -70,6 +86,8 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
   async function handleComplete() {
     if (!task) return
     setLocalDone((n) => n + 1)
+    setCelebrate(true)
+    setTimeout(() => setCelebrate(false), 900)
     if (isBonusMode) {
       setLeaving(true)
       await completeTask(task.id)
@@ -116,8 +134,8 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
     return (
       <div className="aria-page flex items-center justify-center">
         <div className="px-6 pb-32 md:pb-8 max-w-sm w-full text-center">
-          <div className="text-4xl mb-4">✦</div>
-          <h2 className="text-lg font-semibold text-ui-text mb-2">
+          <div className="text-4xl mb-4 sparkle" style={{color:'#C490D1'}}>✦</div>
+          <h2 className="text-sm pixel-heading text-ui-text mb-2">
             {totalDone > 0 ? `${totalDone} done today` : 'Nothing scheduled'}
           </h2>
           <p className="text-sm text-ui-subtext mb-6">
@@ -145,7 +163,7 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
         {/* Header row */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <h1 className={`text-sm font-semibold tracking-wide uppercase ${
+            <h1 className={`text-[10px] font-pixel ${
               isBonusMode ? 'text-amber-400' : 'text-ui-subtext'
             }`}>
               {isBonusMode ? 'Bonus' : 'Now'}
@@ -168,6 +186,17 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
                 See all →
               </button>
             )}
+            {onNavigate && (
+              <button
+                onClick={() => setShowMenu(true)}
+                className="text-ui-subtext hover:text-ui-text transition-colors p-1 md:hidden"
+                aria-label="Menu"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                  <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
@@ -181,11 +210,11 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
             ? 'rounded-2xl ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
             : ''
           }>
-            <Card className="px-6 py-8">
+            <Card className="px-8 py-10 min-h-[220px]">
 
               {/* Type + priority */}
-              <div className="flex items-center gap-2 mb-5">
-                <span className={`text-base ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
+              <div className="flex items-center gap-2 mb-7">
+                <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
                   {TYPE_ICONS[task.task_type] || '✦'}
                 </span>
                 <span className="text-xs text-ui-subtext">{TYPE_LABELS[task.task_type] || 'Task'}</span>
@@ -201,17 +230,23 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
                 )}
               </div>
 
-              <h2 className="text-xl font-semibold text-ui-text leading-snug mb-3">
+              <h2 className="text-3xl font-bold text-ui-text leading-snug mb-3">
                 {task.title}
               </h2>
 
               {(task.due_time || task.due_date) && (
-                <div className="flex items-center gap-1.5 mb-3 text-sm text-ui-subtext">
-                  <span>◷</span>
-                  <span>
-                    {task.due_time
-                      ? `${task.due_time}${task.due_date ? ` · ${task.due_date}` : ''}`
-                      : task.due_date}
+                <div className="flex items-center gap-1.5 mb-3">
+                  <span className={`inline-flex items-center gap-1.5 text-base px-2.5 py-0.5 rounded-full ${
+                    isImminent(task)
+                      ? 'bg-amber-400/20 text-amber-400'
+                      : 'text-ui-subtext'
+                  }`}>
+                    <span>◷</span>
+                    <span>
+                      {task.due_time
+                        ? `${task.due_time}${task.due_date ? ` · ${task.due_date}` : ''}`
+                        : task.due_date}
+                    </span>
                   </span>
                 </div>
               )}
@@ -233,7 +268,13 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
           </div>
 
           {/* Actions */}
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="mt-4 flex flex-col gap-2 relative">
+            {celebrate && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <span className="text-2xl animate-bounce">✨</span>
+                <span className="ml-2 text-sm font-semibold text-ui-accent">nice!</span>
+              </div>
+            )}
             <Button
               size="lg"
               onClick={handleComplete}
@@ -262,7 +303,7 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
         {remaining > 1 && (
           <div className="flex justify-center gap-1 mt-4">
             {Array.from({ length: Math.min(remaining, 8) }).map((_, i) => (
-              <div key={i} className={`w-1.5 h-1.5 rounded-full ${
+              <div key={i} className={`w-2 h-2 rounded-full ${
                 i === 0
                   ? (isBonusMode ? 'bg-amber-400' : 'bg-ui-accent')
                   : 'bg-ui-border'
@@ -275,6 +316,13 @@ export default function Focus({ onGoToList, onTriage, doneCount = 0 }) {
       </div>
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
+      {showMenu && onNavigate && (
+        <HamburgerMenu
+          onNavigate={onNavigate}
+          onClose={() => setShowMenu(false)}
+          onLogout={() => logout().then(() => window.location.reload())}
+        />
+      )}
     </div>
   )
 }

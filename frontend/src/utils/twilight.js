@@ -1,16 +1,9 @@
-// Maps the current hour to one of four time-of-day theme names.
-// The theme name is applied as data-theme="..." on <html> by ThemeContext.
-// All actual colour values live in index.css — not here.
-
-export const THEME_NAMES = ['dawn', 'morning', 'afternoon', 'evening']
+export const THEME_NAMES = ['adhtea']
 
 export function getTwilightName() {
-  return THEME_NAMES[Math.floor(new Date().getHours() / 6)]
+  return 'adhtea'
 }
 
 export const THEME_LABELS = {
-  dawn: 'Dawn',
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
+  adhtea: 'adhTea',
 }

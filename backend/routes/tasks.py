@@ -274,12 +274,24 @@ def create_task(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    today = date.today()
+    due_today = body.due_date is not None and body.due_date <= today
+
+    if due_today:
+        existing_count = (
+            db.query(Task)
+            .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
+            .count()
+        )
+
     task = Task(
         owner_id=current_user.id,
         title=body.title.strip(),
         notes=body.notes,
         task_type=body.task_type,
-        status=TaskStatus.inbox,
+        status=TaskStatus.today if due_today else TaskStatus.inbox,
+        scheduled_date=today_start() if due_today else None,
+        sort_order=float(existing_count) if due_today else None,
         actuator_category_id=body.actuator_category_id,
         is_critical=body.is_critical,
         due_date=body.due_date,

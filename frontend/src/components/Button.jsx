@@ -1,16 +1,13 @@
 // Button primitive — all button styles go through here.
-// To restyle buttons app-wide, edit this file only.
-//
 // Variants:
-//   primary  — filled, accent colour (default)
-//   secondary — outlined, transparent fill
+//   primary  — filled lavender with 4px pixel offset shadow (default)
+//   secondary — 4px outlined
 //   ghost    — no border, subtle hover
-//   danger   — red tones for destructive actions
+//   danger   — 4px red border
 
 const BASE = `
   inline-flex items-center justify-center gap-2
-  font-medium rounded-xl
-  transition-all duration-150
+  font-medium rounded-sm
   active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none
   cursor-pointer select-none
 `
@@ -22,10 +19,10 @@ const SIZES = {
 }
 
 const VARIANTS = {
-  primary:   'bg-ui-primary hover:bg-ui-primary-hover text-ui-primary-text',
-  secondary: 'border border-ui-border text-ui-subtext hover:text-ui-accent hover:border-ui-accent/40',
-  ghost:     'text-ui-subtext hover:text-ui-accent',
-  danger:    'border border-red-500/30 text-red-400 hover:bg-red-500/10',
+  primary:   'bg-ui-primary hover:bg-ui-primary-hover text-ui-primary-text pixel-btn',
+  secondary: 'border-4 border-ui-border text-ui-subtext hover:text-ui-accent hover:border-ui-accent/60 transition-colors duration-150',
+  ghost:     'text-ui-subtext hover:text-ui-accent transition-colors duration-150',
+  danger:    'border-4 border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors duration-150',
 }
 
 export default function Button({

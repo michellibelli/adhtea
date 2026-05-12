@@ -130,7 +130,8 @@ export default function Capture() {
   const [taskType, setTaskType] = useState('task')
   const [form, setForm]         = useState(BLANK)
   const [saving, setSaving]     = useState(false)
-  const [saved, setSaved]       = useState(null)  // { type } for success flash
+  const [saved, setSaved]       = useState(null)
+  const [error, setError]       = useState(null)
   const titleRef = useRef(null)
 
   useEffect(() => { titleRef.current?.focus() }, [])
@@ -146,6 +147,7 @@ export default function Capture() {
     e.preventDefault()
     if (!isValid(taskType, form)) return
     setSaving(true)
+    setError(null)
     try {
       if (taskType === 'routine') {
         const payload = {
@@ -159,6 +161,8 @@ export default function Capture() {
         await createRoutine(payload)
         setSaved('routine')
       } else {
+        const today = new Date().toISOString().split('T')[0]
+        const dueToday = form.due_date && form.due_date <= today
         const payload = {
           title: form.title.trim(),
           task_type: taskType,
@@ -170,12 +174,13 @@ export default function Capture() {
           tags: form.tags.trim() || undefined,
         }
         await createTask(payload)
-        setSaved(taskType)
+        setSaved(dueToday ? 'today' : taskType)
       }
       reset()
-      setTimeout(() => setSaved(null), 2000)
+      setTimeout(() => setSaved(null), 2500)
     } catch (err) {
       console.error(err)
+      setError('Could not save — check connection and try again.')
     } finally {
       setSaving(false)
     }
@@ -186,6 +191,8 @@ export default function Capture() {
 
   const successMsg = saved === 'routine'
     ? '↻ Routine saved — appears in your daily tasks'
+    : saved === 'today'
+    ? '✦ Added to today — go to Focus to see it'
     : saved
     ? '✦ Captured — in your inbox for triage'
     : ''
@@ -357,6 +364,13 @@ export default function Capture() {
         <div className={`mt-5 text-center text-sm font-medium text-ui-accent transition-opacity duration-300 ${saved ? 'opacity-100' : 'opacity-0'}`}>
           {successMsg}
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mt-3 text-center text-sm font-medium text-red-400">
+            {error}
+          </div>
+        )}
 
       </div>
     </div>

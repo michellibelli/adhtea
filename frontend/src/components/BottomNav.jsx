@@ -1,105 +1,133 @@
-const CAPTURE_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-    <circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+// Shared SVG gradient — defined once, referenced by all icons via url(#navRainbow)
+const GradientDef = () => (
+  <svg width="0" height="0" className="absolute overflow-hidden">
+    <defs>
+      <linearGradient id="navRainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%"   stopColor="#F06B9A"/>
+        <stop offset="20%"  stopColor="#F7A165"/>
+        <stop offset="40%"  stopColor="#F0E07A"/>
+        <stop offset="60%"  stopColor="#7BC97A"/>
+        <stop offset="80%"  stopColor="#6DC8CC"/>
+        <stop offset="100%" stopColor="#9D8FD6"/>
+      </linearGradient>
+    </defs>
+  </svg>
+)
+
+const S = 'url(#navRainbow)'
+
+const TeacupIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+    <path d="M8 7 C8 5.5 9 4.5 8 3"/>
+    <path d="M12 6 C12 4.5 13 3.5 12 2"/>
+    <path d="M4 9h16l-2 9H6z"/>
+    <path d="M18 11a3 3 0 0 1 0 5"/>
+    <line x1="2" y1="20" x2="22" y2="20"/>
+  </svg>
+)
+
+const SunIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" className="w-8 h-8">
+    <circle cx="12" cy="12" r="4"/>
+    <line x1="12" y1="2"    x2="12" y2="5"/>
+    <line x1="12" y1="19"   x2="12" y2="22"/>
+    <line x1="2"  y1="12"   x2="5"  y2="12"/>
+    <line x1="19" y1="12"   x2="22" y2="12"/>
+    <line x1="5.64"  y1="5.64"  x2="7.76"  y2="7.76"/>
+    <line x1="16.24" y1="16.24" x2="18.36" y2="18.36"/>
+    <line x1="5.64"  y1="18.36" x2="7.76"  y2="16.24"/>
+    <line x1="16.24" y1="7.76"  x2="18.36" y2="5.64"/>
+  </svg>
+)
+
+const MoonIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    <circle cx="18" cy="6" r="0.8" fill={S} stroke="none"/>
+    <circle cx="21" cy="9" r="0.6" fill={S} stroke="none"/>
+  </svg>
+)
+
+const HeartSparkleIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    <line x1="12" y1="10" x2="12" y2="14" strokeWidth={1.5} opacity="0.8"/>
+    <line x1="10" y1="12" x2="14" y2="12" strokeWidth={1.5} opacity="0.8"/>
+  </svg>
+)
+
+const FlowerIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+    <ellipse cx="12" cy="7"  rx="2.5" ry="3.5"/>
+    <ellipse cx="17" cy="12" rx="3.5" ry="2.5"/>
+    <ellipse cx="12" cy="17" rx="2.5" ry="3.5"/>
+    <ellipse cx="7"  cy="12" rx="3.5" ry="2.5"/>
+    <circle  cx="12" cy="12" r="2.5" fill={S} fillOpacity="0.3" stroke={S}/>
   </svg>
 )
 
 const MOBILE_NAV_ITEMS = [
-  {
-    id: 'routines',
-    label: 'Routines',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-      </svg>
-    ),
-  },
-  {
-    id: 'selfcare',
-    label: 'Log',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'settings',
-    label: '',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-      </svg>
-    ),
-  },
+  { id: 'routines', label: 'Routines', icon: <MoonIcon /> },
+  { id: 'selfcare', label: 'Log',      icon: <HeartSparkleIcon /> },
+  { id: 'settings', label: '',         icon: <FlowerIcon /> },
 ]
 
 const DESKTOP_NAV_ITEMS = [
-  {
-    id: 'capture',
-    label: 'Capture',
-    icon: CAPTURE_ICON,
-  },
-  {
-    id: 'today',
-    label: 'Today',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-    ),
-  },
+  { id: 'capture', label: 'Capture', icon: <TeacupIcon /> },
+  { id: 'today',   label: 'Today',   icon: <SunIcon /> },
   ...MOBILE_NAV_ITEMS,
 ]
 
 export default function BottomNav({ active, onNavigate, onCapture }) {
   return (
     <>
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch border-t border-ui-nav-border bg-ui-nav backdrop-blur-md pb-safe md:hidden">
-        {MOBILE_NAV_ITEMS.map((item) => {
-          const isActive = active === item.id
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 px-1 min-h-[60px] transition-colors duration-150 ${isActive ? 'text-ui-accent' : 'text-ui-subtext'}`}
-            >
-              {item.icon}
-              <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
-            </button>
-          )
-        })}
-      </nav>
-
       {/* Mobile FAB — capture */}
       <button
         onClick={onCapture}
-        className="fixed bottom-[76px] right-4 z-50 w-14 h-14 rounded-full bg-ui-accent shadow-lg flex items-center justify-center text-white active:scale-95 transition-transform md:hidden"
+        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
+        style={{ background: 'linear-gradient(135deg, #C490D1, #B4A8E0)' }}
         aria-label="Capture"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
-          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="w-6 h-6">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
 
-      {/* Desktop sidebar */}
-      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r border-ui-nav-border bg-ui-nav backdrop-blur-md pt-6 pb-6 gap-2">
-        <div className="text-xs font-bold tracking-widest mb-4 text-ui-accent">ARIA</div>
+      {/* Desktop sidebar — night sky */}
+      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-[#6A3090] bg-[#2A0E58] pt-6 pb-6 gap-1">
+        <GradientDef />
+
+        {/* Pride stripe top */}
+        <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'4px'}} />
+
+        {/* Logo */}
+        <div className="mb-4 mt-1">
+          <img src="/adhTeaLogo.png" alt="adhTea" className="w-18 object-contain" style={{imageRendering:'pixelated', width:'72px'}}/>
+        </div>
+
         {DESKTOP_NAV_ITEMS.map((item) => {
           const isActive = active === item.id
           return (
             <button
               key={item.id}
               onClick={() => item.id === 'capture' ? onCapture() : onNavigate(item.id)}
-              className={`w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-colors duration-150 ${isActive ? 'text-ui-accent border-r-2 border-ui-accent/40' : 'text-ui-subtext'}`}
+              className="w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-all duration-150"
+              style={{ opacity: isActive ? 1 : 0.45 }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.opacity = '0.75' }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.45' }}
             >
               {item.icon}
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[9px] font-medium" style={{color: isActive ? '#E0B8F0' : '#9A6EB8'}}>
+                {item.label}
+              </span>
             </button>
           )
         })}
+
+        {/* Sparkle footer */}
+        <div className="mt-auto flex flex-col items-center gap-1">
+          <span className="sparkle text-xs" style={{color:'#9D8FD6', animationDelay:'1.4s'}}>✧</span>
+        </div>
       </nav>
     </>
   )

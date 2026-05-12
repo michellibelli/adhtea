@@ -2,139 +2,149 @@
 
 /* =============================================================================
    ARIA Design Tokens
-
-   All colours live here. To restyle the whole app:
-   1. Tweak values in the [data-theme="..."] blocks below.
-   2. To add a new token, add it to @theme inline AND all four theme blocks.
-   Never hardcode colours in components — always use the ui-* utility classes.
+   All colours live here. Tweak values in [data-theme="adhtea"] to restyle.
+   Never hardcode colours in components — use ui-* utilities.
    ============================================================================= */
 
 @theme inline {
-  /* Surface — cards, panels, sheets */
   --color-ui-surface:       var(--aria-surface);
   --color-ui-border:        var(--aria-border);
-
-  /* Text */
   --color-ui-text:          var(--aria-text);
   --color-ui-subtext:       var(--aria-subtext);
   --color-ui-accent:        var(--aria-accent);
-
-  /* Primary action (buttons, active states) */
   --color-ui-primary:       var(--aria-primary);
   --color-ui-primary-hover: var(--aria-primary-hover);
   --color-ui-primary-text:  var(--aria-primary-text);
-
-  /* Navigation bar */
   --color-ui-nav:           var(--aria-nav);
   --color-ui-nav-border:    var(--aria-nav-border);
-
-  /* Inputs */
   --color-ui-input:         var(--aria-input);
   --color-ui-input-border:  var(--aria-input-border);
   --color-ui-input-focus:   var(--aria-input-focus);
-
-  /* Badges / chips */
   --color-ui-badge:         var(--aria-badge);
   --color-ui-badge-text:    var(--aria-badge-text);
+  --font-pixel: 'Press Start 2P', monospace;
 }
 
 /* =============================================================================
-   Per-theme variable definitions
-   Applied via data-theme="dawn|morning|afternoon|evening" on <html>
+   adhTea design system — queer pixel cozy palette
    ============================================================================= */
 
-[data-theme="dawn"] {
-  --aria-surface:       oklch(25% 0.02 260 / 80%);
-  --aria-border:        oklch(35% 0.03 260 / 60%);
-  --aria-text:          oklch(93% 0.01 260);
-  --aria-subtext:       oklch(62% 0.02 260);
-  --aria-accent:        oklch(68% 0.18 270);
-  --aria-primary:       oklch(58% 0.20 270);
-  --aria-primary-hover: oklch(65% 0.20 270);
-  --aria-primary-text:  oklch(100% 0 0);
-  --aria-nav:           oklch(18% 0.02 260 / 95%);
-  --aria-nav-border:    oklch(30% 0.03 260);
-  --aria-input:         oklch(22% 0.02 260);
-  --aria-input-border:  oklch(38% 0.03 260);
-  --aria-input-focus:   oklch(58% 0.20 270);
-  --aria-badge:         oklch(28% 0.10 270 / 60%);
-  --aria-badge-text:    oklch(72% 0.15 270);
-}
+[data-theme="adhtea"] {
+  --pride-pink:    #F06B9A;
+  --pride-peach:   #F7A165;
+  --pride-yellow:  #F0E07A;
+  --pride-green:   #7BC97A;
+  --pride-aqua:    #6DC8CC;
+  --pride-lavender:#9D8FD6;
 
-[data-theme="morning"] {
-  --aria-surface:       oklch(100% 0 0 / 80%);
-  --aria-border:        oklch(88% 0.04 15 / 60%);
-  --aria-text:          oklch(22% 0.01 260);
-  --aria-subtext:       oklch(50% 0.02 260);
-  --aria-accent:        oklch(55% 0.22 15);
-  --aria-primary:       oklch(55% 0.22 15);
-  --aria-primary-hover: oklch(62% 0.22 15);
-  --aria-primary-text:  oklch(100% 0 0);
-  --aria-nav:           oklch(100% 0 0 / 95%);
-  --aria-nav-border:    oklch(88% 0.04 15);
-  --aria-input:         oklch(100% 0 0);
-  --aria-input-border:  oklch(82% 0.06 15);
-  --aria-input-focus:   oklch(55% 0.22 15);
-  --aria-badge:         oklch(94% 0.04 15);
-  --aria-badge-text:    oklch(45% 0.18 15);
-}
-
-[data-theme="afternoon"] {
-  --aria-surface:       oklch(100% 0 0 / 80%);
-  --aria-border:        oklch(88% 0.05 160 / 60%);
-  --aria-text:          oklch(22% 0.01 260);
-  --aria-subtext:       oklch(50% 0.02 260);
-  --aria-accent:        oklch(48% 0.18 175);
-  --aria-primary:       oklch(48% 0.18 175);
-  --aria-primary-hover: oklch(55% 0.18 175);
-  --aria-primary-text:  oklch(100% 0 0);
-  --aria-nav:           oklch(100% 0 0 / 95%);
-  --aria-nav-border:    oklch(88% 0.05 160);
-  --aria-input:         oklch(100% 0 0);
-  --aria-input-border:  oklch(82% 0.07 160);
-  --aria-input-focus:   oklch(48% 0.18 175);
-  --aria-badge:         oklch(94% 0.05 175);
-  --aria-badge-text:    oklch(38% 0.15 175);
-}
-
-[data-theme="evening"] {
-  --aria-surface:       oklch(22% 0.05 300 / 80%);
-  --aria-border:        oklch(32% 0.07 300 / 60%);
-  --aria-text:          oklch(92% 0.02 300);
-  --aria-subtext:       oklch(62% 0.05 300);
-  --aria-accent:        oklch(68% 0.18 300);
-  --aria-primary:       oklch(58% 0.20 300);
-  --aria-primary-hover: oklch(65% 0.20 300);
-  --aria-primary-text:  oklch(100% 0 0);
-  --aria-nav:           oklch(16% 0.05 300 / 95%);
-  --aria-nav-border:    oklch(28% 0.07 300);
-  --aria-input:         oklch(20% 0.05 300);
-  --aria-input-border:  oklch(35% 0.07 300);
-  --aria-input-focus:   oklch(58% 0.20 300);
-  --aria-badge:         oklch(25% 0.10 300 / 60%);
-  --aria-badge-text:    oklch(72% 0.15 300);
+  --aria-surface:       #FFFBF0;
+  --aria-border:        #C4A8D4;
+  --aria-text:          #2A0F40;
+  --aria-subtext:       #7A5090;
+  --aria-accent:        #C490D1;
+  --aria-primary:       #B4A8E0;
+  --aria-primary-hover: #9A8CC8;
+  --aria-primary-text:  #2A0F40;
+  --aria-nav:           #130828;
+  --aria-nav-border:    #4A2068;
+  --aria-input:         #FFFBF0;
+  --aria-input-border:  #C4A8D4;
+  --aria-input-focus:   #C490D1;
+  --aria-badge:         #F7A165;
+  --aria-badge-text:    #2A0F40;
 }
 
 /* =============================================================================
-   Page gradient backgrounds
-   Used as .aria-page on the root div of each screen
+   Page background — pixel dawn sky + tiled star/cloud texture
    ============================================================================= */
 
 .aria-page {
   min-height: 100dvh;
 }
 
-[data-theme="dawn"] .aria-page {
-  background: linear-gradient(to bottom, oklch(14% 0.03 260), oklch(18% 0.08 270), oklch(14% 0.03 260));
+[data-theme="adhtea"] .aria-page {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='14' y='7' width='2' height='6' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='12' y='9' width='6' height='2' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='84' y='25' width='2' height='10' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='80' y='29' width='10' height='2' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='39' y='62' width='2' height='6' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='37' y='64' width='6' height='2' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='99' y='86' width='2' height='4' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='98' y='87' width='4' height='2' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='19' y='96' width='2' height='8' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='16' y='99' width='8' height='2' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='59' y='38' width='2' height='4' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='58' y='39' width='4' height='2' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='109' y='52' width='2' height='6' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='107' y='54' width='6' height='2' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='50' y='19' width='12' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='53' y='16' width='6' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='55' y='20' width='4' height='2' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='2' y='74' width='10' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='4' y='72' width='5' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='75' y='10' width='2' height='2' fill='rgba(247,161,101,0.32)'/%3E%3Crect x='30' y='42' width='2' height='2' fill='rgba(196,144,209,0.32)'/%3E%3Crect x='65' y='88' width='2' height='2' fill='rgba(240,107,154,0.28)'/%3E%3Crect x='110' y='15' width='2' height='2' fill='rgba(109,200,204,0.3)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #DFC8FF 0%, #F5C0F2 22%, #FFD0C0 50%, #FFE8C0 72%, #FFFBF0 100%);
+  background-size: 120px 120px, 100%;
 }
-[data-theme="morning"] .aria-page {
-  background: linear-gradient(to bottom, oklch(97% 0.02 15), oklch(97% 0.02 40), oklch(97% 0.02 60));
+
+[data-theme="adhtea"] body {
+  background: #DFC8FF;
 }
-[data-theme="afternoon"] .aria-page {
-  background: linear-gradient(to bottom, oklch(96% 0.03 160), oklch(96% 0.03 185), oklch(96% 0.03 200));
+
+/* =============================================================================
+   Pixel UI utilities — Stardew-style offset borders (doubled)
+   ============================================================================= */
+
+.pixel-card {
+  position: relative;
+  overflow: hidden;
+  border: 4px solid var(--aria-border);
+  box-shadow: 4px 4px 0 0 #7A5090, inset 0 0 0 2px rgba(196,144,209,0.25);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
+    #F0EAFF !important;
+  background-size: 200px 200px, 100% !important;
 }
-[data-theme="evening"] .aria-page {
-  background: linear-gradient(to bottom, oklch(16% 0.06 300), oklch(14% 0.08 310), oklch(13% 0.06 270));
+
+.pixel-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
+  z-index: 1;
+}
+
+.pixel-btn {
+  border: 4px solid var(--aria-border) !important;
+  box-shadow: 3px 3px 0 0 #7A5090;
+  transition: box-shadow 80ms, transform 80ms !important;
+}
+.pixel-btn:hover {
+  box-shadow: 1px 1px 0 0 #7A5090;
+  transform: translate(2px, 2px);
+}
+.pixel-btn:active {
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}
+
+/* =============================================================================
+   Pixel heading — Press Start 2P for section titles only
+   ============================================================================= */
+
+.pixel-heading {
+  font-family: 'Press Start 2P', monospace;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+}
+
+/* =============================================================================
+   Sparkle glow pulse
+   ============================================================================= */
+
+@keyframes sparkle-pulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px currentColor; }
+  50%       { opacity: 0.7; text-shadow: 0 0 20px currentColor; }
+}
+.sparkle { animation: sparkle-pulse 2.8s ease-in-out infinite; }
+
+/* =============================================================================
+   Pride gradient bar
+   ============================================================================= */
+
+.pride-stripe {
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(to right,
+    #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6
+  );
 }
 
 /* =============================================================================
@@ -154,5 +164,4 @@ html { scroll-behavior: smooth; }
 
 button, a { -webkit-tap-highlight-color: transparent; }
 
-/* Safe area inset for notched phones */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }

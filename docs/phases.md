@@ -128,6 +128,65 @@
 
 ---
 
+## Phase 3.6 — Navigation Overhaul + Task Intelligence ✅ COMPLETE
+
+*Not in original plan — added based on real-use feedback after first live session.*
+
+### Built
+
+**Navigation redesign**
+- App always opens to Focus (home) — no auto-triage launch
+- BottomNav mobile: Routines | Log | ☰ (hamburger, no label) + FAB for capture
+- BottomNav desktop: sidebar unchanged
+- Triage moved to Settings → "Triage inbox"
+- "Triage ↻" shortcut remains on Focus header
+
+**Triage overhaul — one item at a time**
+- Shows one card at a time (large, 2xl title), not full list
+- "→ Today" schedules immediately
+- Defer buttons (Tomorrow / End of week / Next week / Pick date) set `due_date` — task stays inbox, hidden until that date arrives
+- "Snooze 1 month" is the only true snooze (hides task completely)
+- Directional slide animation (Today → right, defer ← left)
+- TriageCard also has inline pencil-edit mode
+
+**Task scheduling fixes**
+- `schedule_today` uses `today_start()` (local midnight) for `scheduled_date` — fixes timezone filter mismatch that caused today's tasks to not appear in Focus
+- `promote_due_tasks()` — runs on every `GET /tasks/today` load; auto-promotes inbox tasks with `due_date <= today` into the Today list without requiring re-triage
+- `defer_task` clears `due_date` to prevent deferred tasks from immediately re-promoting
+- Inbox filter hides tasks with `due_date > today` — they surface on their scheduled date
+- Routine instances auto-generate with `status=today` (skip triage, appear directly in Focus)
+- Stale routine instances soft-deleted by carry_forward (not sent to inbox)
+
+**Bonus mode (Focus)**
+- Activates when today's task list is fully cleared
+- Shows all future-dated inbox tasks + snoozed tasks (ordered by date)
+- Goldenrod/amber UI: "Bonus" header, amber ring border on card, amber progress dots
+- "Skip" button (local remove, no API) instead of "Back to inbox"
+- Done ✓ button turns amber
+
+**AllTasks page (consolidated search + waiting)**
+- Accessible from Settings → "All tasks"
+- Filter bar (client-side, instant)
+- Each row: checkbox, type icon, title+status, date pill (tap → inline date picker + Clear), snooze moon icon (green ring when active)
+- Snooze toggle: ON = 1 month from now, OFF = unsnooze
+- Batch actions (2+ selected): sticky bubble bar sticks 10px below mobile header (`top-[66px]`)
+  - "Snooze (N)" amber bubble — snooze or unsnooze all selected
+  - "Date (N)" accent bubble — expands inline date picker within sticky bar
+- Optimistic local updates (no full refetch after edits)
+
+**New backend endpoints**
+- `GET /tasks/bonus` — future inbox (non-routine) + snoozed tasks
+- `GET /tasks/search?q=` — case-insensitive title+notes search
+- `GET /tasks/backlog` — all active tasks for AllTasks page
+
+**Deployment prep**
+- `backend/Procfile` for Railway
+- `psycopg2-binary` added to requirements.txt
+- `frontend/vercel.json` with SPA rewrites
+- database.py already supports `DATABASE_URL` env var (SQLite dev / PostgreSQL prod)
+
+---
+
 
 
 ### To Build
