@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn } from './api/client'
+import { isLoggedIn, likelySleeping } from './api/client'
+import WakeScreen from './components/WakeScreen'
 import { getMe, logout } from './api/auth'
 import { getTodayLog } from './api/selfcare'
 import Login from './pages/Login'
@@ -44,19 +45,6 @@ function AppShell() {
   const [carriedOver, setCarriedOver] = useState(false)
   const [ready, setReady]             = useState(false)
   const [showEOD, setShowEOD]         = useState(false)
-  const [sleeping, setSleeping]       = useState(false)
-
-  useEffect(() => {
-    const onSleeping = () => setSleeping(true)
-    const onAwake    = () => setSleeping(false)
-    window.addEventListener('api:sleeping', onSleeping)
-    window.addEventListener('api:awake',    onAwake)
-    return () => {
-      window.removeEventListener('api:sleeping', onSleeping)
-      window.removeEventListener('api:awake',    onAwake)
-    }
-  }, [])
-
   useEffect(() => {
     getMe()
       .then(async (u) => {
@@ -92,14 +80,6 @@ function AppShell() {
 
   return (
     <div className="min-h-screen">
-      {/* Sleeping banner */}
-      {sleeping && (
-        <div className="fixed top-0 left-0 right-0 z-[100] text-center text-xs py-1.5 font-medium md:left-20"
-          style={{background:'linear-gradient(to right,#ED8E89,#F7B685,#F3EBA5,#94C691,#9BD6D9,#B4A8E0)', color:'#3D2B1F'}}>
-          ☕ Server waking up — hang tight...
-        </div>
-      )}
-
       {/* Mobile top bar */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden" style={{background:'#2A0E58', borderBottom:'4px solid #6A3090'}}>
         <div className="pride-stripe" />
@@ -144,7 +124,17 @@ function AppShell() {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(isLoggedIn())
+  const [authed, setAuthed]     = useState(isLoggedIn())
+  const [warming, setWarming]   = useState(() => isLoggedIn() && likelySleeping())
+
+  if (warming) {
+    return (
+      <ThemeProvider>
+        <WakeScreen onReady={() => setWarming(false)} />
+      </ThemeProvider>
+    )
+  }
+
   return (
     <ThemeProvider>
       {authed ? <AppShell /> : <Login onLogin={() => setAuthed(true)} />}
