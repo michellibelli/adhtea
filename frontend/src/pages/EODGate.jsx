@@ -116,11 +116,11 @@ export default function EODGate({ onComplete }) {
     setSaving(true)
     try {
       await upsertLog({ mood })
+      localStorage.setItem('aria_last_log_date', new Date().toISOString().split('T')[0])
       const s = await getDailySummary()
       setSummary(s)
     } catch (err) {
       console.error(err)
-      // Don't block the user if API fails
       onComplete()
     } finally {
       setSaving(false)
