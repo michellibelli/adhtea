@@ -3,6 +3,7 @@ import { warmUp } from '../api/client'
 import { createTask } from '../api/tasks'
 
 const PRIDE = 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)'
+const TOTAL_WAIT = 28  // ~max seconds across all retry delays
 
 const DIARY_PROMPTS = [
   'How are you feeling right now?',
@@ -17,10 +18,10 @@ function toDateStr(d) {
 }
 
 function getPromptConfig() {
-  const lastLog  = localStorage.getItem('aria_last_log_date')  // 'YYYY-MM-DD' or null
-  const today    = toDateStr(new Date())
-  const yesterday= toDateStr(new Date(Date.now() - 86400000))
-  const hour     = new Date().getHours()
+  const lastLog   = localStorage.getItem('aria_last_log_date')
+  const today     = toDateStr(new Date())
+  const yesterday = toDateStr(new Date(Date.now() - 86400000))
+  const hour      = new Date().getHours()
   const isMorning = hour >= 5 && hour < 12
 
   if (lastLog === today) {
@@ -31,7 +32,6 @@ function getPromptConfig() {
       noteTitle:   '📓 Diary entry',
     }
   }
-
   if (isMorning && lastLog !== yesterday) {
     return {
       heading:     'No log from yesterday.',
@@ -40,7 +40,6 @@ function getPromptConfig() {
       noteTitle:   '📓 Yesterday recap',
     }
   }
-
   return {
     heading:     'While you wait —',
     prompt:      'What have you done so far today?',
@@ -49,17 +48,13 @@ function getPromptConfig() {
   }
 }
 
-function fmt(s) {
-  const m = Math.floor(s / 60)
-  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
-}
-
 export default function WakeScreen({ onReady }) {
-  const [log,    setLog]    = useState([])
-  const [done,   setDone]   = useState(false)
-  const [secs,   setSecs]   = useState(0)
-  const [entry,  setEntry]  = useState('')
-  const [saving, setSaving] = useState(false)
+  const [log,       setLog]       = useState([])
+  const [serverUp,  setServerUp]  = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const [ready,     setReady]     = useState(false)   // note saved, button live
+  const [countdown, setCountdown] = useState(TOTAL_WAIT)
+  const [entry,     setEntry]     = useState('')
   const config = useRef(getPromptConfig())
 
   function addLog(msg) {
@@ -69,14 +64,17 @@ export default function WakeScreen({ onReady }) {
     }])
   }
 
+  // Countdown — stops when server is up
   useEffect(() => {
-    const id = setInterval(() => setSecs((s) => s + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
+    if (serverUp || countdown <= 0) return
+    const id = setTimeout(() => setCountdown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearTimeout(id)
+  }, [countdown, serverUp])
 
+  // Wake up server
   useEffect(() => {
     warmUp(addLog).then(async () => {
-      setDone(true)
+      setServerUp(true)
       if (entry.trim()) {
         setSaving(true)
         try {
@@ -89,7 +87,7 @@ export default function WakeScreen({ onReady }) {
         } catch (_) { /* non-blocking */ }
         setSaving(false)
       }
-      setTimeout(onReady, 500)
+      setReady(true)
     })
   }, [])
 
@@ -108,32 +106,46 @@ export default function WakeScreen({ onReady }) {
           style={{ imageRendering: 'pixelated' }} />
       </div>
 
-      {/* Server status log */}
+      {/* Status log */}
       <div className="w-full max-w-xs rounded-sm border-2 border-[#E8D8C8] bg-[#FDF8EE] px-4 py-3 font-mono text-xs text-[#7A6152] space-y-1.5 min-h-[64px]">
         {log.map((e, i) => (
           <div key={i} className="flex gap-2 items-start">
             <span className="text-[#C8B8A8] shrink-0">{e.ts}</span>
-            <span className={done && i === log.length - 1 ? 'text-[#94C691] font-medium' : ''}>
+            <span className={serverUp && i === log.length - 1 ? 'text-[#94C691] font-medium' : ''}>
               {e.msg}
             </span>
           </div>
         ))}
-        {!done && (
-          <div className="flex items-center gap-2 pt-0.5">
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#B4A8E0] animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }} />
-              ))}
+
+        {/* Status row: countdown OR ready button */}
+        <div className="pt-1">
+          {!serverUp ? (
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#B4A8E0] animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </div>
+              <span className="text-[#C8B8A8] tabular-nums">
+                {countdown > 0 ? `~${countdown}s remaining` : 'almost there...'}
+              </span>
             </div>
-            <span className="text-[#C8B8A8] tabular-nums">{fmt(secs)}</span>
-          </div>
-        )}
-        {saving && <div className="text-[#B4A8E0]">saving your note...</div>}
+          ) : saving ? (
+            <span className="text-[#B4A8E0]">saving your note...</span>
+          ) : ready ? (
+            <button
+              onClick={onReady}
+              className="mt-1 px-3 py-1.5 rounded-sm border-2 border-[#B4A8E0] bg-[#B4A8E0] text-[#3D2B1F] text-xs font-semibold hover:bg-[#A498D0] hover:border-[#A498D0] active:scale-95 transition-all"
+            >
+              Let's go →
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {/* Log / diary section — hides when done */}
-      {!done && (
+      {/* Diary section — visible while waiting */}
+      {!serverUp && (
         <div className="w-full max-w-xs mt-6">
           <p className="text-[11px] font-semibold text-[#B4A8E0] uppercase tracking-widest mb-1">
             {heading}
