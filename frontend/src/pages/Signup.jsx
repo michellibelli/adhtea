@@ -44,10 +44,8 @@ export default function Signup({ onLogin, onGoLogin }) {
         <img
           src="/adhTeaLogo.png"
           alt="adhTea"
-          style={{
-            width: '220px',
-            filter: 'drop-shadow(0 6px 32px rgba(90,0,120,0.35))',
-          }}
+          className="rounded-3xl"
+          style={{ width: '220px' }}
         />
       </div>
 

@@ -170,8 +170,7 @@ export default function WakeScreen({ onReady }) {
           <img
             src="/adhTeaLogo.png"
             alt="adhTea"
-            className="w-28 object-contain"
-            style={{ imageRendering: 'pixelated' }}
+            className="w-28 object-contain rounded-2xl"
           />
           {/* Steam wisps — positioned above the cup */}
           <div className="absolute" style={{ bottom: '72%', left: '50%', transform: 'translateX(-50%)', width: 60, height: 40 }}>
@@ -229,8 +228,7 @@ export default function WakeScreen({ onReady }) {
           <img
             src="/adhTeaLogo.png"
             alt="adhTea"
-            className="w-16 object-contain opacity-80"
-            style={{ imageRendering: 'pixelated' }}
+            className="w-16 object-contain opacity-80 rounded-xl"
           />
         </div>
 

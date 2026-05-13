@@ -47,11 +47,8 @@ export default function Login({ onLogin, onGoSignup }) {
         <img
           src="/adhTeaLogo.png"
           alt="adhTea"
-          style={{
-            imageRendering: 'pixelated',
-            width: '200px',
-            filter: 'drop-shadow(0 0 24px rgba(196,144,209,0.45))',
-          }}
+          className="rounded-3xl"
+          style={{ width: '220px' }}
         />
       </div>
 

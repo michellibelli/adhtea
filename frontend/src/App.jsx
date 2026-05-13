@@ -111,7 +111,7 @@ function AppShell() {
             onClick={() => setScreen('focus')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <img src="/adhTeaLogo.png" alt="adhTea" className="h-10 object-contain" style={{imageRendering:'pixelated'}}/>
+            <img src="/adhTeaLogo.png" alt="adhTea" className="h-10 w-10 object-contain rounded-lg" />
           </button>
           {user && (
             <span className="text-xs" style={{color:'#6A4080'}}>{user.name}</span>

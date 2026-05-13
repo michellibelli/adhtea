@@ -114,7 +114,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
 
         {/* Logo — home button */}
         <button onClick={() => onNavigate('focus')} className="mb-4 mt-1 hover:opacity-80 transition-opacity" aria-label="Go to Now">
-          <img src="/adhTeaLogo.png" alt="adhTea" className="w-18 object-contain" style={{imageRendering:'pixelated', width:'72px'}}/>
+          <img src="/adhTeaLogo.png" alt="adhTea" className="object-contain rounded-xl" style={{width:'64px'}}/>
         </button>
 
         {DESKTOP_NAV_ITEMS.map((item) => {
