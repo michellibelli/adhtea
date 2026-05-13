@@ -107,12 +107,11 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               key={item.id}
               onClick={() => item.id === 'capture' ? onCapture() : onNavigate(item.id)}
               className="w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-all duration-150"
-              style={{ opacity: isActive ? 1 : 0.45 }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.opacity = '0.75' }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.45' }}
             >
-              {item.icon}
-              <span className="text-[10px]" style={{color:'#FFFFFF', fontWeight: isActive ? 700 : 600, textShadow: '0 1px 3px rgba(0,0,0,0.25)'}}>
+              <span style={{ opacity: isActive ? 1 : 0.5, transition: 'opacity 150ms' }}>
+                {item.icon}
+              </span>
+              <span className="text-[10px]" style={{color:'#FFFFFF', fontWeight: isActive ? 700 : 600, textShadow: '0 1px 3px rgba(0,0,0,0.3)'}}>
                 {item.label}
               </span>
             </button>
