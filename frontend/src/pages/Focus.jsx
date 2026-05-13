@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getToday, completeTask, snoozeTask, deferTask, getBonusTasks } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import { logout } from '../api/auth'
@@ -7,6 +7,21 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
+
+const TEA_PUNS = [
+  "Steeped in success! 🍵",
+  "You're brewtiful! ☕",
+  "That was tea-riffic! ✨",
+  "Oolong way, you did it! 🍃",
+  "Matcha this energy! 💚",
+  "Earl Grey-t work! 👏",
+  "You're on a rolling boil! 🌊",
+  "Chai-ve, that's done! 🫖",
+  "Pekoe-sitively crushing it! 🌸",
+  "You're steep-endous! 🏆",
+  "Infuse-iastic! ☕✨",
+  "No steep too deep! 🌿",
+]
 
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 const TYPE_LABELS = { task: 'Task', appointment: 'Appointment', routine: 'Routine', note: 'Note' }
@@ -43,7 +58,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   const [capacity,    setCapacity]    = useState(null)
   const [loading,     setLoading]     = useState(true)
   const [leaving,     setLeaving]     = useState(false)
-  const [celebrate,   setCelebrate]   = useState(false)
+  const [celebrate,   setCelebrate]   = useState(false)  // false | 'p1' | 'p2' | 'p3'
+  const punRef = useRef('')
   const [showSnooze,  setShowSnooze]  = useState(false)
   const [showMenu,    setShowMenu]    = useState(false)
   const [localDone,   setLocalDone]   = useState(0)
@@ -86,8 +102,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   async function handleComplete() {
     if (!task) return
     setLocalDone((n) => n + 1)
-    setCelebrate(true)
-    setTimeout(() => setCelebrate(false), 900)
+    punRef.current = TEA_PUNS[Math.floor(Math.random() * TEA_PUNS.length)]
+    setCelebrate('p1')
+    setTimeout(() => setCelebrate('p2'), 720)
+    setTimeout(() => setCelebrate('p3'), 1180)
+    setTimeout(() => setCelebrate(false), 4300)
     if (isBonusMode) {
       setLeaving(true)
       await completeTask(task.id)
@@ -160,47 +179,96 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     <div className="aria-page flex flex-col">
       <div className="flex-1 flex flex-col px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
 
-        {/* Header row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <h1 className={`text-[10px] font-pixel ${
-              isBonusMode ? 'text-amber-400' : 'text-ui-subtext'
-            }`}>
-              {isBonusMode ? 'Bonus' : 'Now'}
-            </h1>
-            {onTriage && (
-              <button onClick={onTriage} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
-                Triage ↻
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {totalDone > 0 && (
-              <span className="text-xs text-ui-subtext">{totalDone} done</span>
-            )}
-            <span className="text-xs text-ui-subtext">
-              {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
-            </span>
-            {onGoToList && (
-              <button onClick={onGoToList} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
-                See all →
-              </button>
-            )}
-            {onNavigate && (
-              <button
-                onClick={() => setShowMenu(true)}
-                className="text-ui-subtext hover:text-ui-text transition-colors p-1 md:hidden"
-                aria-label="Menu"
+        {/* Header — replaced by celebration during task complete */}
+        {celebrate ? (
+          <div
+            className="relative overflow-hidden mb-4 cursor-pointer select-none"
+            style={{ height: '52px' }}
+            onClick={() => setCelebrate(false)}
+          >
+            {/* Train: cup + rainbow slide in as a unit */}
+            {celebrate !== 'p3' && (
+              <div
+                className="absolute inset-0 flex items-center"
+                style={{
+                  animation: celebrate === 'p1'
+                    ? 'celebrate-slide-in 720ms ease-out forwards'
+                    : 'none',
+                  transform: celebrate === 'p2' ? 'translateX(0)' : undefined,
+                }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-                  <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              </button>
+                {/* Rainbow strip */}
+                <div
+                  style={{
+                    flex: 1,
+                    height: '6px',
+                    borderRadius: '3px 0 0 3px',
+                    background: 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)',
+                    transformOrigin: 'right center',
+                    animation: celebrate === 'p2'
+                      ? 'celebrate-rainbow-shrink 420ms ease-in forwards'
+                      : 'none',
+                  }}
+                />
+                {/* Cup */}
+                <span style={{ fontSize: '2em', lineHeight: 1, flexShrink: 0, paddingRight: '4px' }}>☕</span>
+              </div>
+            )}
+            {/* Pun text */}
+            {celebrate === 'p3' && (
+              <div
+                className="absolute inset-0 flex items-center justify-center gap-2"
+                style={{ animation: 'celebrate-pun-in 280ms ease-out forwards' }}
+              >
+                <span className="sparkle" style={{ fontSize: '1.1em', color: '#C490D1' }}>✨</span>
+                <span className="text-sm font-semibold" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
+                <span className="sparkle" style={{ fontSize: '1.1em', color: '#C490D1', animationDelay: '0.5s' }}>✨</span>
+              </div>
             )}
           </div>
-        </div>
-
-        <CapacityBar capacity={capacity} compact />
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <h1 className={`text-[10px] font-pixel ${
+                  isBonusMode ? 'text-amber-400' : 'text-ui-subtext'
+                }`}>
+                  {isBonusMode ? 'Bonus' : 'Now'}
+                </h1>
+                {onTriage && (
+                  <button onClick={onTriage} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
+                    Triage ↻
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {totalDone > 0 && (
+                  <span className="text-xs text-ui-subtext">{totalDone} done</span>
+                )}
+                <span className="text-xs text-ui-subtext">
+                  {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
+                </span>
+                {onGoToList && (
+                  <button onClick={onGoToList} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
+                    See all →
+                  </button>
+                )}
+                {onNavigate && (
+                  <button
+                    onClick={() => setShowMenu(true)}
+                    className="text-ui-subtext hover:text-ui-text transition-colors p-1 md:hidden"
+                    aria-label="Menu"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+            <CapacityBar capacity={capacity} compact />
+          </>
+        )}
 
         {/* Card */}
         <div className={`flex-1 flex flex-col justify-center transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`}>
@@ -269,12 +337,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
           {/* Actions */}
           <div className="mt-4 flex flex-col gap-2 relative">
-            {celebrate && (
-              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <span className="text-2xl animate-bounce">✨</span>
-                <span className="ml-2 text-sm font-semibold text-ui-accent">nice!</span>
-              </div>
-            )}
             <Button
               size="lg"
               onClick={handleComplete}
