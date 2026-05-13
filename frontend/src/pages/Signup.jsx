@@ -37,24 +37,22 @@ export default function Signup({ onLogin, onGoLogin }) {
     <div className="min-h-dvh flex flex-col">
       <div className="flex flex-col items-center justify-end pb-10 pt-16 px-6"
         style={{
-          background: 'linear-gradient(180deg, #130828 0%, #2A0E58 65%, #6A3090 100%)',
+          background: 'linear-gradient(180deg, #B858C8 0%, #CC6FD4 55%, #D87FDE 100%)',
           minHeight: '52vh',
         }}
       >
-        <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'4px'}} />
         <img
           src="/adhTeaLogo.png"
           alt="adhTea"
           style={{
-            imageRendering: 'pixelated',
-            width: '200px',
-            filter: 'drop-shadow(0 0 24px rgba(196,144,209,0.45))',
+            width: '220px',
+            filter: 'drop-shadow(0 6px 32px rgba(90,0,120,0.35))',
           }}
         />
       </div>
 
       <div className="flex-1 flex flex-col items-center px-6 pt-8 pb-12"
-        style={{background: 'linear-gradient(180deg, #F5EEFF 0%, #FFFBF0 100%)'}}
+        style={{background: 'linear-gradient(180deg, #F8F0FF 0%, #FFFFFF 100%)'}}
       >
         <div className="w-full max-w-sm">
           <p className="text-sm text-center text-ui-subtext mb-6">Create your account</p>
