@@ -126,7 +126,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
     if (!over || active.id === over.id) return
     const oldIndex = sorted.findIndex(t => t.id === active.id)
     const newIndex = sorted.findIndex(t => t.id === over.id)
-    const reordered = arrayMove(sorted, oldIndex, newIndex)
+    const reordered = arrayMove(sorted, oldIndex, newIndex).map((t, i) => ({ ...t, sort_order: i }))
     setTasks(reordered)
     await reorderTasks(reordered.map(t => t.id))
   }
