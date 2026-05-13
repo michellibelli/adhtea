@@ -114,6 +114,7 @@ class TaskCreate(BaseModel):
     notes: Optional[str] = None
     task_type: TaskType = TaskType.task
     actuator_category_id: Optional[int] = None
+    project_id: Optional[int] = None
     is_critical: bool = False
     due_date: Optional[date] = None
     due_time: Optional[str] = None          # HH:MM
@@ -162,6 +163,7 @@ class TaskResponse(BaseModel):
     assigned_to_id: Optional[int]
     actuator_category_id: Optional[int]
     routine_id: Optional[int]
+    project_id: Optional[int]
     title: str
     notes: Optional[str]
     task_type: TaskType
@@ -322,5 +324,62 @@ class CapacitySnapshotResponse(BaseModel):
     executive_capacitor: float
     overall: float
     computed_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Project
+# ---------------------------------------------------------------------------
+
+class ProjectCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+
+
+class ProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+
+class ProjectGenerateRequest(BaseModel):
+    description: str
+
+
+class ProjectTaskSummary(BaseModel):
+    id: int
+    title: str
+    notes: Optional[str]
+    weight: TaskWeight
+    due_date: Optional[date]
+    status: TaskStatus
+    completed_at: Optional[datetime]
+    project_id: Optional[int]
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    description: Optional[str]
+    status: str
+    created_at: datetime
+    task_count: int
+    done_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectDetailResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    description: Optional[str]
+    status: str
+    created_at: datetime
+    tasks: list[ProjectTaskSummary]
 
     model_config = {"from_attributes": True}

@@ -17,6 +17,7 @@ import SelfCare from './pages/SelfCare'
 import EODGate from './pages/EODGate'
 import Settings from './pages/Settings'
 import AllTasks from './pages/AllTasks'
+import Projects from './pages/Projects'
 import BottomNav from './components/BottomNav'
 import PageProgress from './components/PageProgress'
 import './App.css'
@@ -112,7 +113,7 @@ function AppShell() {
       </div>
 
       <main className="pt-[57px] md:pt-0">
-        {screen === 'capture'  && <Capture />}
+        {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'triage'   && <Triage onTriageDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('triage')} onNavigate={setScreen} />}
         {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTriage={() => setScreen('triage')} />}
@@ -122,6 +123,7 @@ function AppShell() {
         {screen === 'selfcare'  && <SelfCare />}
         {screen === 'settings'  && <Settings onNavigate={setScreen} user={user} />}
         {screen === 'tasks'     && <AllTasks />}
+        {screen === 'projects'  && <Projects onNavigate={setScreen} />}
       </main>
 
       {/* Desktop sign out */}

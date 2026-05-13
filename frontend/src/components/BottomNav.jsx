@@ -66,15 +66,23 @@ const FlowerIcon = () => (
   </svg>
 )
 
+const SproutIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+    <path d="M12 22v-9"/>
+    <path d="M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z"/>
+  </svg>
+)
+
 const MOBILE_NAV_ITEMS = [
+  { id: 'projects', label: 'Projects', icon: <SproutIcon /> },
   { id: 'routines', label: 'Routines', icon: <MoonIcon /> },
   { id: 'selfcare', label: 'Log',      icon: <HeartSparkleIcon /> },
-  { id: 'settings', label: 'Menu',      icon: <FlowerIcon /> },
+  { id: 'settings', label: 'Menu',     icon: <FlowerIcon /> },
 ]
 
 const DESKTOP_NAV_ITEMS = [
-  { id: 'capture', label: 'Capture', icon: <TeacupIcon /> },
-  { id: 'today',   label: 'Today',   icon: <SunIcon /> },
+  { id: 'capture',  label: 'Capture',  icon: <TeacupIcon /> },
+  { id: 'today',    label: 'Today',    icon: <SunIcon /> },
   ...MOBILE_NAV_ITEMS,
 ]
 

@@ -144,6 +144,23 @@ class ActuatorCategory(Base):
 
 
 # ---------------------------------------------------------------------------
+# Project
+# ---------------------------------------------------------------------------
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String(20), default="active", nullable=False)  # active, completed, archived
+    created_at = Column(DateTime, default=utcnow)
+
+    tasks = relationship("Task", back_populates="project", foreign_keys="[Task.project_id]")
+
+
+# ---------------------------------------------------------------------------
 # Task
 # ---------------------------------------------------------------------------
 
@@ -155,6 +172,7 @@ class Task(Base):
     assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # delegation
     actuator_category_id = Column(Integer, ForeignKey("actuator_categories.id"), nullable=True)
     routine_id = Column(Integer, ForeignKey("routines.id"), nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
 
     title = Column(String(500), nullable=False)
     notes = Column(Text, nullable=True)
@@ -190,6 +208,7 @@ class Task(Base):
     owner = relationship("User", back_populates="tasks", foreign_keys=[owner_id])
     assigned_to = relationship("User", foreign_keys=[assigned_to_id])
     actuator_category = relationship("ActuatorCategory")
+    project = relationship("Project", back_populates="tasks", foreign_keys=[project_id])
 
 
 # ---------------------------------------------------------------------------

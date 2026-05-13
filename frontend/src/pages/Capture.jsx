@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createTask } from '../api/tasks'
 import { createRoutine } from '../api/routines'
+import { createProject, generateProjectTasks } from '../api/projects'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
 
@@ -9,6 +10,7 @@ const TASK_TYPES = [
   { id: 'appointment', label: 'Appt',   icon: '◷' },
   { id: 'routine',     label: 'Routine', icon: '↻' },
   { id: 'note',        label: 'Note',    icon: '◈' },
+  { id: 'project',     label: 'Project', icon: '🌱' },
 ]
 
 const LOCATION_TYPES = [
@@ -123,10 +125,10 @@ function isValid(taskType, form) {
     const needsDays = form.frequency === 'weekly' || form.frequency === 'custom'
     return needsDays ? !!form.days_of_week : true
   }
-  return true  // note: just title required
+  return true  // note / project: just title required
 }
 
-export default function Capture() {
+export default function Capture({ onNavigate }) {
   const [taskType, setTaskType] = useState('task')
   const [form, setForm]         = useState(BLANK)
   const [saving, setSaving]     = useState(false)
@@ -160,6 +162,14 @@ export default function Capture() {
         }
         await createRoutine(payload)
         setSaved('routine')
+        reset()
+      } else if (taskType === 'project') {
+        const p = await createProject(form.title.trim(), form.notes.trim() || null)
+        if (form.notes.trim()) {
+          await generateProjectTasks(p.id, form.notes.trim())
+        }
+        onNavigate?.('projects')
+        return
       } else {
         const today = new Date().toISOString().split('T')[0]
         const dueToday = form.due_date && form.due_date <= today
@@ -175,8 +185,8 @@ export default function Capture() {
         }
         await createTask(payload)
         setSaved(dueToday ? 'today' : taskType)
+        reset()
       }
-      reset()
       setTimeout(() => setSaved(null), 2500)
     } catch (err) {
       console.error(err)
@@ -336,8 +346,21 @@ export default function Capture() {
             </FieldRow>
           )}
 
+          {/* ── PROJECT fields ── */}
+          {taskType === 'project' && (
+            <FieldRow label="Describe the project">
+              <Textarea
+                value={form.notes}
+                onChange={(e) => set('notes', e.target.value)}
+                rows={4}
+                placeholder="What does this project involve? AI will break it into daily tasks scheduled starting tomorrow…"
+                autoFocus
+              />
+            </FieldRow>
+          )}
+
           {/* Notes — task / appointment / note only */}
-          {taskType !== 'routine' && (
+          {taskType !== 'routine' && taskType !== 'project' && (
             <FieldRow label="Notes (optional)">
               <Textarea
                 value={form.notes}
@@ -355,7 +378,13 @@ export default function Capture() {
               {taskType === 'routine'     && (needsDays ? 'Days required' : '')}
             </p>
             <Button type="submit" disabled={!valid || saving}>
-              {saving ? '…' : taskType === 'routine' ? 'Save routine' : 'Capture'}
+              {saving
+                ? '…'
+                : taskType === 'routine'
+                  ? 'Save routine'
+                  : taskType === 'project'
+                    ? 'Create project'
+                    : 'Capture'}
             </Button>
           </div>
         </form>

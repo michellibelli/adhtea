@@ -293,6 +293,7 @@ def create_task(
         scheduled_date=today_start() if due_today else None,
         sort_order=float(existing_count) if due_today else None,
         actuator_category_id=body.actuator_category_id,
+        project_id=body.project_id,
         is_critical=body.is_critical,
         due_date=body.due_date,
         due_time=body.due_time,
