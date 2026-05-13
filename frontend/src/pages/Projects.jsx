@@ -43,6 +43,8 @@ export default function Projects({ onNavigate }) {
 
   const [showAddTask,  setShowAddTask]  = useState(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskDue,   setNewTaskDue]   = useState('')
+  const [newTaskSize,  setNewTaskSize]  = useState('medium')
   const [addingTask,   setAddingTask]   = useState(false)
 
   const [editingTitle, setEditingTitle] = useState(null)
@@ -115,8 +117,9 @@ export default function Projects({ onNavigate }) {
     try {
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
-      const due = tomorrow.toISOString().split('T')[0]
-      const task = await createTask({ title: newTaskTitle.trim(), project_id: projectId, due_date: due })
+      const due = newTaskDue || tomorrow.toISOString().split('T')[0]
+      const weight = newTaskSize === 'small' ? 'light' : newTaskSize === 'large' ? 'heavy' : 'medium'
+      const task = await createTask({ title: newTaskTitle.trim(), project_id: projectId, due_date: due, weight })
       setDetail(prev => ({
         ...prev,
         [projectId]: { ...prev[projectId], tasks: [...(prev[projectId]?.tasks || []), task] },
@@ -125,6 +128,8 @@ export default function Projects({ onNavigate }) {
         p.id === projectId ? { ...p, task_count: p.task_count + 1 } : p
       ))
       setNewTaskTitle('')
+      setNewTaskDue('')
+      setNewTaskSize('medium')
       setShowAddTask(null)
     } catch (err) { console.error(err) }
     finally { setAddingTask(false) }
@@ -350,9 +355,9 @@ export default function Projects({ onNavigate }) {
                           </div>
                         ))}
 
-                        {/* Add task inline form */}
+                        {/* Add task form */}
                         {showAddTask === project.id && (
-                          <div className="px-4 py-3 border-b border-ui-border/40 flex gap-2">
+                          <div className="px-4 py-3 border-b border-ui-border/40 space-y-2">
                             <Input
                               value={newTaskTitle}
                               onChange={e => setNewTaskTitle(e.target.value)}
@@ -360,10 +365,38 @@ export default function Projects({ onNavigate }) {
                               onKeyDown={e => e.key === 'Enter' && handleAddTask(project.id)}
                               autoFocus
                             />
-                            <Button size="sm" onClick={() => handleAddTask(project.id)} disabled={!newTaskTitle.trim() || addingTask}>
-                              {addingTask ? '…' : 'Add'}
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setShowAddTask(null)}>✕</Button>
+                            <div className="flex gap-2">
+                              <Input
+                                type="date"
+                                value={newTaskDue}
+                                onChange={e => setNewTaskDue(e.target.value)}
+                                className="flex-1"
+                              />
+                              <div className="flex gap-1">
+                                {[['small','Light'],['medium','Med'],['large','Heavy']].map(([val, lbl]) => (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setNewTaskSize(val)}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                      newTaskSize === val
+                                        ? 'bg-ui-primary text-ui-primary-text border-transparent'
+                                        : 'border-ui-border text-ui-subtext hover:text-ui-accent'
+                                    }`}
+                                  >
+                                    {lbl}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => handleAddTask(project.id)} disabled={!newTaskTitle.trim() || addingTask}>
+                                {addingTask ? '…' : 'Add task'}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => { setShowAddTask(null); setNewTaskTitle(''); setNewTaskDue(''); setNewTaskSize('medium') }}>
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
                         )}
 
@@ -387,25 +420,25 @@ export default function Projects({ onNavigate }) {
                           </div>
                         )}
 
-                        {/* Action links */}
-                        <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <button
-                            onClick={() => { setShowAddTask(project.id); setShowGenerate(null) }}
-                            className="text-xs text-ui-accent hover:opacity-70 transition-opacity"
+                        {/* Action buttons */}
+                        <div className="px-4 py-3 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => { setShowAddTask(project.id === showAddTask ? null : project.id); setShowGenerate(null) }}
                           >
                             + Add task
-                          </button>
-                          <span className="text-ui-border text-xs">·</span>
-                          <button
-                            onClick={() => { setShowGenerate(project.id); setShowAddTask(null); setGenerateDesc(''); setGenError(null) }}
-                            className="text-xs text-ui-accent hover:opacity-70 transition-opacity"
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => { setShowGenerate(project.id === showGenerate ? null : project.id); setShowAddTask(null); setGenerateDesc(''); setGenError(null) }}
                           >
                             ✦ Generate more
-                          </button>
-                          <span className="text-ui-border text-xs">·</span>
+                          </Button>
                           <button
                             onClick={() => handleArchive(project.id)}
-                            className="text-xs text-ui-subtext/40 hover:text-ui-subtext transition-colors"
+                            className="px-2.5 py-1 text-xs text-ui-subtext/40 hover:text-ui-subtext transition-colors"
                           >
                             Archive
                           </button>
