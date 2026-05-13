@@ -11,6 +11,18 @@ const FLOAT_ART = [
   { emoji: '✿',  top: '6%',  left: '52%', size: 16, dur: 4.2, delay: 2.5, rotA: -5, rotB: 5 },
   { emoji: '🍄', top: '50%', left: '55%', size: 20, dur: 5.7, delay: 0.6, rotA: -3, rotB: 6 },
   { emoji: '💜', top: '35%', left: '22%', size: 16, dur: 4.8, delay: 1.9, rotA: -5, rotB: 3 },
+  { emoji: '🫖', top: '3%',  left: '32%', size: 22, dur: 5.0, delay: 0.7, rotA: -4, rotB: 5 },
+  { emoji: '✧',  top: '11%', left: '90%', size: 14, dur: 3.9, delay: 2.2, rotA: -6, rotB: 6 },
+  { emoji: '🌺', top: '23%', left: '2%',  size: 20, dur: 5.6, delay: 1.5, rotA: -5, rotB: 3 },
+  { emoji: '🍵', top: '32%', left: '60%', size: 22, dur: 4.7, delay: 0.2, rotA: -3, rotB: 7 },
+  { emoji: '💫', top: '46%', left: '75%', size: 18, dur: 5.2, delay: 2.8, rotA: -7, rotB: 4 },
+  { emoji: '🌼', top: '63%', left: '28%', size: 20, dur: 6.1, delay: 1.3, rotA: -4, rotB: 5 },
+  { emoji: '🍩', top: '74%', left: '88%', size: 18, dur: 4.5, delay: 0.9, rotA: -5, rotB: 3 },
+  { emoji: '✨', top: '85%', left: '18%', size: 16, dur: 5.4, delay: 2.4, rotA: -3, rotB: 6 },
+  { emoji: '🐝', top: '92%', left: '60%', size: 18, dur: 4.3, delay: 1.7, rotA: -6, rotB: 4 },
+  { emoji: '🌈', top: '17%', left: '18%', size: 22, dur: 5.9, delay: 3.4, rotA: -4, rotB: 5 },
+  { emoji: '🍓', top: '55%', left: '43%', size: 18, dur: 4.8, delay: 0.5, rotA: -5, rotB: 4 },
+  { emoji: '💐', top: '78%', left: '48%', size: 20, dur: 5.3, delay: 2.1, rotA: -3, rotB: 6 },
 ]
 
 export default function AuthPage({ children }) {
