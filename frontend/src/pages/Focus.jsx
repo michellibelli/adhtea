@@ -283,8 +283,15 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           </>
         )}
 
-        {/* Card */}
-        <div className={`flex-1 flex flex-col justify-center transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`}>
+        {/* Card — dunks during celebration, normal fade otherwise */}
+        <div
+          className={`flex-1 flex flex-col justify-center ${
+            celebrate
+              ? ''
+              : `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
+          }`}
+          style={celebrate ? { animation: 'celebrate-card-dunk 680ms ease-in 440ms both' } : undefined}
+        >
 
           {/* Bonus glow ring wrapper */}
           <div className={isBonusMode
