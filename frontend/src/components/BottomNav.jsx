@@ -104,10 +104,10 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
         {/* Pride stripe top */}
         <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'4px'}} />
 
-        {/* Logo */}
-        <div className="mb-4 mt-1">
+        {/* Logo — home button */}
+        <button onClick={() => onNavigate('focus')} className="mb-4 mt-1 hover:opacity-80 transition-opacity" aria-label="Go to Now">
           <img src="/adhTeaLogo.png" alt="adhTea" className="w-18 object-contain" style={{imageRendering:'pixelated', width:'72px'}}/>
-        </div>
+        </button>
 
         {DESKTOP_NAV_ITEMS.map((item) => {
           const isActive = active === item.id
