@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getSignupConfig, signup } from '../api/auth'
+import AuthPage from '../components/AuthPage'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
 
@@ -34,64 +35,47 @@ export default function Signup({ onLogin, onGoLogin }) {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      <div className="flex flex-col items-center justify-end pb-10 pt-16 px-6"
-        style={{
-          background: 'linear-gradient(180deg, #B858C8 0%, #CC6FD4 55%, #D87FDE 100%)',
-          minHeight: '52vh',
-        }}
-      >
-        <img
-          src="/adhTeaLogo.png"
-          alt="adhTea"
-          className="rounded-3xl"
-          style={{ width: '220px' }}
+    <AuthPage>
+      <p className="text-sm text-center text-white/80 mb-6">Create your account</p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
+        <Input
+          placeholder="Username" value={username} onChange={e => setUsername(e.target.value)}
+          required autoCapitalize="none" autoCorrect="off"
         />
-      </div>
+        <Input
+          type="email" placeholder="Email (optional)" value={email}
+          onChange={e => setEmail(e.target.value)}
+        />
+        <Input
+          type="password" placeholder="Password" value={password}
+          onChange={e => setPassword(e.target.value)} required
+        />
+        {alphaRequired && (
+          <Input
+            placeholder="Alpha code" value={alphaCode}
+            onChange={e => setAlphaCode(e.target.value)} required
+          />
+        )}
 
-      <div className="flex-1 flex flex-col items-center px-6 pt-8 pb-12"
-        style={{background: 'linear-gradient(180deg, #F8F0FF 0%, #FFFFFF 100%)'}}
+        {error && (
+          <div className="bg-red-500/20 border border-red-300/40 rounded-xl px-4 py-3 text-center">
+            <p className="text-red-200 text-sm font-medium">{error}</p>
+          </div>
+        )}
+
+        <Button type="submit" size="lg" disabled={loading}>
+          {loading ? '…' : 'Create Account'}
+        </Button>
+      </form>
+
+      <button
+        className="w-full mt-5 text-sm text-white/70 hover:text-white transition-colors text-center"
+        onClick={onGoLogin}
       >
-        <div className="w-full max-w-sm">
-          <p className="text-sm text-center text-ui-subtext mb-6">Create your account</p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
-            <Input
-              placeholder="Username" value={username} onChange={e => setUsername(e.target.value)}
-              required autoCapitalize="none" autoCorrect="off"
-            />
-            <Input
-              type="email" placeholder="Email (optional)" value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-            <Input
-              type="password" placeholder="Password" value={password}
-              onChange={e => setPassword(e.target.value)} required
-            />
-            {alphaRequired && (
-              <Input
-                placeholder="Alpha code" value={alphaCode}
-                onChange={e => setAlphaCode(e.target.value)} required
-              />
-            )}
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-center">
-                <p className="text-red-400 text-sm font-medium">{error}</p>
-              </div>
-            )}
-
-            <Button type="submit" size="lg" disabled={loading}>
-              {loading ? '…' : 'Create Account'}
-            </Button>
-          </form>
-
-          <Button variant="ghost" className="w-full mt-6 text-sm" onClick={onGoLogin}>
-            Already have an account? Sign in
-          </Button>
-        </div>
-      </div>
-    </div>
+        Already have an account? Sign in
+      </button>
+    </AuthPage>
   )
 }

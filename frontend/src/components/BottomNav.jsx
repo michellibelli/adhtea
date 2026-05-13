@@ -1,4 +1,4 @@
-const S = '#7B72CC'  // "adh" periwinkle from logo
+const S = '#4A3FA8'  // deep periwinkle — darker icons
 
 const TeacupIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
@@ -51,7 +51,7 @@ const FlowerIcon = () => (
 )
 
 const SproutIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
     <path d="M12 22v-9"/>
     <path d="M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z"/>
   </svg>
@@ -112,7 +112,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.45' }}
             >
               {item.icon}
-              <span className="text-[9px] font-medium text-white">
+              <span className="text-[9px] font-semibold" style={{color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.65)'}}>
                 {item.label}
               </span>
             </button>
@@ -121,7 +121,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
 
         {/* Sparkle footer */}
         <div className="mt-auto flex flex-col items-center gap-1">
-          <span className="sparkle text-xs" style={{color:'#7B72CC', animationDelay:'1.4s'}}>✧</span>
+          <span className="sparkle text-xs" style={{color:'#4A3FA8', animationDelay:'1.4s'}}>✧</span>
         </div>
       </nav>
     </>
