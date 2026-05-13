@@ -427,14 +427,14 @@ export default function Projects({ onNavigate }) {
                             variant="secondary"
                             onClick={() => { setShowAddTask(project.id === showAddTask ? null : project.id); setShowGenerate(null) }}
                           >
-                            + Add task
+                            + Task 🛠️
                           </Button>
                           <Button
                             size="sm"
                             variant="secondary"
                             onClick={() => { setShowGenerate(project.id === showGenerate ? null : project.id); setShowAddTask(null); setGenerateDesc(''); setGenError(null) }}
                           >
-                            ✦ Generate more
+                            + Task <span className="sparkle" style={{animationDuration:'1.4s'}}>✨</span>
                           </Button>
                           <button
                             onClick={() => handleArchive(project.id)}
