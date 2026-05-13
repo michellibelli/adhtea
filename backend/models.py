@@ -117,6 +117,7 @@ class User(Base):
     triage_start_hour = Column(Integer, default=8)
     triage_end_hour = Column(Integer, default=12)
     alpha_code_version = Column(Integer, default=0, nullable=False)
+    is_onboarded = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=utcnow)
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")

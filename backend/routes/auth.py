@@ -6,7 +6,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow
+from models import (
+    User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
+    Task, Routine, Project, TaskType, TaskStatus, TaskWeight, RoutineFrequency, TimeOfDay,
+)
 from schemas import (
     LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate,
     UserCreate, UserListItem, RegisterRequest, InviteResponse,
@@ -415,3 +418,88 @@ def set_alpha_code(
     owner.alpha_code_version = config.alpha_code_version
     db.commit()
     return {"ok": True, "alpha_code_version": config.alpha_code_version}
+
+
+# ---------------------------------------------------------------------------
+# Onboarding — seed tutorial data for new users
+# ---------------------------------------------------------------------------
+
+@router.post("/onboard/seed")
+def onboard_seed(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.is_onboarded:
+        return {"ok": True, "skipped": True}
+
+    # Task: Log in (completeable immediately)
+    db.add(Task(
+        owner_id=current_user.id,
+        title="Log in ✓",
+        task_type=TaskType.task,
+        status=TaskStatus.today,
+        notes="You made it! Tap the checkmark to complete this one right now.",
+        weight=TaskWeight.light,
+    ))
+
+    # Routine: 15 min self-care daily
+    db.add(Routine(
+        user_id=current_user.id,
+        title="15 minutes of self-care",
+        frequency=RoutineFrequency.daily,
+        time_of_day=TimeOfDay.anytime,
+        active=True,
+    ))
+
+    # Task: Schedule the routine
+    db.add(Task(
+        owner_id=current_user.id,
+        title="Schedule your daily self-care routine",
+        task_type=TaskType.task,
+        status=TaskStatus.today,
+        notes="Go to Routines (moon icon) to set a time for your 15-min self-care. Even a small daily ritual makes a big difference.",
+        weight=TaskWeight.light,
+    ))
+
+    # Project: Spill the tea babe
+    project = Project(
+        user_id=current_user.id,
+        title="Spill the tea babe 🍵",
+        description="Your getting-started adventure. Work through these to explore how adhTea works.",
+        status="active",
+    )
+    db.add(project)
+    db.flush()
+
+    # Subtask 1: What do you want to get done tomorrow?
+    db.add(Task(
+        owner_id=current_user.id,
+        project_id=project.id,
+        title="What do you want to get done tomorrow?",
+        task_type=TaskType.task,
+        status=TaskStatus.today,
+        notes="Tap '+ Task 🛠️' on the Projects page to add tasks here. One thing you want to tackle tomorrow is enough.",
+        weight=TaskWeight.light,
+    ))
+
+    # Subtask 2: What's your morning routine?
+    db.add(Task(
+        owner_id=current_user.id,
+        project_id=project.id,
+        title="What's your morning routine?",
+        task_type=TaskType.task,
+        status=TaskStatus.today,
+        notes="Go to Routines (moon icon) and tap '+ Routine' to build your morning ritual. Once added, tap 'Schedule' to lock it into your day.",
+        weight=TaskWeight.light,
+    ))
+
+    # Task: Log first morning check-in
+    db.add(Task(
+        owner_id=current_user.id,
+        title="Log your first morning check-in",
+        task_type=TaskType.task,
+        status=TaskStatus.today,
+        notes="Head to the Log page (heart icon) and tap 'Check in ✏️' to record how you're doing today.",
+        weight=TaskWeight.light,
+    ))
+
+    current_user.is_onboarded = True
+    db.commit()
+    return {"ok": True}

@@ -30,6 +30,9 @@ def _migrate():
                 conn.execute(text("UPDATE users SET is_owner=1 WHERE id=(SELECT MIN(id) FROM users)"))
             if "alpha_code_version" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN alpha_code_version INTEGER NOT NULL DEFAULT 0"))
+            if "is_onboarded" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_onboarded BOOLEAN NOT NULL DEFAULT 0"))
+                conn.execute(text("UPDATE users SET is_onboarded=1"))  # existing users skip onboarding
             conn.commit()
         else:
             conn.execute(text(
@@ -38,6 +41,8 @@ def _migrate():
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS alpha_code_version INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_onboarded BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.execute(text("UPDATE users SET is_onboarded=TRUE WHERE is_onboarded=FALSE"))
             conn.execute(text(
                 "UPDATE users SET is_owner=TRUE WHERE id=(SELECT MIN(id) FROM users) AND is_owner=FALSE"
             ))

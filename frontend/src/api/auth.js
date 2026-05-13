@@ -79,3 +79,7 @@ export async function getAlphaCode() {
 export async function setAlphaCode(alphaCode) {
   return api.patch('/alpha-code', { alpha_code: alphaCode })
 }
+
+export async function seedOnboarding() {
+  return api.post('/onboard/seed')
+}

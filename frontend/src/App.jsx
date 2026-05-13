@@ -20,6 +20,7 @@ import EODGate from './pages/EODGate'
 import Settings from './pages/Settings'
 import AllTasks from './pages/AllTasks'
 import Projects from './pages/Projects'
+import OnboardingWelcome from './pages/OnboardingWelcome'
 import BottomNav from './components/BottomNav'
 import PageProgress from './components/PageProgress'
 import './App.css'
@@ -51,6 +52,7 @@ function AppShell() {
   const [ready, setReady]                     = useState(false)
   const [showEOD, setShowEOD]                 = useState(false)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
+  const [showOnboarding, setShowOnboarding]   = useState(false)
 
   useEffect(() => {
     getMe()
@@ -58,6 +60,11 @@ function AppShell() {
         setUser(u)
         if (u.needs_alpha_challenge) {
           setNeedsAlphaChallenge(true)
+          setReady(true)
+          return
+        }
+        if (!u.is_onboarded) {
+          setShowOnboarding(true)
           setReady(true)
           return
         }
@@ -92,6 +99,14 @@ function AppShell() {
           onVerified={() => setNeedsAlphaChallenge(false)}
           onLogout={() => window.location.reload()}
         />
+      </ThemeProvider>
+    )
+  }
+
+  if (showOnboarding) {
+    return (
+      <ThemeProvider>
+        <OnboardingWelcome onDone={() => { setShowOnboarding(false); setScreen('focus') }} />
       </ThemeProvider>
     )
   }
@@ -157,6 +172,7 @@ export default function App() {
 
   function handleAuthed() {
     window.history.replaceState({}, '', '/')
+    setWarming(true)
     setAuthed(true)
   }
 

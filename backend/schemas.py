@@ -102,6 +102,7 @@ class UserResponse(BaseModel):
     triage_end_hour: int
     created_at: datetime
     needs_alpha_challenge: bool = False
+    is_onboarded: bool = True
 
     model_config = {"from_attributes": True}
 

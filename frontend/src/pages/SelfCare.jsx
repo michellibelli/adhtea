@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
 import { getMedication, createMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
+import { createTask } from '../api/tasks'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -56,8 +57,12 @@ export default function SelfCare() {
   const [saved,      setSaved]      = useState(false)
   const [form,       setForm]       = useState(EMPTY_FORM)
 
-  const [showMedForm, setShowMedForm] = useState(false)
-  const [medForm,     setMedForm]     = useState({ name: '', dose: '' })
+  const [showMedForm,   setShowMedForm]   = useState(false)
+  const [medForm,       setMedForm]       = useState({ name: '', dose: '' })
+  const [showCheckin,   setShowCheckin]   = useState(false)
+  const [checkinText,   setCheckinText]   = useState('')
+  const [checkinSaving, setCheckinSaving] = useState(false)
+  const [checkinDone,   setCheckinDone]   = useState(false)
 
   useEffect(() => {
     Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
@@ -107,6 +112,19 @@ export default function SelfCare() {
     } catch (err) { console.error(err) }
   }
 
+  async function handleCheckin() {
+    if (!checkinText.trim()) return
+    setCheckinSaving(true)
+    try {
+      await createTask({ title: '📓 Check-in', task_type: 'note', notes: checkinText.trim() })
+      setCheckinText('')
+      setShowCheckin(false)
+      setCheckinDone(true)
+      setTimeout(() => setCheckinDone(false), 2500)
+    } catch (_) { /* non-blocking */ }
+    setCheckinSaving(false)
+  }
+
   async function handleAddMed() {
     if (!medForm.name.trim()) return
     try {
@@ -125,7 +143,39 @@ export default function SelfCare() {
     <div className="aria-page">
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
 
-        <h1 className="text-2xl font-semibold text-ui-text mb-6">Foundation</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold text-ui-text">Foundation</h1>
+          <div className="flex items-center gap-2">
+            {checkinDone && <span className="text-xs text-ui-subtext">✓ saved</span>}
+            <button
+              onClick={() => setShowCheckin(v => !v)}
+              className="text-xs px-3 py-1.5 rounded-xl border border-ui-border text-ui-subtext hover:text-ui-accent hover:border-ui-accent transition-colors"
+            >
+              Check in ✏️
+            </button>
+          </div>
+        </div>
+
+        {/* Quick check-in panel */}
+        {showCheckin && (
+          <div className="mb-5 rounded-xl border-2 border-[#E8D8C8] bg-[#FDF8EE] px-4 py-3">
+            <p className="text-xs text-ui-subtext mb-2">How are you doing right now?</p>
+            <textarea
+              autoFocus
+              value={checkinText}
+              onChange={e => setCheckinText(e.target.value)}
+              placeholder="thoughts, feelings, anything..."
+              rows={3}
+              className="w-full rounded-lg border border-ui-border bg-white px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/60 resize-none focus:outline-none focus:border-ui-accent transition-colors mb-2"
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setShowCheckin(false); setCheckinText('') }} className="text-xs text-ui-subtext hover:text-ui-text transition-colors px-2">cancel</button>
+              <Button size="sm" onClick={handleCheckin} disabled={checkinSaving || !checkinText.trim()}>
+                {checkinSaving ? 'Saving…' : 'Save note'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Capacity */}
         <div className="mb-6">
