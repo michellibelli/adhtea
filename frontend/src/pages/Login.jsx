@@ -1,15 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { login, setup } from '../api/auth'
+import { api } from '../api/client'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
 
 export default function Login({ onLogin }) {
-  const [mode, setMode] = useState('login')
-  const [name, setName] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [mode,        setMode]        = useState('login')
+  const [setupNeeded, setSetupNeeded] = useState(null)   // null = checking
+  const [name,        setName]        = useState('')
+  const [username,    setUsername]    = useState('')
+  const [password,    setPassword]    = useState('')
+  const [error,       setError]       = useState('')
+  const [loading,     setLoading]     = useState(false)
+
+  useEffect(() => {
+    api.get('/setup-needed')
+      .then(res => setSetupNeeded(res.needed))
+      .catch(() => setSetupNeeded(false))
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -80,13 +88,20 @@ export default function Login({ onLogin }) {
             </Button>
           </form>
 
-          <Button
-            variant="ghost"
-            className="w-full mt-6 text-sm"
-            onClick={() => { setMode(mode === 'login' ? 'setup' : 'login'); setError('') }}
-          >
-            {mode === 'login' ? 'First time? Create your account' : 'Already have an account? Sign in'}
-          </Button>
+          {setupNeeded === true && (
+            <Button
+              variant="ghost"
+              className="w-full mt-6 text-sm"
+              onClick={() => { setMode(mode === 'login' ? 'setup' : 'login'); setError('') }}
+            >
+              {mode === 'login' ? 'First time? Create your account' : 'Already have an account? Sign in'}
+            </Button>
+          )}
+          {setupNeeded === false && (
+            <p className="text-center text-xs text-ui-subtext mt-6">
+              Need access? Ask for an invite link.
+            </p>
+          )}
         </div>
       </div>
 

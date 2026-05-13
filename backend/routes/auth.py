@@ -49,6 +49,11 @@ def get_current_user(
 # Setup — create the primary account (only works if no users exist)
 # ---------------------------------------------------------------------------
 
+@router.get("/setup-needed")
+def setup_needed(db: Session = Depends(get_db)):
+    return {"needed": db.query(User).first() is None}
+
+
 @router.post("/setup", response_model=LoginResponse)
 def setup(req: SetupRequest, db: Session = Depends(get_db)):
     existing = db.query(User).first()
