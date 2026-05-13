@@ -112,7 +112,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.45' }}
             >
               {item.icon}
-              <span className="text-[9px]" style={{color:'#FFFFFF', fontWeight: isActive ? 700 : 500, opacity: isActive ? 1 : 0.88}}>
+              <span className="text-[10px]" style={{color:'#FFFFFF', fontWeight: isActive ? 700 : 500, opacity: isActive ? 1 : 0.95}}>
                 {item.label}
               </span>
             </button>
