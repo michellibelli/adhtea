@@ -148,7 +148,7 @@ function AppShell() {
       {/* Desktop sign out */}
       <div className="hidden md:flex fixed left-0 bottom-0 z-50 w-20 flex-col items-center pb-4">
         {user && (
-          <button onClick={handleLogout} className="text-[9px] text-ui-subtext hover:opacity-70 transition-opacity px-2 text-center leading-tight">
+          <button onClick={handleLogout} className="text-[9px] text-white/60 hover:text-white transition-colors px-2 text-center leading-tight">
             Sign<br />out
           </button>
         )}

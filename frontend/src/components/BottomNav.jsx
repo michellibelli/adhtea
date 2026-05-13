@@ -1,20 +1,4 @@
-// Shared SVG gradient — defined once, referenced by all icons via url(#navRainbow)
-const GradientDef = () => (
-  <svg width="0" height="0" className="absolute overflow-hidden">
-    <defs>
-      <linearGradient id="navRainbow" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%"   stopColor="#F06B9A"/>
-        <stop offset="20%"  stopColor="#F7A165"/>
-        <stop offset="40%"  stopColor="#F0E07A"/>
-        <stop offset="60%"  stopColor="#7BC97A"/>
-        <stop offset="80%"  stopColor="#6DC8CC"/>
-        <stop offset="100%" stopColor="#9D8FD6"/>
-      </linearGradient>
-    </defs>
-  </svg>
-)
-
-const S = 'url(#navRainbow)'
+const S = '#7B72CC'  // "adh" periwinkle from logo
 
 const TeacupIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
@@ -105,9 +89,8 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
         </svg>
       </button>
 
-      {/* Desktop sidebar — night sky */}
-      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-[#6A3090] bg-[#2A0E58] pt-6 pb-6 gap-1">
-        <GradientDef />
+      {/* Desktop sidebar */}
+      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-[#B05CC0] bg-[#CC7FDF] pt-6 pb-6 gap-1">
 
         {/* Pride stripe top */}
         <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'4px'}} />
@@ -129,7 +112,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.45' }}
             >
               {item.icon}
-              <span className="text-[9px] font-medium" style={{color: isActive ? '#E0B8F0' : '#9A6EB8'}}>
+              <span className="text-[9px] font-medium text-white">
                 {item.label}
               </span>
             </button>
@@ -138,7 +121,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
 
         {/* Sparkle footer */}
         <div className="mt-auto flex flex-col items-center gap-1">
-          <span className="sparkle text-xs" style={{color:'#9D8FD6', animationDelay:'1.4s'}}>✧</span>
+          <span className="sparkle text-xs" style={{color:'#7B72CC', animationDelay:'1.4s'}}>✧</span>
         </div>
       </nav>
     </>
