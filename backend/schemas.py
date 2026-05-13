@@ -34,6 +34,22 @@ class SetupRequest(BaseModel):
 # User
 # ---------------------------------------------------------------------------
 
+class UserCreate(BaseModel):
+    name: str
+    username: str
+    password: str
+
+
+class UserListItem(BaseModel):
+    id: int
+    name: str
+    username: str
+    role: UserRole
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class UserSettingsUpdate(BaseModel):
     task_visible_limit: Optional[int] = None
     notification_morning: Optional[str] = None

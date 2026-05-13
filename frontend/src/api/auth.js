@@ -27,3 +27,15 @@ export async function getMe() {
 export async function updateSettings(settings) {
   return api.patch('/me/settings', settings)
 }
+
+export async function listUsers() {
+  return api.get('/users')
+}
+
+export async function createUser(name, username, password) {
+  return api.post('/users', { name, username, password })
+}
+
+export async function deleteUser(id) {
+  return api.delete(`/users/${id}`)
+}

@@ -119,7 +119,7 @@ function AppShell() {
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
         {screen === 'selfcare'  && <SelfCare />}
-        {screen === 'settings'  && <Settings onNavigate={setScreen} />}
+        {screen === 'settings'  && <Settings onNavigate={setScreen} user={user} />}
         {screen === 'tasks'     && <AllTasks />}
       </main>
 

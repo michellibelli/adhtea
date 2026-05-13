@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal } from '../api/gcal'
+import { listUsers, createUser, deleteUser } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import { Input } from '../components/Input'
 
 function GoogleCalendarCard() {
   const [status,   setStatus]   = useState(null)
@@ -93,7 +95,117 @@ function GoogleCalendarCard() {
 }
 
 
-export default function Settings({ onNavigate }) {
+function UsersSection({ currentUserId }) {
+  const [users,   setUsers]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [form,    setForm]    = useState({ name: '', username: '', password: '' })
+  const [saving,  setSaving]  = useState(false)
+  const [error,   setError]   = useState(null)
+  const [open,    setOpen]    = useState(false)
+
+  useEffect(() => {
+    listUsers()
+      .then(setUsers)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    setError(null)
+    setSaving(true)
+    try {
+      const user = await createUser(form.name, form.username, form.password)
+      setUsers(u => [...u, user])
+      setForm({ name: '', username: '', password: '' })
+      setOpen(false)
+    } catch (err) {
+      setError(err?.message || 'Failed to create user')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id, name) {
+    if (!confirm(`Remove ${name}? This deletes all their data permanently.`)) return
+    try {
+      await deleteUser(id)
+      setUsers(u => u.filter(x => x.id !== id))
+    } catch (err) {
+      alert(err?.message || 'Failed to delete user')
+    }
+  }
+
+  return (
+    <section className="mb-6">
+      <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Users</h2>
+      <Card className="px-5 py-4">
+        {loading ? (
+          <p className="text-xs text-ui-subtext">Loading…</p>
+        ) : (
+          <div className="space-y-2 mb-4">
+            {users.map(u => (
+              <div key={u.id} className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-ui-text">{u.name}</span>
+                  <span className="text-xs text-ui-subtext ml-2">@{u.username}</span>
+                </div>
+                {u.id !== currentUserId && (
+                  <button
+                    onClick={() => handleDelete(u.id, u.name)}
+                    className="text-xs text-red-400 hover:opacity-70 transition-opacity"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!open ? (
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            + Add user
+          </Button>
+        ) : (
+          <form onSubmit={handleCreate} className="space-y-2 mt-2">
+            <Input
+              placeholder="Name"
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              required
+            />
+            <Input
+              placeholder="Username"
+              value={form.username}
+              onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+              required
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              required
+            />
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={saving}>
+                {saving ? 'Creating…' : 'Create'}
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => { setOpen(false); setError(null) }}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
+    </section>
+  )
+}
+
+
+export default function Settings({ onNavigate, user }) {
   return (
     <div className="aria-page">
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
@@ -133,6 +245,10 @@ export default function Settings({ onNavigate }) {
             </Card>
           </div>
         </section>
+
+        {user?.role === 'primary' && (
+          <UsersSection currentUserId={user.id} />
+        )}
 
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Integrations</h2>

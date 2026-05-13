@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, SessionToken, ActuatorCategory, UserRole, utcnow
-from schemas import LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate
+from schemas import LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate, UserCreate, UserListItem
 
 router = APIRouter()
 security = HTTPBearer()
@@ -162,3 +162,68 @@ def update_settings(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+# ---------------------------------------------------------------------------
+# Admin: user management (primary role only)
+# ---------------------------------------------------------------------------
+
+def require_primary(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.primary:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+@router.get("/users", response_model=list[UserListItem])
+def list_users(
+    admin: User = Depends(require_primary),
+    db: Session = Depends(get_db),
+):
+    return db.query(User).order_by(User.created_at).all()
+
+
+@router.post("/users", response_model=UserListItem, status_code=201)
+def create_user(
+    req: UserCreate,
+    admin: User = Depends(require_primary),
+    db: Session = Depends(get_db),
+):
+    if db.query(User).count() >= 20:
+        raise HTTPException(status_code=400, detail="User limit reached (20)")
+    username = req.username.lower().strip()
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+    hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
+    user = User(
+        name=req.name,
+        username=username,
+        hashed_password=hashed,
+        role=UserRole.primary,
+    )
+    db.add(user)
+    db.flush()
+    for p in PRESET_ACTUATORS:
+        db.add(ActuatorCategory(
+            user_id=user.id,
+            name=p["name"],
+            description=p["description"],
+            is_preset=True,
+        ))
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.delete("/users/{user_id}", status_code=204)
+def delete_user(
+    user_id: int,
+    admin: User = Depends(require_primary),
+    db: Session = Depends(get_db),
+):
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
