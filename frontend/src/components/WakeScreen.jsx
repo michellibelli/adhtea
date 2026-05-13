@@ -249,29 +249,27 @@ export default function WakeScreen({ onReady }) {
           )}
         </div>
 
-        {/* Diary section — visible while waiting */}
-        {!serverUp && (
-          <div className="w-full">
-            <div className="rounded-sm border-2 border-[#E8D8C8] bg-[#FDF8EE]/90 px-4 py-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold text-[#B4A8E0] uppercase tracking-widest mb-1">
-                {heading}
+        {/* Diary section — always visible */}
+        <div className="w-full">
+          <div className="rounded-sm border-2 border-[#E8D8C8] bg-[#FDF8EE]/90 px-4 py-4 backdrop-blur-sm">
+            <p className="text-[10px] font-semibold text-[#B4A8E0] uppercase tracking-widest mb-1">
+              {heading}
+            </p>
+            <p className="text-sm text-[#7A6152] mb-3">{prompt}</p>
+            <textarea
+              value={entry}
+              onChange={(e) => setEntry(e.target.value)}
+              placeholder={placeholder}
+              rows={4}
+              className="w-full rounded-sm border-2 border-[#E8D8C8] bg-[#FFFDF5] px-3 py-2 text-sm text-[#3D2B1F] placeholder-[#C8B8A8] resize-none focus:outline-none focus:border-[#B4A8E0] transition-colors"
+            />
+            {entry.trim() && !serverUp && (
+              <p className="text-[10px] text-[#B4A8E0] mt-1.5">
+                ✓ will be saved when server wakes
               </p>
-              <p className="text-sm text-[#7A6152] mb-3">{prompt}</p>
-              <textarea
-                value={entry}
-                onChange={(e) => setEntry(e.target.value)}
-                placeholder={placeholder}
-                rows={4}
-                className="w-full rounded-sm border-2 border-[#E8D8C8] bg-[#FFFDF5] px-3 py-2 text-sm text-[#3D2B1F] placeholder-[#C8B8A8] resize-none focus:outline-none focus:border-[#B4A8E0] transition-colors"
-              />
-              {entry.trim() && (
-                <p className="text-[10px] text-[#B4A8E0] mt-1.5">
-                  ✓ will be saved when server wakes
-                </p>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
