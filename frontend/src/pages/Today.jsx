@@ -1,10 +1,24 @@
 import { useState, useEffect, useCallback } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { getToday, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, reorderTasks } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
-import Button from '../components/Button'
 
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 
@@ -17,8 +31,8 @@ function computeLoad(tasks) {
   return              { label: 'Overloaded',  color: 'text-red-400',     bar: 'bg-red-400',     pct: 100, level: 'overloaded' }
 }
 
-const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3, null: 4, undefined: 4 }
-const DESIRE_RANK   = { high: 0, medium: 1, low: 2, null: 3, undefined: 3 }
+const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3 }
+const DESIRE_RANK   = { high: 0, medium: 1, low: 2 }
 
 function sortTasks(tasks, sortBy) {
   const copy = [...tasks]
@@ -38,8 +52,52 @@ function sortTasks(tasks, sortBy) {
       return (a.sort_order ?? 999) - (b.sort_order ?? 999)
     })
   }
-  // manual (default)
   return copy.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
+}
+
+// Drag handle icon
+function GripIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <circle cx="7" cy="6" r="1.2" /><circle cx="13" cy="6" r="1.2" />
+      <circle cx="7" cy="10" r="1.2" /><circle cx="13" cy="10" r="1.2" />
+      <circle cx="7" cy="14" r="1.2" /><circle cx="13" cy="14" r="1.2" />
+    </svg>
+  )
+}
+
+function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1">
+      <button
+        {...attributes}
+        {...listeners}
+        className="flex-shrink-0 text-ui-border hover:text-ui-subtext transition-colors cursor-grab active:cursor-grabbing touch-none p-1"
+        aria-label="Drag to reorder"
+      >
+        <GripIcon />
+      </button>
+      <div className="flex-1 min-w-0">
+        <TaskCard
+          task={task}
+          variant="today"
+          onComplete={onComplete}
+          onSnooze={onSnooze}
+          onDefer={onDefer}
+          onDelete={onDelete}
+        />
+      </div>
+    </div>
+  )
 }
 
 export default function Today({ visibleLimit = 10, carriedOver = false, onTriage }) {
@@ -50,6 +108,11 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   const [showDone, setShowDone] = useState(false)
   const [sortBy, setSortBy]     = useState('manual')
   const [dismissOverload, setDismissOverload] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -72,6 +135,16 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
   async function handleDefer(id) { await deferTask(id); fetchTasks() }
   async function handleDelete(id) { await deleteTask(id); fetchTasks() }
+
+  async function handleDragEnd(event) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = sorted.findIndex(t => t.id === active.id)
+    const newIndex = sorted.findIndex(t => t.id === over.id)
+    const reordered = arrayMove(sorted, oldIndex, newIndex)
+    setTasks(reordered)
+    await reorderTasks(reordered.map(t => t.id))
+  }
 
   if (loading) return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
 
@@ -149,6 +222,28 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
             <p className="text-base font-medium text-ui-text mb-2">Nothing on your list</p>
             <p className="text-sm text-ui-subtext">Head to Inbox to schedule tasks, or Capture to add something new.</p>
           </Card>
+        ) : sortBy === 'manual' ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={visible.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {visible.map((task) => (
+                  <SortableTaskRow
+                    key={task.id}
+                    task={task}
+                    onComplete={handleComplete}
+                    onSnooze={handleSnooze}
+                    onDefer={handleDefer}
+                    onDelete={handleDelete}
+                  />
+                ))}
+                {queued.length > 0 && (
+                  <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">
+                    {queued.length} more waiting — complete or snooze items above to reveal them
+                  </Card>
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="space-y-3">
             {visible.map((task) => (

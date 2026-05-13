@@ -41,6 +41,22 @@ function computeLoad(tasks) {
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 const TYPE_LABELS = { task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note' }
 
+const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3 }
+
+// Sort today tasks: critical first, then by priority, then by weight desc
+function sortByImportance(tasks) {
+  return [...tasks].sort((a, b) => {
+    if (a.is_critical !== b.is_critical) return a.is_critical ? -1 : 1
+    const pa = PRIORITY_RANK[a.priority] ?? 4
+    const pb = PRIORITY_RANK[b.priority] ?? 4
+    if (pa !== pb) return pa - pb
+    const wa = WEIGHTS[a.weight] || 2
+    const wb = WEIGHTS[b.weight] || 2
+    return wb - wa
+  })
+}
+
+
 // ── Critical list ─────────────────────────────────────────────────────────────
 
 function CriticalList({ onDone }) {
@@ -123,6 +139,94 @@ function CriticalList({ onDone }) {
 }
 
 
+// ── Today review — trim an overwhelming list ───────────────────────────────────
+
+function TodayReview({ todayItems, onDone }) {
+  const sorted = sortByImportance(todayItems)
+  const [deferred, setDeferred] = useState(new Set())
+  const [saving, setSaving]     = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    const until = tomorrow()
+    await Promise.all([...deferred].map(id => snoozeTask(id, until)))
+    onDone()
+  }
+
+  function toggle(id) {
+    setDeferred(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const keeping  = sorted.filter(t => !deferred.has(t.id))
+  const deferring = sorted.filter(t =>  deferred.has(t.id))
+
+  return (
+    <div className="aria-page">
+      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
+
+        <div className="mb-5">
+          <h1 className="text-2xl font-semibold text-ui-text mb-1">Sort today's list</h1>
+          <p className="text-sm text-ui-subtext">Tap items you can move to tomorrow. Keep what actually needs to happen today.</p>
+        </div>
+
+        <div className="mb-4 px-4 py-3 rounded-xl bg-ui-surface border border-ui-border">
+          <p className="text-xs text-ui-subtext leading-relaxed">
+            Tasks are ordered by importance — critical and urgent at the top. Tap anything to defer it.
+          </p>
+        </div>
+
+        <div className="space-y-2 mb-6">
+          {sorted.map(task => {
+            const isDeferring = deferred.has(task.id)
+            return (
+              <button
+                key={task.id}
+                onClick={() => toggle(task.id)}
+                className={`w-full text-left transition-all duration-200 ${isDeferring ? 'opacity-40' : ''}`}
+              >
+                <Card className={`px-4 py-3.5 ${isDeferring ? 'border-dashed' : ''}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-ui-accent text-xs">{TYPE_ICONS[task.task_type] || '✦'}</span>
+                        {task.is_critical && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Critical</span>}
+                        {task.priority === 'urgent' && !task.is_critical && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">Urgent</span>}
+                      </div>
+                      <p className={`text-sm font-medium ${isDeferring ? 'line-through text-ui-subtext' : 'text-ui-text'}`}>{task.title}</p>
+                    </div>
+                    <span className={`text-xs flex-shrink-0 font-medium ${isDeferring ? 'text-ui-subtext' : 'text-ui-accent'}`}>
+                      {isDeferring ? 'Tomorrow' : 'Today'}
+                    </span>
+                  </div>
+                </Card>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-ui-subtext mb-5 px-1">
+          <span>Keeping today: <span className="text-ui-text font-medium">{keeping.length}</span></span>
+          {deferring.length > 0 && <span>Moving to tomorrow: <span className="text-amber-400 font-medium">{deferring.length}</span></span>}
+        </div>
+
+        <Button size="lg" onClick={handleSave} disabled={saving} className="w-full">
+          {saving ? 'Saving…' : deferring.length > 0 ? `Move ${deferring.length} to tomorrow` : 'Looks good — go to Today'}
+        </Button>
+
+        <button onClick={onDone} className="mt-4 block mx-auto text-xs text-ui-subtext/60 hover:text-ui-subtext transition-colors">
+          Skip for now →
+        </button>
+
+      </div>
+    </div>
+  )
+}
+
+
 // ── Tournament card ───────────────────────────────────────────────────────────
 
 function TournamentCard({ task, onPick, picking }) {
@@ -162,16 +266,16 @@ function TournamentCard({ task, onPick, picking }) {
 
 // ── Main triage ───────────────────────────────────────────────────────────────
 
-const TODAY_LIMIT = 10
-
 export default function Triage({ onTriageDone }) {
-  const [pool,         setPool]         = useState([])   // inbox items not yet handled
+  const [pool,         setPool]         = useState([])
   const [todayItems,   setTodayItems]   = useState([])
   const [capacity,     setCapacity]     = useState(null)
   const [loading,      setLoading]      = useState(true)
   const [showCritical, setShowCritical] = useState(false)
   const [scheduledToday, setScheduledToday] = useState(0)
-  const [picking,      setPicking]      = useState(false) // debounce mid-animation
+  const [picking,      setPicking]      = useState(false)
+  // 'inbox' | 'today-review' | 'done'
+  const [mode,         setMode]         = useState('inbox')
 
   const fetchAll = useCallback(async () => {
     try {
@@ -190,6 +294,12 @@ export default function Triage({ onTriageDone }) {
       setPool(inbox)
       setTodayItems(today)
       setCapacity(cap)
+      // Auto-select mode based on state
+      if (inbox.length === 0 && today.length > 0) {
+        setMode('today-review')
+      } else {
+        setMode('inbox')
+      }
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }, [])
@@ -198,12 +308,7 @@ export default function Triage({ onTriageDone }) {
 
   const load    = computeLoad(todayItems)
   const loadCfg = LOAD_CONFIG[load]
-
-  // Today's limit — stop when reached
-  const todayFull = todayItems.length >= TODAY_LIMIT
-
-  // The 3 current candidates
-  const trio = pool.slice(0, 3)
+  const trio    = pool.slice(0, 3)
 
   async function handlePick(taskId) {
     if (picking) return
@@ -233,33 +338,54 @@ export default function Triage({ onTriageDone }) {
 
   if (loading) return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
   if (showCritical) return <CriticalList onDone={handleDone} />
+  if (mode === 'today-review') return <TodayReview todayItems={todayItems} onDone={handleDone} />
 
-  // All done or today full
-  if (pool.length === 0 || todayFull) {
+  // Inbox empty — offer today review if there are tasks, else done
+  if (pool.length === 0) {
+    if (todayItems.length > 0) {
+      return (
+        <div className="aria-page">
+          <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
+            <Card className="mt-16 text-center px-8 py-12">
+              <div className="text-4xl mb-4">✦</div>
+              <h2 className="text-lg font-semibold text-ui-text mb-2">Inbox is clear</h2>
+              <p className="text-sm text-ui-subtext mb-1">
+                {scheduledToday > 0 ? `${scheduledToday} added · ` : ''}{todayItems.length} tasks on today's list.
+              </p>
+              {todayItems.length > 0 && (
+                <div className="mt-4 mb-6">
+                  <div className="flex items-center justify-between text-xs mb-1.5 px-1">
+                    <span className="text-ui-subtext">Today's load</span>
+                    <span className={loadCfg.color}>{loadCfg.label}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-ui-border overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${loadCfg.bar}`} style={{ width: `${loadCfg.pct}%` }} />
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                {(load === 'heavy' || load === 'overloaded') && (
+                  <Button size="lg" onClick={() => setMode('today-review')}>
+                    Sort today's list →
+                  </Button>
+                )}
+                <Button size="lg" variant={load === 'heavy' || load === 'overloaded' ? 'secondary' : 'primary'} onClick={handleDone}>
+                  Go to Today →
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )
+    }
+    // Nothing in inbox, nothing today — done
     return (
       <div className="aria-page">
         <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
           <Card className="mt-16 text-center px-8 py-12">
             <div className="text-4xl mb-4">✦</div>
-            <h2 className="text-lg font-semibold text-ui-text mb-2">
-              {todayFull ? "Today's list is full" : 'Triage complete'}
-            </h2>
-            <p className="text-sm text-ui-subtext mb-1">
-              {scheduledToday > 0
-                ? `${scheduledToday} added · ${todayItems.length} total on your list.`
-                : 'Everything pushed out. Today is yours.'}
-            </p>
-            {todayItems.length > 0 && (
-              <div className="mt-4 mb-6">
-                <div className="flex items-center justify-between text-xs mb-1.5 px-1">
-                  <span className="text-ui-subtext">Today's load</span>
-                  <span className={loadCfg.color}>{loadCfg.label}</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-ui-border overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${loadCfg.bar}`} style={{ width: `${loadCfg.pct}%` }} />
-                </div>
-              </div>
-            )}
+            <h2 className="text-lg font-semibold text-ui-text mb-2">Triage complete</h2>
+            <p className="text-sm text-ui-subtext mb-6">Everything pushed out. Today is yours.</p>
             <Button size="lg" onClick={handleDone}>Go to Today →</Button>
           </Card>
         </div>
@@ -277,31 +403,51 @@ export default function Triage({ onTriageDone }) {
             <h1 className="text-2xl font-semibold text-ui-text">Triage</h1>
             <p className="text-sm text-ui-subtext mt-0.5">Which matters most right now?</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setShowCritical(true)} className="mt-1">
-            Low focus →
-          </Button>
+          <div className="flex flex-col items-end gap-1 mt-1">
+            <Button variant="ghost" size="sm" onClick={() => setShowCritical(true)}>
+              Low focus →
+            </Button>
+            {todayItems.length > 0 && (
+              <button
+                onClick={() => setMode('today-review')}
+                className="text-xs text-ui-subtext/60 hover:text-ui-subtext transition-colors"
+              >
+                Sort today's list →
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Progress */}
+        {/* Load indicator */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs mb-1.5 px-0.5">
             <span className="text-ui-subtext">
-              Today: <span className="font-medium text-ui-text">{todayItems.length}</span> / {TODAY_LIMIT}
+              Today: <span className="font-medium text-ui-text">{todayItems.length}</span> tasks
             </span>
             <span className={`font-medium ${loadCfg.color}`}>{loadCfg.label}</span>
           </div>
           <div className="h-1.5 rounded-full bg-ui-border overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${loadCfg.bar}`}
-              style={{ width: `${Math.min((todayItems.length / TODAY_LIMIT) * 100, 100)}%` }}
+              style={{ width: `${loadCfg.pct}%` }}
             />
           </div>
         </div>
 
         <CapacityBar capacity={capacity} compact />
 
+        {/* Overloaded nudge */}
+        {(load === 'heavy' || load === 'overloaded') && (
+          <div className="mb-4 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <p className="text-xs text-amber-400">
+              Today is already {load === 'overloaded' ? 'overloaded' : 'heavy'}.{' '}
+              <button onClick={() => setMode('today-review')} className="underline">Sort today's list</button> to trim it first.
+            </p>
+          </div>
+        )}
+
         {/* The trio */}
-        <div className="mt-5 space-y-3">
+        <div className="mt-2 space-y-3">
           {trio.map((task) => (
             <TournamentCard
               key={task.id}
