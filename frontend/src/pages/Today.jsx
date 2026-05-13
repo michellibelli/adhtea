@@ -55,17 +55,6 @@ function sortTasks(tasks, sortBy) {
   return copy.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
 }
 
-// Drag handle icon
-function GripIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-      <circle cx="7" cy="6" r="1.2" /><circle cx="13" cy="6" r="1.2" />
-      <circle cx="7" cy="10" r="1.2" /><circle cx="13" cy="10" r="1.2" />
-      <circle cx="7" cy="14" r="1.2" /><circle cx="13" cy="14" r="1.2" />
-    </svg>
-  )
-}
-
 function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -77,25 +66,21 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-1">
-      <button
-        {...attributes}
-        {...listeners}
-        className="flex-shrink-0 text-ui-border hover:text-ui-subtext transition-colors cursor-grab active:cursor-grabbing touch-none p-1"
-        aria-label="Drag to reorder"
-      >
-        <GripIcon />
-      </button>
-      <div className="flex-1 min-w-0">
-        <TaskCard
-          task={task}
-          variant="today"
-          onComplete={onComplete}
-          onSnooze={onSnooze}
-          onDefer={onDefer}
-          onDelete={onDelete}
-        />
-      </div>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      <TaskCard
+        task={task}
+        variant="today"
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        onDefer={onDefer}
+        onDelete={onDelete}
+      />
     </div>
   )
 }
