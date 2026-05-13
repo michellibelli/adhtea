@@ -43,7 +43,6 @@ const EMPTY_FORM = {
   meals: null,
   exercise: null,
   exercise_minutes: null,
-  medication_taken: null,
   mood: null,
 }
 
@@ -58,7 +57,7 @@ export default function SelfCare() {
   const [form,       setForm]       = useState(EMPTY_FORM)
 
   const [showMedForm,   setShowMedForm]   = useState(false)
-  const [medForm,       setMedForm]       = useState({ name: '', dose: '' })
+  const [medForm,       setMedForm]       = useState({ name: '', dose: '', reminder_times: '' })
   const [checkinText,   setCheckinText]   = useState('')
   const [checkinSaving, setCheckinSaving] = useState(false)
   const [checkinDone,   setCheckinDone]   = useState(false)
@@ -76,7 +75,6 @@ export default function SelfCare() {
             meals:            todayLog.meals,
             exercise:         todayLog.exercise,
             exercise_minutes: todayLog.exercise_minutes,
-            medication_taken: todayLog.medication_taken,
             mood:             todayLog.mood,
           })
         }
@@ -126,9 +124,10 @@ export default function SelfCare() {
   async function handleAddMed() {
     if (!medForm.name.trim()) return
     try {
-      const created = await createMedication({ name: medForm.name.trim(), dose: medForm.dose.trim() || null })
+      const times = medForm.reminder_times.trim().replace(/\s+/g, '').replace(/,+/g, ',').replace(/,$/, '') || null
+      const created = await createMedication({ name: medForm.name.trim(), dose: medForm.dose.trim() || null, reminder_times: times })
       setMedication(prev => [...prev, created])
-      setMedForm({ name: '', dose: '' })
+      setMedForm({ name: '', dose: '', reminder_times: '' })
       setShowMedForm(false)
     } catch (err) { console.error(err) }
   }
@@ -254,26 +253,6 @@ export default function SelfCare() {
               </div>
             </div>
 
-            {/* Meds yesterday */}
-            <div>
-              <span className="text-xs text-ui-subtext block mb-1.5">Took meds yesterday</span>
-              <div className="flex gap-2">
-                {[{ v: true, l: 'Yes' }, { v: false, l: 'No' }, { v: null, l: 'N/A' }].map(({ v, l }) => (
-                  <button
-                    key={l}
-                    onClick={() => setForm(f => ({ ...f, medication_taken: v }))}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                      form.medication_taken === v
-                        ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                        : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-                    }`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Mood */}
             <div>
               <span className="text-xs text-ui-subtext block mb-1.5">Mood</span>
@@ -317,6 +296,11 @@ export default function SelfCare() {
                 onChange={e => setMedForm(f => ({ ...f, dose: e.target.value }))}
                 placeholder="Dose (optional)"
               />
+              <Input
+                value={medForm.reminder_times}
+                onChange={e => setMedForm(f => ({ ...f, reminder_times: e.target.value }))}
+                placeholder="Reminder times e.g. 08:00, 14:00 (optional)"
+              />
               <Button onClick={handleAddMed} disabled={!medForm.name.trim()}>Add</Button>
             </Card>
           )}
@@ -327,11 +311,15 @@ export default function SelfCare() {
             <div className="space-y-2">
               {medication.map(med => {
                 const taken = !!medLogs[med.id]
+                const times = med.reminder_times ? med.reminder_times.split(',').map(t => t.trim()) : []
                 return (
                   <Card key={med.id} className="px-4 py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ui-text">{med.name}</p>
                       {med.dose && <p className="text-xs text-ui-subtext">{med.dose}</p>}
+                      {times.length > 0 && (
+                        <p className="text-xs text-ui-subtext mt-0.5">⏰ {times.join(' · ')}</p>
+                      )}
                     </div>
                     {taken ? (
                       <span className="text-xs text-ui-accent font-medium flex-shrink-0">✓ Taken</span>

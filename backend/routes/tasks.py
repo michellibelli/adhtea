@@ -93,6 +93,7 @@ def generate_routine_instances(user: User, db: Session):
                 is_critical=routine.is_critical,
                 routine_id=routine.id,
                 scheduled_date=today_dt,
+                due_time=routine.exact_time,
             ))
             created += 1
     if created:

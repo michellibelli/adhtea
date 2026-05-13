@@ -7,7 +7,7 @@ import { Input } from '../components/Input'
 const FREQ_LABELS  = { daily: 'Daily', weekdays: 'Weekdays', weekends: 'Weekends', weekly: 'Weekly', custom: 'Custom' }
 const TIME_LABELS  = { anytime: 'Anytime', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' }
 const DAY_NAMES    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const EMPTY_FORM   = { title: '', frequency: 'daily', time_of_day: 'anytime', days_of_week: '', only_when_present: false }
+const EMPTY_FORM   = { title: '', frequency: 'daily', time_of_day: 'anytime', days_of_week: '', only_when_present: false, exact_time: '' }
 
 
 // ---------------------------------------------------------------------------
@@ -94,6 +94,16 @@ function RoutineForm({ form, setForm, onSave, onCancel, editing = false }) {
         />
       </div>
 
+      <div>
+        <p className="text-xs text-ui-subtext mb-1.5">Exact time <span className="opacity-50">(optional — surfaces in Focus 5 min before)</span></p>
+        <input
+          type="time"
+          value={form.exact_time || ''}
+          onChange={e => setForm(f => ({ ...f, exact_time: e.target.value || null }))}
+          className="px-3 py-1.5 text-sm rounded-lg bg-ui-input border border-ui-input-border text-ui-text outline-none focus:border-ui-input-focus transition-colors"
+        />
+      </div>
+
       <div className="flex gap-2 pt-1">
         <Button onClick={onSave} disabled={!form.title.trim()} className="flex-1">
           {editing ? 'Save changes' : 'Add routine'}
@@ -114,9 +124,14 @@ function RoutineItem({ routine, onEdit, onDeactivate }) {
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-ui-primary/10 text-ui-accent font-medium">
               {FREQ_LABELS[routine.frequency]}
             </span>
-            {routine.time_of_day !== 'anytime' && (
+            {routine.time_of_day !== 'anytime' && !routine.exact_time && (
               <span className="text-[10px] px-2 py-0.5 rounded-full border border-ui-border text-ui-subtext font-medium">
                 {TIME_LABELS[routine.time_of_day]}
+              </span>
+            )}
+            {routine.exact_time && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full border border-ui-border text-ui-subtext font-medium">
+                ⏰ {routine.exact_time}
               </span>
             )}
           </div>
@@ -179,6 +194,7 @@ export default function Routines() {
       time_of_day: r.time_of_day,
       days_of_week: r.days_of_week || '',
       only_when_present: r.only_when_present,
+      exact_time: r.exact_time || '',
     })
   }
 

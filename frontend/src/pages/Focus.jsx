@@ -30,18 +30,27 @@ const PRIORITY_BADGE = {
   high:   'bg-amber-500/20 text-amber-400',
 }
 
-function isImminent(task) {
-  if (task.task_type !== 'appointment' || !task.due_time) return false
-  const [h, m] = task.due_time.split(':').map(Number)
+function minutesUntil(dueTime) {
+  const [h, m] = dueTime.split(':').map(Number)
   const now = new Date()
-  const appt = new Date(now)
-  appt.setHours(h, m, 0, 0)
-  const diffMin = (appt - now) / 60000
-  return diffMin <= 5
+  const due = new Date(now)
+  due.setHours(h, m, 0, 0)
+  return (due - now) / 60000
+}
+
+function isImminent(task) {
+  if (!task.due_time) return false
+  if (task.task_type !== 'appointment' && task.task_type !== 'routine') return false
+  return minutesUntil(task.due_time) <= 5
 }
 
 function pickNext(tasks) {
-  const copy = [...tasks]
+  // Timed routines are invisible until 5 min before their scheduled time
+  const visible = tasks.filter(t => {
+    if (t.task_type === 'routine' && t.due_time) return minutesUntil(t.due_time) <= 5
+    return true
+  })
+  const copy = [...visible]
   copy.sort((a, b) => {
     const aImm = isImminent(a)
     const bImm = isImminent(b)
@@ -202,7 +211,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   style={{
                     flex: 1,
                     height: '6px',
-                    borderRadius: '3px 0 0 3px',
+                    borderRadius: '3px 3px 3px 3px',
                     background: 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)',
                     transformOrigin: 'right center',
                     animation: celebrate === 'p2'
@@ -210,8 +219,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                       : 'none',
                   }}
                 />
-                {/* Cup */}
-                <span style={{ fontSize: '2em', lineHeight: 1, flexShrink: 0, paddingRight: '4px' }}>☕</span>
+                {/* Cup — overlaps the rainbow front end */}
+                <span style={{
+                  fontSize: '2em', lineHeight: 1, flexShrink: 0,
+                  paddingRight: '4px', marginLeft: '-0.9em',
+                  position: 'relative', zIndex: 1,
+                }}>☕</span>
               </div>
             )}
             {/* Pun text */}
