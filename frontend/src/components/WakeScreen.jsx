@@ -160,33 +160,35 @@ export default function WakeScreen({ onReady }) {
   if (!splashDone) {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center"
+        className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
         style={{ background: '#FFFDF5' }}
       >
-        <div className="fixed top-0 left-0 right-0 h-1" style={{ background: PRIDE }} />
+        {/* Same floating art as wake phase */}
+        {FLOAT_ART.map((art, i) => (
+          <span
+            key={i}
+            className="float-art"
+            style={{
+              top: art.top, left: art.left,
+              '--bob-size':    `${art.size}px`,
+              '--bob-dur':     `${art.dur}s`,
+              '--bob-delay':   `${art.delay}s`,
+              '--bob-rot-a':   `${art.rotA}deg`,
+              '--bob-rot-b':   `${art.rotB}deg`,
+              '--bob-opacity': 0.45,
+            }}
+          >
+            {art.emoji}
+          </span>
+        ))}
 
-        {/* Logo + steam container */}
-        <div className="relative flex flex-col items-center">
+        <div className="relative z-10 flex flex-col items-center">
           <img
             src="/adhTeaLogo.png"
             alt="adhTea"
-            className="w-28 object-contain rounded-2xl"
+            className="object-contain rounded-3xl"
+            style={{ width: '220px' }}
           />
-          {/* Steam wisps — positioned above the cup */}
-          <div className="absolute" style={{ bottom: '72%', left: '50%', transform: 'translateX(-50%)', width: 60, height: 40 }}>
-            <div
-              className="steam-wisp"
-              style={{ '--steam-dur': '2.0s', '--steam-delay': '0s', left: '18%', height: 28, bottom: 0 }}
-            />
-            <div
-              className="steam-wisp"
-              style={{ '--steam-dur': '2.4s', '--steam-delay': '0.6s', left: '46%', height: 36, bottom: 0, width: 5 }}
-            />
-            <div
-              className="steam-wisp"
-              style={{ '--steam-dur': '2.1s', '--steam-delay': '1.1s', left: '72%', height: 24, bottom: 0, width: 4 }}
-            />
-          </div>
         </div>
       </div>
     )
