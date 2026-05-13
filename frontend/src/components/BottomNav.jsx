@@ -26,7 +26,7 @@ const TeacupIcon = () => (
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" style={{width:40,height:40}}>
     <circle cx="12" cy="12" r="5"/>
-    <g {...svgG('nav-ray-sway', '6s', '0s', 'center')}>
+    <g {...svgG('nav-ray-sway', '9s', '0s', 'center')}>
       <line x1="12" y1="1"    x2="12" y2="3"/>
       <line x1="12" y1="21"   x2="12" y2="23"/>
       <line x1="1"  y1="12"   x2="3"  y2="12"/>
@@ -43,20 +43,20 @@ const MoonIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{width:29,height:29}}>
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     <circle cx="19" cy="5" r="1.5" fill={S} stroke="none"
-      style={{ animation: anim('nav-star-twinkle', '1.8s', '0s'), transformBox: 'fill-box', transformOrigin: 'center' }}
+      style={{ animation: anim('nav-star-twinkle', '2.7s', '0s'), transformBox: 'fill-box', transformOrigin: 'center' }}
     />
     <circle cx="22" cy="10" r="1.2" fill={S} stroke="none"
-      style={{ animation: anim('nav-star-twinkle', '1.8s', '0.7s'), transformBox: 'fill-box', transformOrigin: 'center' }}
+      style={{ animation: anim('nav-star-twinkle', '2.7s', '1.0s'), transformBox: 'fill-box', transformOrigin: 'center' }}
     />
     <circle cx="5" cy="18" r="1.1" fill={S} stroke="none"
-      style={{ animation: anim('nav-star-twinkle', '1.8s', '1.2s'), transformBox: 'fill-box', transformOrigin: 'center' }}
+      style={{ animation: anim('nav-star-twinkle', '2.7s', '1.8s'), transformBox: 'fill-box', transformOrigin: 'center' }}
     />
   </svg>
 )
 
 const HeartSparkleIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-    style={{width:29,height:29, animation: anim('nav-heartbeat', '3s', '0s'), transformBox: 'fill-box', transformOrigin: 'center'}}
+    style={{width:29,height:29, animation: anim('nav-heartbeat', '4.5s', '0s'), transformBox: 'fill-box', transformOrigin: 'center'}}
   >
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
     <line x1="12" y1="10" x2="12" y2="14" strokeWidth={1.5} opacity="0.8"/>
@@ -66,7 +66,7 @@ const HeartSparkleIcon = () => (
 
 const FlowerIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-    style={{width:35,height:35, animation: 'nav-flower-spin 5s linear infinite', transformBox: 'fill-box', transformOrigin: 'center'}}
+    style={{width:35,height:35, animation: 'nav-flower-spin 7.5s linear infinite', transformBox: 'fill-box', transformOrigin: 'center'}}
   >
     <ellipse cx="12" cy="7"  rx="2.5" ry="3.5"/>
     <ellipse cx="17" cy="12" rx="3.5" ry="2.5"/>
@@ -79,13 +79,10 @@ const FlowerIcon = () => (
 const SproutIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{width:40,height:40}}>
     <path d="M12 22v-9"/>
-    {/* scale wrapper keeps leaf bigger than stem; inner path animates */}
-    <g style={{ transform: 'scale(1.45)', transformOrigin: '12px 13px', transformBox: 'fill-box' }}>
-      <path
-        d="M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z"
-        style={{ animation: anim('nav-leaf-sway', '2.8s', '0s'), transformBox: 'fill-box', transformOrigin: 'center bottom' }}
-      />
-    </g>
+    <path
+      d="M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z"
+      style={{ animation: anim('nav-leaf-sway', '4.2s', '0s'), transformBox: 'fill-box', transformOrigin: 'center bottom' }}
+    />
   </svg>
 )
 
