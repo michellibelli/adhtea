@@ -119,18 +119,6 @@ function AppShell() {
         </div>
       </header>
 
-      {/* Ambient twinkling stars */}
-      <div aria-hidden="true">
-        <span className="star-field-star" style={{top:'7%',  left:'18%', color:'#C490D1', fontSize:'13px', '--star-opacity':0.28, '--star-dur':'5.2s', '--star-delay':'0s'}}>✦</span>
-        <span className="star-field-star" style={{top:'19%', left:'68%', color:'#F06B9A', fontSize:'9px',  '--star-opacity':0.22, '--star-dur':'4.1s', '--star-delay':'1.3s'}}>✧</span>
-        <span className="star-field-star" style={{top:'38%', left:'82%', color:'#F7A165', fontSize:'11px', '--star-opacity':0.2,  '--star-dur':'6.8s', '--star-delay':'0.7s'}}>✦</span>
-        <span className="star-field-star" style={{top:'54%', left:'9%',  color:'#9D8FD6', fontSize:'8px',  '--star-opacity':0.25, '--star-dur':'4.9s', '--star-delay':'2.1s'}}>✧</span>
-        <span className="star-field-star" style={{top:'70%', left:'55%', color:'#6DC8CC', fontSize:'12px', '--star-opacity':0.2,  '--star-dur':'5.7s', '--star-delay':'0.4s'}}>✦</span>
-        <span className="star-field-star" style={{top:'83%', left:'28%', color:'#F0E07A', fontSize:'9px',  '--star-opacity':0.3,  '--star-dur':'3.8s', '--star-delay':'1.8s'}}>✧</span>
-        <span className="star-field-star" style={{top:'12%', left:'44%', color:'#7BC97A', fontSize:'7px',  '--star-opacity':0.18, '--star-dur':'6.2s', '--star-delay':'3.0s'}}>✦</span>
-        <span className="star-field-star" style={{top:'62%', left:'91%', color:'#C490D1', fontSize:'10px', '--star-opacity':0.22, '--star-dur':'5.0s', '--star-delay':'1.0s'}}>✧</span>
-      </div>
-
       <main className="pt-[57px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'triage'   && <Triage onTriageDone={handleTriageDone} />}
