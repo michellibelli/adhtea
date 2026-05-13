@@ -226,8 +226,8 @@
 }
 @keyframes nav-leaf-sway {
   0%, 100% { transform: rotate(0deg); }
-  30%       { transform: rotate(9deg); }
-  65%       { transform: rotate(-6deg); }
+  30%       { transform: rotate(22deg); }
+  65%       { transform: rotate(-15deg); }
 }
 @keyframes nav-star-twinkle {
   0%, 35%, 100% { opacity: 1; transform: scale(1); }
@@ -235,10 +235,10 @@
 }
 @keyframes nav-heartbeat {
   0%, 100% { transform: scale(1); }
-  14%      { transform: scale(1.25); }
-  28%      { transform: scale(1); }
-  42%      { transform: scale(1.14); }
-  60%      { transform: scale(1); }
+  8%       { transform: scale(1.08); }
+  16%      { transform: scale(1); }
+  24%      { transform: scale(1.04); }
+  36%      { transform: scale(1); }
 }
 @keyframes nav-flower-spin {
   0%   { transform: rotate(0deg); }
