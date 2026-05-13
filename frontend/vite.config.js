@@ -9,13 +9,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'adhTeaLogo.png', 'favicon.svg'],
+      includeAssets: ['icon.svg', 'adhTeaLogo.png', 'favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'adhTea',
         short_name: 'adhTea',
         description: 'Your ADHD-friendly task companion',
-        theme_color: '#2A0E58',
-        background_color: '#2A0E58',
+        theme_color: '#CC6FD4',
+        background_color: '#CC6FD4',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
