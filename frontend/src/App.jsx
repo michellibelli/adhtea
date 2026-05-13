@@ -5,6 +5,7 @@ import WakeScreen from './components/WakeScreen'
 import { getMe, logout } from './api/auth'
 import { getTodayLog } from './api/selfcare'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Capture from './pages/Capture'
 import Triage from './pages/Triage'
 import Focus from './pages/Focus'
@@ -140,11 +141,26 @@ function AppShell() {
 export default function App() {
   const [authed, setAuthed]     = useState(isLoggedIn())
   const [warming, setWarming]   = useState(() => isLoggedIn() && likelySleeping())
+  const inviteToken = new URLSearchParams(window.location.search).get('invite')
+
+  function handleAuthed() {
+    // Strip ?invite= from URL so refreshing doesn't re-show register
+    window.history.replaceState({}, '', window.location.pathname)
+    setAuthed(true)
+  }
 
   if (warming) {
     return (
       <ThemeProvider>
         <WakeScreen onReady={() => setWarming(false)} />
+      </ThemeProvider>
+    )
+  }
+
+  if (!authed && inviteToken) {
+    return (
+      <ThemeProvider>
+        <Register inviteToken={inviteToken} onRegister={handleAuthed} />
       </ThemeProvider>
     )
   }

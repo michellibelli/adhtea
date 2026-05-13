@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal } from '../api/gcal'
-import { listUsers, createUser, deleteUser } from '../api/auth'
+import { listUsers, createUser, deleteUser, createInvite, listInvites, revokeInvite, logout } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -205,7 +205,85 @@ function UsersSection({ currentUserId }) {
 }
 
 
+function InviteSection() {
+  const [invites, setInvites] = useState([])
+  const [copied,  setCopied]  = useState(null)
+  const [busy,    setBusy]    = useState(false)
+
+  useEffect(() => {
+    listInvites().then(setInvites).catch(() => {})
+  }, [])
+
+  const BASE = window.location.origin
+
+  async function handleGenerate() {
+    setBusy(true)
+    try {
+      const inv = await createInvite()
+      setInvites(prev => [inv, ...prev])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleRevoke(token) {
+    await revokeInvite(token)
+    setInvites(prev => prev.filter(i => i.token !== token))
+  }
+
+  function handleCopy(token) {
+    const url = `${BASE}/?invite=${token}`
+    navigator.clipboard.writeText(url)
+    setCopied(token)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  return (
+    <section className="mb-6">
+      <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Invite links</h2>
+      <Card className="px-5 py-4">
+        <p className="text-xs text-ui-subtext mb-3 leading-relaxed">
+          Generate a link and send it to a friend. Single-use — expires once they sign up.
+        </p>
+        <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={busy} className="mb-4">
+          {busy ? 'Generating…' : '+ Generate invite link'}
+        </Button>
+        {invites.length > 0 && (
+          <div className="space-y-2">
+            {invites.map(inv => (
+              <div key={inv.token} className="flex items-center justify-between gap-2">
+                <span className="text-xs text-ui-subtext font-mono truncate flex-1">
+                  {`${BASE}/?invite=${inv.token}`}
+                </span>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleCopy(inv.token)}
+                    className="text-xs text-ui-accent hover:opacity-70 transition-opacity"
+                  >
+                    {copied === inv.token ? 'Copied!' : 'Copy'}
+                  </button>
+                  <button
+                    onClick={() => handleRevoke(inv.token)}
+                    className="text-xs text-red-400 hover:opacity-70 transition-opacity"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </section>
+  )
+}
+
+
 export default function Settings({ onNavigate, user }) {
+  function handleLogout() {
+    logout().then(() => window.location.reload())
+  }
+
   return (
     <div className="aria-page">
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
@@ -247,7 +325,10 @@ export default function Settings({ onNavigate, user }) {
         </section>
 
         {user?.role === 'primary' && (
-          <UsersSection currentUserId={user.id} />
+          <>
+            <UsersSection currentUserId={user.id} />
+            <InviteSection />
+          </>
         )}
 
         <section className="mb-6">
@@ -255,7 +336,7 @@ export default function Settings({ onNavigate, user }) {
           <GoogleCalendarCard />
         </section>
 
-        <section>
+        <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Import</h2>
           <Card className="px-5 py-4">
             <p className="text-sm font-medium text-ui-text mb-1">Import from CSV</p>
@@ -263,6 +344,17 @@ export default function Settings({ onNavigate, user }) {
               Upload a CSV export from Notion or another task manager. Columns detected automatically.
             </p>
             <CSVImportForm />
+          </Card>
+        </section>
+
+        <section>
+          <Card className="px-5 py-4">
+            <button
+              onClick={handleLogout}
+              className="text-sm text-red-400 hover:opacity-70 transition-opacity font-medium"
+            >
+              Sign out
+            </button>
           </Card>
         </section>
 

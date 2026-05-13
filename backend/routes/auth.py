@@ -6,8 +6,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, SessionToken, ActuatorCategory, UserRole, utcnow
-from schemas import LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate, UserCreate, UserListItem
+from models import User, SessionToken, ActuatorCategory, InviteToken, UserRole, utcnow
+from schemas import LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate, UserCreate, UserListItem, RegisterRequest, InviteResponse
 
 router = APIRouter()
 security = HTTPBearer()
@@ -227,3 +227,70 @@ def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(user)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Invite links (primary only generates; anyone can register with valid token)
+# ---------------------------------------------------------------------------
+
+@router.post("/invites", response_model=InviteResponse, status_code=201)
+def create_invite(
+    admin: User = Depends(require_primary),
+    db: Session = Depends(get_db),
+):
+    token_str = secrets.token_urlsafe(24)
+    invite = InviteToken(token=token_str, created_by=admin.id)
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    return invite
+
+
+@router.get("/invites", response_model=list[InviteResponse])
+def list_invites(
+    admin: User = Depends(require_primary),
+    db: Session = Depends(get_db),
+):
+    return db.query(InviteToken).filter(InviteToken.used_by == None).order_by(InviteToken.created_at.desc()).all()  # noqa: E711
+
+
+@router.delete("/invites/{token}", status_code=204)
+def revoke_invite(
+    token: str,
+    admin: User = Depends(require_primary),
+    db: Session = Depends(get_db),
+):
+    invite = db.query(InviteToken).filter(InviteToken.token == token, InviteToken.used_by == None).first()  # noqa: E711
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    db.delete(invite)
+    db.commit()
+
+
+@router.post("/register", response_model=LoginResponse, status_code=201)
+def register(req: RegisterRequest, db: Session = Depends(get_db)):
+    invite = db.query(InviteToken).filter(
+        InviteToken.token == req.invite_token,
+        InviteToken.used_by == None,  # noqa: E711
+    ).first()
+    if not invite:
+        raise HTTPException(status_code=400, detail="Invalid or already-used invite link")
+    if db.query(User).count() >= 20:
+        raise HTTPException(status_code=400, detail="User limit reached")
+    username = req.username.lower().strip()
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+    hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
+    user = User(name=req.name, username=username, hashed_password=hashed, role=UserRole.primary)
+    db.add(user)
+    db.flush()
+    for p in PRESET_ACTUATORS:
+        db.add(ActuatorCategory(user_id=user.id, name=p["name"], description=p["description"], is_preset=True))
+    invite.used_by = user.id
+    invite.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    token_str = secrets.token_hex(32)
+    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
+    session = SessionToken(user_id=user.id, token=token_str, expires_at=expires)
+    db.add(session)
+    db.commit()
+    return LoginResponse(token=token_str, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)

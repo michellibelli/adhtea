@@ -42,6 +42,7 @@ const EMPTY_FORM = {
   meals: null,
   exercise: null,
   exercise_minutes: null,
+  medication_taken: null,
   mood: null,
 }
 
@@ -66,12 +67,13 @@ export default function SelfCare() {
         setMedication(meds)
         if (todayLog) {
           setForm({
-            sleep_hours:     todayLog.sleep_hours,
-            sleep_quality:   todayLog.sleep_quality,
-            meals:           todayLog.meals,
-            exercise:        todayLog.exercise,
+            sleep_hours:      todayLog.sleep_hours,
+            sleep_quality:    todayLog.sleep_quality,
+            meals:            todayLog.meals,
+            exercise:         todayLog.exercise,
             exercise_minutes: todayLog.exercise_minutes,
-            mood:            todayLog.mood,
+            medication_taken: todayLog.medication_taken,
+            mood:             todayLog.mood,
           })
         }
         const ml = {}
@@ -134,14 +136,14 @@ export default function SelfCare() {
         {/* Self-care log */}
         <div className="mb-6">
           <p className="text-xs text-ui-subtext uppercase tracking-wider mb-3">
-            {log ? 'Update today\'s log' : 'Morning log'}
+            {log ? 'Update log' : 'Morning check-in'}
           </p>
           <Card className="px-4 py-4 space-y-4">
 
             {/* Sleep hours */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-ui-subtext">Sleep</span>
+                <span className="text-xs text-ui-subtext">Sleep last night</span>
                 <span className="text-xs font-medium text-ui-text">
                   {form.sleep_hours != null ? `${form.sleep_hours}h` : '—'}
                 </span>
@@ -159,7 +161,7 @@ export default function SelfCare() {
 
             {/* Sleep quality */}
             <div>
-              <span className="text-xs text-ui-subtext block mb-1.5">Sleep quality</span>
+              <span className="text-xs text-ui-subtext block mb-1.5">Sleep quality last night</span>
               <TapRow
                 options={[1,2,3,4,5]}
                 labels={['1','2','3','4','5']}
@@ -170,7 +172,7 @@ export default function SelfCare() {
 
             {/* Meals */}
             <div>
-              <span className="text-xs text-ui-subtext block mb-1.5">Meals today</span>
+              <span className="text-xs text-ui-subtext block mb-1.5">Meals yesterday</span>
               <TapRow
                 options={[0,1,2,3,4]}
                 labels={['0','1','2','3','4']}
@@ -181,7 +183,7 @@ export default function SelfCare() {
 
             {/* Exercise */}
             <div>
-              <span className="text-xs text-ui-subtext block mb-1.5">Exercise</span>
+              <span className="text-xs text-ui-subtext block mb-1.5">Exercise yesterday</span>
               <div className="flex items-center gap-2 flex-wrap">
                 {[{ v: true, l: 'Yes' }, { v: false, l: 'No' }].map(({ v, l }) => (
                   <button
@@ -211,6 +213,26 @@ export default function SelfCare() {
                     <span className="text-xs text-ui-subtext">min</span>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Meds yesterday */}
+            <div>
+              <span className="text-xs text-ui-subtext block mb-1.5">Took meds yesterday</span>
+              <div className="flex gap-2">
+                {[{ v: true, l: 'Yes' }, { v: false, l: 'No' }, { v: null, l: 'N/A' }].map(({ v, l }) => (
+                  <button
+                    key={l}
+                    onClick={() => setForm(f => ({ ...f, medication_taken: v }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      form.medication_taken === v
+                        ? 'bg-ui-primary text-ui-primary-text border-transparent'
+                        : 'border-ui-border text-ui-subtext hover:text-ui-accent'
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
               </div>
             </div>
 

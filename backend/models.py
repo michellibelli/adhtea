@@ -267,6 +267,21 @@ class MedicationLog(Base):
 
 
 # ---------------------------------------------------------------------------
+# Invite Token
+# ---------------------------------------------------------------------------
+
+class InviteToken(Base):
+    __tablename__ = "invite_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    used_at = Column(DateTime, nullable=True)
+
+
+# ---------------------------------------------------------------------------
 # Google Calendar OAuth token
 # ---------------------------------------------------------------------------
 
