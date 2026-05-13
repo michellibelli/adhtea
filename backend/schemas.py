@@ -72,17 +72,36 @@ class UserSettingsUpdate(BaseModel):
     triage_end_hour: Optional[int] = None
 
 
+class SignupRequest(BaseModel):
+    name: str
+    username: str
+    email: Optional[str] = None
+    password: str
+    alpha_code: Optional[str] = None
+
+
+class AlphaChallengeRequest(BaseModel):
+    alpha_code: str
+
+
+class AlphaCodeUpdate(BaseModel):
+    alpha_code: str
+
+
 class UserResponse(BaseModel):
     id: int
     name: str
     username: str
+    email: Optional[str]
     role: UserRole
+    is_owner: bool
     task_visible_limit: int
     notification_morning: str
     notification_evening: str
     triage_start_hour: int
     triage_end_hour: int
     created_at: datetime
+    needs_alpha_challenge: bool = False
 
     model_config = {"from_attributes": True}
 

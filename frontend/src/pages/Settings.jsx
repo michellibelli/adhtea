@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal } from '../api/gcal'
-import { listUsers, createUser, deleteUser, createInvite, listInvites, revokeInvite, logout } from '../api/auth'
+import { listUsers, createUser, deleteUser, createInvite, listInvites, revokeInvite, logout, getAlphaCode, setAlphaCode } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -279,6 +279,58 @@ function InviteSection() {
 }
 
 
+function AlphaCodeSection() {
+  const [code,    setCode]    = useState('')
+  const [current, setCurrent] = useState(null)
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
+
+  useEffect(() => {
+    getAlphaCode()
+      .then(res => { setCurrent(res.alpha_code); setCode(res.alpha_code ?? '') })
+      .catch(() => {})
+  }, [])
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setSaving(true)
+    setSaved(false)
+    try {
+      await setAlphaCode(code)
+      setCurrent(code || null)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="mb-6">
+      <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Alpha code</h2>
+      <Card className="px-5 py-4">
+        <p className="text-xs text-ui-subtext mb-3 leading-relaxed">
+          {current
+            ? 'New signups must enter this code. Changing it will ask all existing users to re-verify on next visit.'
+            : 'No code set — anyone with the signup link can create an account.'}
+        </p>
+        <form onSubmit={handleSave} className="flex gap-2">
+          <Input
+            placeholder="Leave empty to disable"
+            value={code}
+            onChange={e => setCode(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="submit" size="sm" disabled={saving}>
+            {saving ? '…' : saved ? 'Saved!' : 'Save'}
+          </Button>
+        </form>
+      </Card>
+    </section>
+  )
+}
+
+
 export default function Settings({ onNavigate, user }) {
   function handleLogout() {
     logout().then(() => window.location.reload())
@@ -330,6 +382,8 @@ export default function Settings({ onNavigate, user }) {
             <InviteSection />
           </>
         )}
+
+        {user?.is_owner && <AlphaCodeSection />}
 
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Integrations</h2>

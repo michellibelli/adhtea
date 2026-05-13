@@ -6,11 +6,32 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, SessionToken, ActuatorCategory, InviteToken, UserRole, utcnow
-from schemas import LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate, UserCreate, UserListItem, RegisterRequest, InviteResponse
+from models import User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow
+from schemas import (
+    LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate,
+    UserCreate, UserListItem, RegisterRequest, InviteResponse,
+    SignupRequest, AlphaChallengeRequest, AlphaCodeUpdate,
+)
 
 router = APIRouter()
 security = HTTPBearer()
+
+
+def _get_or_init_config(db: Session) -> SiteConfig:
+    config = db.query(SiteConfig).first()
+    if not config:
+        config = SiteConfig()
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    return config
+
+
+def _make_session(user_id: int, db: Session) -> str:
+    token_str = secrets.token_hex(32)
+    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
+    db.add(SessionToken(user_id=user_id, token=token_str, expires_at=expires))
+    return token_str
 
 TOKEN_EXPIRY_DAYS = 30
 
@@ -61,11 +82,14 @@ def setup(req: SetupRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Setup already complete")
 
     hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
+    config = _get_or_init_config(db)
     user = User(
         name=req.name,
         username=req.username.lower().strip(),
         hashed_password=hashed,
         role=UserRole.primary,
+        is_owner=True,
+        alpha_code_version=config.alpha_code_version,
     )
     db.add(user)
     db.flush()  # get user.id
@@ -79,11 +103,7 @@ def setup(req: SetupRequest, db: Session = Depends(get_db)):
             is_preset=True,
         ))
 
-    # Create session token
-    token_str = secrets.token_hex(32)
-    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
-    session = SessionToken(user_id=user.id, token=token_str, expires_at=expires)
-    db.add(session)
+    token_str = _make_session(user.id, db)
     db.commit()
 
     return LoginResponse(
@@ -142,8 +162,16 @@ def logout(
 # ---------------------------------------------------------------------------
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)):
-    return current_user
+def me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    config = _get_or_init_config(db)
+    needs_challenge = (
+        config.alpha_code is not None
+        and not current_user.is_owner
+        and current_user.alpha_code_version != config.alpha_code_version
+    )
+    data = {c.name: getattr(current_user, c.name) for c in current_user.__table__.columns}
+    data["needs_alpha_challenge"] = needs_challenge
+    return data
 
 
 @router.patch("/me/settings", response_model=UserResponse)
@@ -299,3 +327,91 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     db.add(session)
     db.commit()
     return LoginResponse(token=token_str, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
+
+
+# ---------------------------------------------------------------------------
+# Open signup (alpha-code gated)
+# ---------------------------------------------------------------------------
+
+@router.get("/signup-config")
+def signup_config(db: Session = Depends(get_db)):
+    config = _get_or_init_config(db)
+    return {"alpha_code_required": config.alpha_code is not None}
+
+
+@router.post("/signup", response_model=LoginResponse, status_code=201)
+def signup(req: SignupRequest, db: Session = Depends(get_db)):
+    config = _get_or_init_config(db)
+    if config.alpha_code is not None:
+        if not req.alpha_code or req.alpha_code.strip() != config.alpha_code:
+            raise HTTPException(status_code=400, detail="Invalid alpha code")
+    if db.query(User).count() >= 20:
+        raise HTTPException(status_code=400, detail="User limit reached")
+    username = req.username.lower().strip()
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+    hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
+    user = User(
+        name=req.name,
+        username=username,
+        email=req.email,
+        hashed_password=hashed,
+        role=UserRole.primary,
+        alpha_code_version=config.alpha_code_version,
+    )
+    db.add(user)
+    db.flush()
+    for p in PRESET_ACTUATORS:
+        db.add(ActuatorCategory(user_id=user.id, name=p["name"], description=p["description"], is_preset=True))
+    token_str = _make_session(user.id, db)
+    db.commit()
+    return LoginResponse(token=token_str, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
+
+
+# ---------------------------------------------------------------------------
+# Alpha challenge — shown to existing users when code rotates
+# ---------------------------------------------------------------------------
+
+@router.post("/alpha-challenge")
+def alpha_challenge(
+    req: AlphaChallengeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    config = _get_or_init_config(db)
+    if config.alpha_code is None or req.alpha_code.strip() != config.alpha_code:
+        raise HTTPException(status_code=400, detail="Invalid alpha code")
+    current_user.alpha_code_version = config.alpha_code_version
+    db.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Alpha code management (owner only)
+# ---------------------------------------------------------------------------
+
+def require_owner(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Owner access required")
+    return current_user
+
+
+@router.get("/alpha-code")
+def get_alpha_code(owner: User = Depends(require_owner), db: Session = Depends(get_db)):
+    config = _get_or_init_config(db)
+    return {"alpha_code": config.alpha_code}
+
+
+@router.patch("/alpha-code")
+def set_alpha_code(
+    req: AlphaCodeUpdate,
+    owner: User = Depends(require_owner),
+    db: Session = Depends(get_db),
+):
+    config = _get_or_init_config(db)
+    config.alpha_code = req.alpha_code.strip() or None
+    config.alpha_code_version += 1
+    # Bump owner's version so they aren't challenged
+    owner.alpha_code_version = config.alpha_code_version
+    db.commit()
+    return {"ok": True, "alpha_code_version": config.alpha_code_version}

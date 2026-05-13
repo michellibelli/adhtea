@@ -19,14 +19,27 @@ def _migrate():
     with engine.connect() as conn:
         is_sqlite = str(engine.url).startswith("sqlite")
         if is_sqlite:
-            rows = conn.execute(text("PRAGMA table_info(tasks)")).fetchall()
-            existing = {row[1] for row in rows}
-            if "project_id" not in existing:
+            tasks_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(tasks)")).fetchall()}
+            users_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
+            if "project_id" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
-                conn.commit()
+            if "email" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
+            if "is_owner" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_owner BOOLEAN NOT NULL DEFAULT 0"))
+                conn.execute(text("UPDATE users SET is_owner=1 WHERE id=(SELECT MIN(id) FROM users)"))
+            if "alpha_code_version" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN alpha_code_version INTEGER NOT NULL DEFAULT 0"))
+            conn.commit()
         else:
             conn.execute(text(
                 "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL"
+            ))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS alpha_code_version INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text(
+                "UPDATE users SET is_owner=TRUE WHERE id=(SELECT MIN(id) FROM users) AND is_owner=FALSE"
             ))
             conn.commit()
 

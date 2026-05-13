@@ -6,6 +6,8 @@ import { getMe, logout } from './api/auth'
 import { getTodayLog } from './api/selfcare'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Signup from './pages/Signup'
+import AlphaChallenge from './pages/AlphaChallenge'
 import Capture from './pages/Capture'
 import Triage from './pages/Triage'
 import Focus from './pages/Focus'
@@ -43,18 +45,24 @@ async function getOpeningScreen() {
 }
 
 function AppShell() {
-  const [screen, setScreen]           = useState('focus')
-  const [user, setUser]               = useState(null)
-  const [carriedOver, setCarriedOver] = useState(false)
-  const [ready, setReady]             = useState(false)
-  const [showEOD, setShowEOD]         = useState(false)
+  const [screen, setScreen]                   = useState('focus')
+  const [user, setUser]                       = useState(null)
+  const [carriedOver, setCarriedOver]         = useState(false)
+  const [ready, setReady]                     = useState(false)
+  const [showEOD, setShowEOD]                 = useState(false)
+  const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
+
   useEffect(() => {
     getMe()
       .then(async (u) => {
         setUser(u)
+        if (u.needs_alpha_challenge) {
+          setNeedsAlphaChallenge(true)
+          setReady(true)
+          return
+        }
         const opening = await getOpeningScreen()
         setScreen(opening)
-        // Check EOD gate: evening window + no log yet today
         if (isEODWindow(u)) {
           try {
             const log = await getTodayLog()
@@ -75,6 +83,17 @@ function AppShell() {
 
   if (!ready) {
     return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">…</p></div>
+  }
+
+  if (needsAlphaChallenge) {
+    return (
+      <ThemeProvider>
+        <AlphaChallenge
+          onVerified={() => setNeedsAlphaChallenge(false)}
+          onLogout={() => window.location.reload()}
+        />
+      </ThemeProvider>
+    )
   }
 
   if (showEOD) {
@@ -141,13 +160,15 @@ function AppShell() {
 }
 
 export default function App() {
-  const [authed, setAuthed]     = useState(isLoggedIn())
-  const [warming, setWarming]   = useState(() => isLoggedIn() && likelySleeping())
+  const [authed, setAuthed]           = useState(isLoggedIn())
+  const [warming, setWarming]         = useState(() => isLoggedIn() && likelySleeping())
+  const [preAuthScreen, setPreAuthScreen] = useState(
+    () => window.location.pathname === '/signup' ? 'signup' : 'login'
+  )
   const inviteToken = new URLSearchParams(window.location.search).get('invite')
 
   function handleAuthed() {
-    // Strip ?invite= from URL so refreshing doesn't re-show register
-    window.history.replaceState({}, '', window.location.pathname)
+    window.history.replaceState({}, '', '/')
     setAuthed(true)
   }
 
@@ -167,9 +188,23 @@ export default function App() {
     )
   }
 
+  if (!authed && preAuthScreen === 'signup') {
+    return (
+      <ThemeProvider>
+        <Signup
+          onLogin={handleAuthed}
+          onGoLogin={() => { window.history.replaceState({}, '', '/'); setPreAuthScreen('login') }}
+        />
+      </ThemeProvider>
+    )
+  }
+
   return (
     <ThemeProvider>
-      {authed ? <AppShell /> : <Login onLogin={() => setAuthed(true)} />}
+      {authed
+        ? <AppShell />
+        : <Login onLogin={() => setAuthed(true)} onGoSignup={() => { window.history.replaceState({}, '', '/signup'); setPreAuthScreen('signup') }} />
+      }
     </ThemeProvider>
   )
 }

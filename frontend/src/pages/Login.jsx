@@ -4,7 +4,7 @@ import { api } from '../api/client'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onGoSignup }) {
   const [mode,        setMode]        = useState('login')
   const [setupNeeded, setSetupNeeded] = useState(null)   // null = checking
   const [name,        setName]        = useState('')
@@ -95,10 +95,10 @@ export default function Login({ onLogin }) {
               {mode === 'login' ? 'First time? Create your account' : 'Already have an account? Sign in'}
             </Button>
           )}
-          {setupNeeded === false && (
-            <p className="text-center text-xs text-ui-subtext mt-6">
-              Need access? Ask for an invite link.
-            </p>
+          {setupNeeded === false && onGoSignup && (
+            <Button variant="ghost" className="w-full mt-6 text-sm" onClick={onGoSignup}>
+              New here? Create an account
+            </Button>
           )}
         </div>
       </div>

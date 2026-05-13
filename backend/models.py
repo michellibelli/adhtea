@@ -90,14 +90,24 @@ class TimeOfDay(str, enum.Enum):
 # User
 # ---------------------------------------------------------------------------
 
+class SiteConfig(Base):
+    __tablename__ = "site_config"
+
+    id = Column(Integer, primary_key=True)
+    alpha_code = Column(String(100), nullable=True)         # None = open signup
+    alpha_code_version = Column(Integer, default=1, nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), nullable=True)
     hashed_password = Column(String(255), nullable=False)
     role = Column(SAEnum(UserRole), default=UserRole.primary, nullable=False)
+    is_owner = Column(Boolean, default=False, nullable=False)  # True only for setup user
     # For child accounts: linked to a primary user
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     # Settings
@@ -106,6 +116,7 @@ class User(Base):
     notification_evening = Column(String(5), default="21:00")
     triage_start_hour = Column(Integer, default=8)
     triage_end_hour = Column(Integer, default=12)
+    alpha_code_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=utcnow)
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")

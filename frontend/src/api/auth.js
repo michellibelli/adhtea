@@ -57,3 +57,25 @@ export async function listInvites() {
 export async function revokeInvite(token) {
   return api.delete(`/invites/${token}`)
 }
+
+export async function getSignupConfig() {
+  return api.get('/signup-config')
+}
+
+export async function signup(name, username, email, password, alphaCode) {
+  const res = await api.post('/signup', { name, username, email: email || null, password, alpha_code: alphaCode || null })
+  setToken(res.token)
+  return res
+}
+
+export async function alphaChallenge(alphaCode) {
+  return api.post('/alpha-challenge', { alpha_code: alphaCode })
+}
+
+export async function getAlphaCode() {
+  return api.get('/alpha-code')
+}
+
+export async function setAlphaCode(alphaCode) {
+  return api.patch('/alpha-code', { alpha_code: alphaCode })
+}
