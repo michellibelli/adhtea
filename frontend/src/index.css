@@ -22,40 +22,41 @@
   --color-ui-input-focus:   var(--aria-input-focus);
   --color-ui-badge:         var(--aria-badge);
   --color-ui-badge-text:    var(--aria-badge-text);
-  --font-pixel: 'Press Start 2P', monospace;
+  --font-display: 'Baloo 2', sans-serif;
+  --font-pixel: 'Baloo 2', sans-serif;
 }
 
 /* =============================================================================
-   adhTea design system — queer pixel cozy palette
+   adhTea design system — bold orchid brand palette
    ============================================================================= */
 
 [data-theme="adhtea"] {
-  --pride-pink:    #F06B9A;
-  --pride-peach:   #F7A165;
-  --pride-yellow:  #F0E07A;
-  --pride-green:   #7BC97A;
-  --pride-aqua:    #6DC8CC;
-  --pride-lavender:#9D8FD6;
+  --logo-purple:  #9088D4;
+  --logo-pink:    #E679B4;
+  --logo-orange:  #F08040;
+  --orchid:       #CC6FD4;
+  --orchid-dark:  #B85DC0;
+  --orchid-light: #E099EC;
 
-  --aria-surface:       #FFFBF0;
-  --aria-border:        #C4A8D4;
+  --aria-surface:       #FFFFFF;
+  --aria-border:        rgba(204, 111, 212, 0.3);
   --aria-text:          #2A0F40;
-  --aria-subtext:       #7A5090;
-  --aria-accent:        #C490D1;
-  --aria-primary:       #B4A8E0;
-  --aria-primary-hover: #9A8CC8;
-  --aria-primary-text:  #2A0F40;
-  --aria-nav:           #130828;
-  --aria-nav-border:    #4A2068;
-  --aria-input:         #FFFBF0;
-  --aria-input-border:  #C4A8D4;
-  --aria-input-focus:   #C490D1;
-  --aria-badge:         #F7A165;
-  --aria-badge-text:    #2A0F40;
+  --aria-subtext:       #7A4090;
+  --aria-accent:        #CC6FD4;
+  --aria-primary:       #CC6FD4;
+  --aria-primary-hover: #B85DC0;
+  --aria-primary-text:  #FFFFFF;
+  --aria-nav:           #1A0830;
+  --aria-nav-border:    #CC6FD4;
+  --aria-input:         #FFFFFF;
+  --aria-input-border:  #D494DE;
+  --aria-input-focus:   #CC6FD4;
+  --aria-badge:         #F08040;
+  --aria-badge-text:    #FFFFFF;
 }
 
 /* =============================================================================
-   Page background — pixel dawn sky + tiled star/cloud texture
+   Page background — vivid orchid brand gradient
    ============================================================================= */
 
 @keyframes page-in {
@@ -69,84 +70,70 @@
 }
 
 [data-theme="adhtea"] .aria-page {
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='14' y='7' width='2' height='6' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='12' y='9' width='6' height='2' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='84' y='25' width='2' height='10' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='80' y='29' width='10' height='2' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='39' y='62' width='2' height='6' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='37' y='64' width='6' height='2' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='99' y='86' width='2' height='4' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='98' y='87' width='4' height='2' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='19' y='96' width='2' height='8' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='16' y='99' width='8' height='2' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='59' y='38' width='2' height='4' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='58' y='39' width='4' height='2' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='109' y='52' width='2' height='6' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='107' y='54' width='6' height='2' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='50' y='19' width='12' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='53' y='16' width='6' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='55' y='20' width='4' height='2' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='2' y='74' width='10' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='4' y='72' width='5' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='75' y='10' width='2' height='2' fill='rgba(247,161,101,0.32)'/%3E%3Crect x='30' y='42' width='2' height='2' fill='rgba(196,144,209,0.32)'/%3E%3Crect x='65' y='88' width='2' height='2' fill='rgba(240,107,154,0.28)'/%3E%3Crect x='110' y='15' width='2' height='2' fill='rgba(109,200,204,0.3)'/%3E%3C/svg%3E"),
-    linear-gradient(160deg, #DFC8FF 0%, #F5C0F2 22%, #FFD0C0 50%, #FFE8C0 72%, #FFFBF0 100%);
-  background-size: 120px 120px, 100%;
+  background: linear-gradient(145deg, #B858C8 0%, #CC6FD4 40%, #D87FDE 75%, #E8A0E8 100%);
 }
 
 [data-theme="adhtea"] body {
-  background: #DFC8FF;
+  background: #CC6FD4;
 }
 
 /* =============================================================================
-   Pixel UI utilities — Stardew-style offset borders (doubled)
+   Modern card + button utilities
    ============================================================================= */
 
 .pixel-card {
   position: relative;
   overflow: hidden;
-  border: 4px solid var(--aria-border);
-  box-shadow: 4px 4px 0 0 #7A5090, inset 0 0 0 2px rgba(196,144,209,0.25);
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
-    #F0EAFF !important;
-  background-size: 200px 200px, 100% !important;
+  border: 1.5px solid rgba(204, 111, 212, 0.25);
+  border-radius: 20px !important;
+  box-shadow: 0 4px 28px rgba(184, 93, 192, 0.18), 0 1px 4px rgba(0, 0, 0, 0.06);
+  background: #FFFFFF !important;
 }
 
-.pixel-card::before,
-.pixel-card::after {
+.pixel-card::before {
   content: '';
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  height: 28px;
-  background: linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6);
+  height: 3px;
+  background: linear-gradient(to right, #9088D4, #E679B4, #F08040);
+  border-radius: 20px 20px 0 0;
   z-index: 1;
   pointer-events: none;
 }
 
-.pixel-card::before {
-  top: 0;
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
-}
-
-.pixel-card::after {
-  bottom: 0;
-  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
-  mask-image: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
-}
-
 .pixel-btn {
-  border: 4px solid var(--aria-border) !important;
-  box-shadow: 3px 3px 0 0 #7A5090;
-  transition: box-shadow 80ms, transform 80ms !important;
+  border: none !important;
+  border-radius: 14px !important;
+  box-shadow: 0 2px 16px rgba(204, 111, 212, 0.38);
+  transition: transform 120ms ease, box-shadow 120ms ease !important;
 }
 .pixel-btn:hover {
-  box-shadow: 1px 1px 0 0 #7A5090;
-  transform: translate(2px, 2px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(204, 111, 212, 0.48);
 }
 .pixel-btn:active {
-  box-shadow: none;
-  transform: translate(3px, 3px);
+  transform: translateY(1px);
+  box-shadow: 0 1px 8px rgba(204, 111, 212, 0.28);
 }
 
 .pixel-btn-rainbow {
-  border: 4px solid transparent !important;
+  border: 2px solid transparent !important;
   background:
     linear-gradient(var(--aria-primary), var(--aria-primary-hover)) padding-box,
-    linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6) border-box !important;
+    linear-gradient(to right, #9088D4, #E679B4, #F08040) border-box !important;
 }
 
 /* =============================================================================
-   Pixel heading — Press Start 2P for section titles only
+   Display heading — Baloo 2 ExtraBold for section titles
    ============================================================================= */
 
 .pixel-heading {
-  font-family: 'Press Start 2P', monospace;
-  line-height: 1.7;
-  letter-spacing: 0.02em;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 /* =============================================================================
@@ -211,15 +198,14 @@
 }
 
 /* =============================================================================
-   Pride gradient bar
+   Brand gradient bar — matches logo pill
    ============================================================================= */
 
 .pride-stripe {
   height: 4px;
   width: 100%;
-  background: linear-gradient(to right,
-    #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6
-  );
+  background: linear-gradient(to right, #9088D4, #E679B4, #F08040);
+  border-radius: 999px;
 }
 
 /* =============================================================================

@@ -1,14 +1,11 @@
-// Shared SVG gradient — defined once, referenced by all icons via url(#navRainbow)
+// Shared SVG gradient — logo 3-stop purple → pink → orange
 const GradientDef = () => (
   <svg width="0" height="0" className="absolute overflow-hidden">
     <defs>
       <linearGradient id="navRainbow" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%"   stopColor="#F06B9A"/>
-        <stop offset="20%"  stopColor="#F7A165"/>
-        <stop offset="40%"  stopColor="#F0E07A"/>
-        <stop offset="60%"  stopColor="#7BC97A"/>
-        <stop offset="80%"  stopColor="#6DC8CC"/>
-        <stop offset="100%" stopColor="#9D8FD6"/>
+        <stop offset="0%"   stopColor="#9088D4"/>
+        <stop offset="50%"  stopColor="#E679B4"/>
+        <stop offset="100%" stopColor="#F08040"/>
       </linearGradient>
     </defs>
   </svg>
@@ -92,8 +89,8 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
       {/* Mobile FAB — capture */}
       <button
         onClick={onCapture}
-        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
-        style={{ background: 'linear-gradient(135deg, #C490D1, #B4A8E0)' }}
+        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white active:scale-95 transition-transform md:hidden"
+        style={{ background: 'linear-gradient(135deg, #CC6FD4, #E679B4)', boxShadow: '0 4px 20px rgba(204,111,212,0.5)' }}
         aria-label="Capture"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
@@ -105,16 +102,16 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
         </svg>
       </button>
 
-      {/* Desktop sidebar — night sky */}
-      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-[#6A3090] bg-[#2A0E58] pt-6 pb-6 gap-1">
+      {/* Desktop sidebar */}
+      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r border-[#CC6FD4]/30 bg-[#1A0830] pt-6 pb-6 gap-1">
         <GradientDef />
 
-        {/* Pride stripe top */}
-        <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'4px'}} />
+        {/* Brand stripe top */}
+        <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'3px'}} />
 
         {/* Logo — home button */}
         <button onClick={() => onNavigate('focus')} className="mb-4 mt-1 hover:opacity-80 transition-opacity" aria-label="Go to Now">
-          <img src="/adhTeaLogo.png" alt="adhTea" className="w-18 object-contain" style={{imageRendering:'pixelated', width:'72px'}}/>
+          <img src="/adhTeaLogo.png" alt="adhTea" className="object-contain" style={{width:'72px'}}/>
         </button>
 
         {DESKTOP_NAV_ITEMS.map((item) => {
@@ -124,21 +121,20 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               key={item.id}
               onClick={() => item.id === 'capture' ? onCapture() : onNavigate(item.id)}
               className="w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-all duration-150"
-              style={{ opacity: isActive ? 1 : 0.45 }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.opacity = '0.75' }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.45' }}
+              style={{ opacity: isActive ? 1 : 0.4 }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.opacity = '0.7' }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.opacity = '0.4' }}
             >
               {item.icon}
-              <span className="text-[9px] font-medium" style={{color: isActive ? '#E0B8F0' : '#9A6EB8'}}>
+              <span className="text-[9px] font-semibold" style={{color: isActive ? '#E099EC' : '#9070A8'}}>
                 {item.label}
               </span>
             </button>
           )
         })}
 
-        {/* Sparkle footer */}
         <div className="mt-auto flex flex-col items-center gap-1">
-          <span className="sparkle text-xs" style={{color:'#9D8FD6', animationDelay:'1.4s'}}>✧</span>
+          <span className="sparkle text-xs" style={{color:'#CC6FD4', animationDelay:'1.4s'}}>✦</span>
         </div>
       </nav>
     </>
