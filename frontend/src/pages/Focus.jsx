@@ -81,9 +81,14 @@ function isImminent(task) {
 }
 
 function pickNext(tasks) {
-  // Timed routines are invisible until 5 min before their scheduled time
+  // Timed routines visible only between (due_time - any) and (due_time + 60 min):
+  //   - Surface starting 5 min before so user can pre-empt
+  //   - Drop out 60 min after due_time so an overdue routine doesn't block bonus mode
   const visible = tasks.filter(t => {
-    if (t.task_type === 'routine' && t.due_time) return minutesUntil(t.due_time) <= 5
+    if (t.task_type === 'routine' && t.due_time) {
+      const m = minutesUntil(t.due_time)
+      return m <= 5 && m >= -60
+    }
     return true
   })
   const copy = [...visible]

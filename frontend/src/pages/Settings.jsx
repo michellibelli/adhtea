@@ -567,10 +567,6 @@ function DomainsSection() {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-ui-subtext leading-relaxed mb-2">
-        Domains let project tasks land only on allowed days/times. Work = weekdays. Home = light evening tasks + weekends.
-        Create more domains from the project create screen.
-      </p>
       {domains.map(d => (
         <DomainCard
           key={d.id}
