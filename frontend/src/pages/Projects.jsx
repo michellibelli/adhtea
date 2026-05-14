@@ -49,54 +49,92 @@ function DragHandle(props) {
   )
 }
 
-function SortableTaskRow({ task, projectId, onComplete, onRemove }) {
+function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  const [editing, setEditing]     = useState(false)
+  const [localTitle, setLocalTitle] = useState(task.title)
+  const [localDate,  setLocalDate]  = useState(task.due_date || '')
+
+  function startEdit() { setLocalTitle(task.title); setLocalDate(task.due_date || ''); setEditing(true) }
+  function cancelEdit() { setEditing(false) }
+  function saveEdit() {
+    if (localTitle.trim()) onUpdate(projectId, task.id, { title: localTitle.trim(), due_date: localDate || null })
+    setEditing(false)
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className={`flex items-center gap-3 px-4 py-2.5 border-b border-ui-border/40 last:border-0 ${task.status === 'done' ? 'opacity-40' : ''}`}
+      className={`border-b border-ui-border/40 last:border-0 ${task.status === 'done' ? 'opacity-40' : ''}`}
     >
-      <DragHandle {...attributes} {...listeners} />
+      {editing ? (
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <input
+            value={localTitle}
+            onChange={e => setLocalTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
+            autoFocus
+            className="w-full text-sm bg-ui-input border border-ui-input-border rounded-lg px-3 py-1.5 text-ui-text outline-none focus:border-ui-input-focus transition-colors"
+          />
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={localDate}
+              onChange={e => setLocalDate(e.target.value)}
+              className="text-xs bg-ui-input border border-ui-input-border rounded-lg px-2 py-1.5 text-ui-text outline-none focus:border-ui-input-focus transition-colors"
+            />
+            <button onClick={saveEdit} className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity">Save</button>
+            <button onClick={cancelEdit} className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <DragHandle {...attributes} {...listeners} />
 
-      <button
-        onClick={() => task.status !== 'done' && onComplete(projectId, task.id)}
-        className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-          task.status === 'done'
-            ? 'bg-ui-accent border-ui-accent'
-            : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
-        }`}
-      >
-        {task.status === 'done' && (
-          <svg viewBox="0 0 12 10" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
-            <polyline points="1 5 4.5 8.5 11 1"/>
-          </svg>
-        )}
-      </button>
+          <button
+            onClick={() => task.status !== 'done' && onComplete(projectId, task.id)}
+            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+              task.status === 'done'
+                ? 'bg-ui-accent border-ui-accent'
+                : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
+            }`}
+          >
+            {task.status === 'done' && (
+              <svg viewBox="0 0 12 10" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
+                <polyline points="1 5 4.5 8.5 11 1"/>
+              </svg>
+            )}
+          </button>
 
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm text-ui-text leading-snug ${task.status === 'done' ? 'line-through' : ''}`}>
-          {task.title}
-        </p>
-        {task.due_date && (
-          <p className="text-[10px] text-ui-subtext mt-0.5">{task.due_date}</p>
-        )}
-      </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm text-ui-text leading-snug ${task.status === 'done' ? 'line-through' : ''}`}>
+              {task.title}
+            </p>
+            {task.due_date && (
+              <p className="text-[10px] text-ui-subtext mt-0.5">{task.due_date}</p>
+            )}
+          </div>
 
-      <button
-        onClick={() => onRemove(projectId, task.id)}
-        className="flex-shrink-0 p-1 text-ui-subtext/25 hover:text-red-400 transition-colors"
-        title="Remove from project"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
+          <button onClick={startEdit} className="flex-shrink-0 p-1 text-ui-subtext/25 hover:text-ui-subtext transition-colors" title="Edit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+
+          <button onClick={() => onRemove(projectId, task.id)} className="flex-shrink-0 p-1 text-ui-subtext/25 hover:text-red-400 transition-colors" title="Remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove }) {
+function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -122,6 +160,7 @@ function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove })
             projectId={projectId}
             onComplete={onComplete}
             onRemove={onRemove}
+            onUpdate={onUpdate}
           />
         ))}
       </SortableContext>
@@ -279,6 +318,19 @@ export default function Projects({ onNavigate }) {
     } catch (err) { console.error(err) }
   }
 
+  async function handleUpdateProjectTask(projectId, taskId, patch) {
+    try {
+      await updateTask(taskId, patch)
+      setDetail(prev => ({
+        ...prev,
+        [projectId]: {
+          ...prev[projectId],
+          tasks: prev[projectId].tasks.map(t => t.id === taskId ? { ...t, ...patch } : t),
+        },
+      }))
+    } catch (err) { console.error(err) }
+  }
+
   async function handleProjectReorder(projectId, updatedTasks) {
     const original = detail[projectId]?.tasks || []
     setDetail(prev => ({ ...prev, [projectId]: { ...prev[projectId], tasks: updatedTasks } }))
@@ -432,6 +484,7 @@ export default function Projects({ onNavigate }) {
                             onReorder={handleProjectReorder}
                             onComplete={handleComplete}
                             onRemove={handleRemove}
+                            onUpdate={handleUpdateProjectTask}
                           />
                         )}
 
