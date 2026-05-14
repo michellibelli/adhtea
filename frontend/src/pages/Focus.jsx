@@ -307,13 +307,13 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           {/* Relative wrapper — anchors cup position */}
           <div className="relative">
 
-            {/* Tag + string — rise during dunk */}
+            {/* Teabag unit — tag + string + card descend as one */}
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 1500ms ease-in 350ms both', position: 'relative', zIndex: 2 } : undefined}>
+
+            {/* Tag + string */}
             <div
               className="flex flex-col items-center"
-              style={{
-                marginBottom: '-1px', zIndex: 2, position: 'relative',
-                animation: celebrate === 'dunk' ? 'teabag-tag-rise 700ms ease-out 100ms forwards' : undefined,
-              }}
+              style={{ marginBottom: '-1px', zIndex: 2, position: 'relative' }}
             >
               <div style={{
                 width: 32, height: 17,
@@ -330,18 +330,15 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 height: 38,
                 background: 'linear-gradient(to bottom, #8B7355 0%, #C4A882 60%, #D4B892 100%)',
                 borderRadius: 1,
-                transformOrigin: 'top center',
-                animation: celebrate === 'dunk' ? 'teabag-string-extend 700ms ease-out 100ms forwards' : undefined,
               }} />
             </div>
 
-            {/* Bonus glow ring + clipped card — descend during dunk */}
+            {/* Bonus glow ring + clipped card */}
             <div
               className={isBonusMode
                 ? 'rounded-2xl ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
                 : ''
               }
-              style={celebrate === 'dunk' ? { animation: 'teabag-descend 1500ms ease-in 350ms both', position: 'relative', zIndex: 2 } : undefined}
             >
               <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
               <Card className="px-8 py-10 min-h-[280px]">
@@ -401,6 +398,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               </Card>
               </div>{/* end teabag clip-path */}
             </div>
+            </div>{/* end teabag unit */}
 
             {/* Teacup — fades in below card, bounces once card enters, then exits */}
             {celebrate === 'dunk' && (
