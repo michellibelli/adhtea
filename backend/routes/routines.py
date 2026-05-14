@@ -38,6 +38,7 @@ def create_routine(
         time_of_day=body.time_of_day,
         days_of_week=body.days_of_week,
         only_when_present=body.only_when_present,
+        exact_time=body.exact_time,
     )
     db.add(routine)
     db.commit()
