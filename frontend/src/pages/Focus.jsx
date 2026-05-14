@@ -8,6 +8,14 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
 
+const TEABAG_BG_SVG = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.88" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="120" height="120" filter="url(#n)" opacity="0.22"/></svg>')}")`
+
+const TEABAG_STYLE = {
+  backgroundColor: '#EBE0C4',
+  backgroundImage: TEABAG_BG_SVG,
+  backgroundSize: '90px 90px',
+}
+
 const TEA_PUNS = [
   "Steeped in success! 🍵",
   "You're brewtiful! ☕",
@@ -496,8 +504,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 : ''
               }
             >
-              <div style={{ clipPath: 'polygon(10% 0%, 90% 0%, 100% 14%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 14%)' }}>
-              <Card className="teabag-card px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center">
+              <div style={{ clipPath: 'polygon(18% 0%, 82% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
+              <Card className="teabag-card px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center" style={TEABAG_STYLE}>
 
                 {task.priority && PRIORITY_BADGE[task.priority] && (
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
