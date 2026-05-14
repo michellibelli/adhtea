@@ -12,6 +12,12 @@ import {
   updateProject, generateProjectTasks, removeTaskFromProject,
 } from '../api/projects'
 import { createTask, completeTask, reorderTasks, updateTask } from '../api/tasks'
+
+function fmtDate(iso) {
+  if (!iso) return null
+  const d = new Date(iso.includes('T') ? iso : iso + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
@@ -50,7 +56,7 @@ function DragHandle(props) {
   )
 }
 
-function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate }) {
+function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, selected, onToggleSelect }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const [editing, setEditing]     = useState(false)
   const [localTitle, setLocalTitle] = useState(task.title)
@@ -93,11 +99,26 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate }) {
         <div className="flex items-center gap-3 px-4 py-2.5">
           <DragHandle {...attributes} {...listeners} />
 
+          {/* Multi-select checkbox */}
           <button
-            onClick={() => task.status !== 'done' && onComplete(projectId, task.id)}
+            onClick={() => onToggleSelect(task.id)}
+            className={`flex-shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+              selected ? 'bg-ui-accent border-ui-accent' : 'border-ui-border hover:border-ui-accent'
+            }`}
+          >
+            {selected && (
+              <svg viewBox="0 0 10 8" fill="none" stroke="white" strokeWidth={2.5} className="w-2 h-2">
+                <polyline points="1 4 3.5 6.5 9 1"/>
+              </svg>
+            )}
+          </button>
+
+          {/* Complete / uncomplete circle */}
+          <button
+            onClick={() => onComplete(projectId, task.id)}
             className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
               task.status === 'done'
-                ? 'bg-ui-accent border-ui-accent'
+                ? 'bg-ui-accent border-ui-accent hover:opacity-70'
                 : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
             }`}
           >
@@ -135,7 +156,7 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate }) {
   )
 }
 
-function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate }) {
+function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate, selected, onToggleSelect }) {
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,        { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -162,6 +183,8 @@ function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, o
             onComplete={onComplete}
             onRemove={onRemove}
             onUpdate={onUpdate}
+            selected={selected.has(task.id)}
+            onToggleSelect={onToggleSelect}
           />
         ))}
       </SortableContext>
@@ -193,6 +216,10 @@ export default function Projects({ onNavigate }) {
   const [editingTitle, setEditingTitle] = useState(null)
   const [editTitle,    setEditTitle]    = useState('')
 
+  const [selected,      setSelected]      = useState(new Set())
+  const [batchDateMode, setBatchDateMode] = useState(false)
+  const [batchDate,     setBatchDate]     = useState('')
+
   useEffect(() => {
     listProjects()
       .then(setProjects)
@@ -213,7 +240,17 @@ export default function Projects({ onNavigate }) {
     } else {
       setExpanded(id)
       if (!detail[id]) loadDetail(id)
+      setSelected(new Set())
+      setBatchDateMode(false)
     }
+  }
+
+  function toggleSelect(taskId) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(taskId) ? next.delete(taskId) : next.add(taskId)
+      return next
+    })
   }
 
   async function handleCreate() {
@@ -279,18 +316,49 @@ export default function Projects({ onNavigate }) {
   }
 
   async function handleComplete(projectId, taskId) {
+    const task = detail[projectId]?.tasks.find(t => t.id === taskId)
+    if (!task) return
+    const isUndo = task.status === 'done'
     try {
-      await completeTask(taskId)
+      if (isUndo) {
+        await updateTask(taskId, { status: 'inbox' })
+      } else {
+        await completeTask(taskId)
+      }
       setDetail(prev => ({
         ...prev,
         [projectId]: {
           ...prev[projectId],
-          tasks: prev[projectId].tasks.map(t => t.id === taskId ? { ...t, status: 'done' } : t),
+          tasks: prev[projectId].tasks.map(t =>
+            t.id === taskId ? { ...t, status: isUndo ? 'inbox' : 'done' } : t
+          ),
         },
       }))
       setProjects(prev => prev.map(p =>
-        p.id === projectId ? { ...p, done_count: p.done_count + 1 } : p
+        p.id === projectId ? { ...p, done_count: p.done_count + (isUndo ? -1 : 1) } : p
       ))
+    } catch (err) { console.error(err) }
+  }
+
+  async function handleBatchDate() {
+    if (!batchDate) return
+    const ids = [...selected]
+    try {
+      await Promise.all(ids.map(id => updateTask(id, { due_date: batchDate })))
+      if (expanded) {
+        setDetail(prev => ({
+          ...prev,
+          [expanded]: {
+            ...prev[expanded],
+            tasks: prev[expanded].tasks.map(t =>
+              selected.has(t.id) ? { ...t, due_date: batchDate } : t
+            ),
+          },
+        }))
+      }
+      setSelected(new Set())
+      setBatchDateMode(false)
+      setBatchDate('')
     } catch (err) { console.error(err) }
   }
 
@@ -477,6 +545,54 @@ export default function Projects({ onNavigate }) {
                           </p>
                         )}
 
+                        {/* Batch bar — shown when 2+ selected */}
+                        {selected.size >= 2 && expanded === project.id && (
+                          <div className="sticky top-[66px] md:top-[10px] z-30 px-4 py-2 bg-ui-nav/95 backdrop-blur-md border-b border-ui-border space-y-2">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => { setBatchDateMode(v => !v); setBatchDate('') }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                  batchDateMode
+                                    ? 'bg-ui-accent text-white border-transparent'
+                                    : 'bg-ui-accent/20 text-ui-accent border-ui-accent/30 hover:bg-ui-accent/30'
+                                }`}
+                              >
+                                ◷ Set date ({selected.size})
+                              </button>
+                              <button
+                                onClick={() => { setSelected(new Set()); setBatchDateMode(false) }}
+                                className="text-xs text-ui-subtext/60 hover:opacity-70 transition-opacity"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                            {batchDateMode && (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="date"
+                                  value={batchDate}
+                                  onChange={e => setBatchDate(e.target.value)}
+                                  className="text-xs bg-ui-surface border border-ui-border rounded-lg px-2 py-1 text-ui-text focus:outline-none focus:border-ui-accent"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleBatchDate}
+                                  disabled={!batchDate}
+                                  className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity disabled:opacity-40"
+                                >
+                                  Set
+                                </button>
+                                <button
+                                  onClick={() => { setBatchDateMode(false); setBatchDate('') }}
+                                  className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Sortable task rows */}
                         {d.tasks.length > 0 && (
                           <SortableTaskList
@@ -486,6 +602,8 @@ export default function Projects({ onNavigate }) {
                             onComplete={handleComplete}
                             onRemove={handleRemove}
                             onUpdate={handleUpdateProjectTask}
+                            selected={selected}
+                            onToggleSelect={toggleSelect}
                           />
                         )}
 
