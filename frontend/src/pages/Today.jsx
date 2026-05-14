@@ -113,10 +113,22 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
-  const sorted  = sortTasks(tasks, sortBy)
-  const visible = sorted.slice(0, visibleLimit)
-  const queued  = sorted.slice(visibleLimit)
-  const load    = computeLoad(visible)
+  const timed = tasks
+    .filter(t => t.task_type === 'appointment' || t.task_type === 'routine')
+    .sort((a, b) => {
+      const at = a.due_time || '99:99'
+      const bt = b.due_time || '99:99'
+      if (at !== bt) return at.localeCompare(bt)
+      return (a.due_date || '').localeCompare(b.due_date || '')
+    })
+
+  const regular = sortTasks(
+    tasks.filter(t => t.task_type !== 'appointment' && t.task_type !== 'routine'),
+    sortBy
+  )
+  const visible = regular.slice(0, visibleLimit)
+  const queued  = regular.slice(visibleLimit)
+  const load    = computeLoad(tasks)
 
   async function handleComplete(id) { await completeTask(id); fetchTasks() }
   async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
@@ -126,10 +138,10 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   async function handleDragEnd(event) {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = sorted.findIndex(t => t.id === active.id)
-    const newIndex = sorted.findIndex(t => t.id === over.id)
-    const reordered = arrayMove(sorted, oldIndex, newIndex).map((t, i) => ({ ...t, sort_order: i }))
-    setTasks(reordered)
+    const oldIndex = regular.findIndex(t => t.id === active.id)
+    const newIndex = regular.findIndex(t => t.id === over.id)
+    const reordered = arrayMove(regular, oldIndex, newIndex).map((t, i) => ({ ...t, sort_order: i }))
+    setTasks([...timed, ...reordered])
     await reorderTasks(reordered.map(t => t.id))
   }
 
@@ -183,67 +195,93 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
           </div>
         )}
 
-        {/* Sort controls */}
-        {tasks.length > 1 && (
-          <div className="flex gap-1.5 mb-4">
-            {[['manual', 'My order'], ['priority', 'Urgent first'], ['desire', 'Want to do']].map(([val, lbl]) => (
-              <button
-                key={val}
-                onClick={() => setSortBy(val)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                  sortBy === val
-                    ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                    : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-                }`}
-              >
-                {lbl}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Task list */}
+        {/* Two-column layout */}
         {tasks.length === 0 ? (
           <Card className="mt-16 text-center px-8 py-12">
             <div className="text-4xl mb-4">✦</div>
             <p className="text-base font-medium text-ui-text mb-2">Nothing on your list</p>
             <p className="text-sm text-ui-subtext">Head to Inbox to schedule tasks, or Capture to add something new.</p>
           </Card>
-        ) : sortBy === 'manual' ? (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={visible.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
-                {visible.map((task) => (
-                  <SortableTaskRow
-                    key={task.id}
-                    task={task}
-                    onComplete={handleComplete}
-                    onSnooze={handleSnooze}
-                    onDefer={handleDefer}
-                    onDelete={handleDelete}
-                  />
-                ))}
-                {queued.length > 0 && (
-                  <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">
-                    {queued.length} more waiting — complete or snooze items above to reveal them
-                  </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+
+            {/* Left — appointments & routines */}
+            <div>
+              {timed.length > 0 && (
+                <>
+                  <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider mb-2 px-0.5">Schedule</p>
+                  <div className="space-y-3">
+                    {timed.map(task => (
+                      <TaskCard key={task.id} task={task} variant="today"
+                        onComplete={handleComplete} onSnooze={handleSnooze}
+                        onDefer={handleDefer} onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Right — tasks */}
+            <div>
+              <div className="flex items-center justify-between mb-2 px-0.5">
+                <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Tasks</p>
+                {regular.length > 1 && (
+                  <div className="flex gap-1">
+                    {[['manual', '↕'], ['priority', '!'], ['desire', '♥']].map(([val, lbl]) => (
+                      <button
+                        key={val}
+                        onClick={() => setSortBy(val)}
+                        title={val === 'manual' ? 'My order' : val === 'priority' ? 'Urgent first' : 'Want to do'}
+                        className={`w-6 h-6 rounded text-xs font-medium border transition-all ${
+                          sortBy === val
+                            ? 'bg-ui-primary text-ui-primary-text border-transparent'
+                            : 'border-ui-border text-ui-subtext hover:text-ui-accent'
+                        }`}
+                      >
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-            </SortableContext>
-          </DndContext>
-        ) : (
-          <div className="space-y-3">
-            {visible.map((task) => (
-              <TaskCard key={task.id} task={task} variant="today"
-                onComplete={handleComplete} onSnooze={handleSnooze}
-                onDefer={handleDefer} onDelete={handleDelete}
-              />
-            ))}
-            {queued.length > 0 && (
-              <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">
-                {queued.length} more waiting — complete or snooze items above to reveal them
-              </Card>
-            )}
+
+              {regular.length === 0 ? (
+                <p className="text-xs text-ui-subtext px-0.5">No tasks today</p>
+              ) : sortBy === 'manual' ? (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={visible.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {visible.map(task => (
+                        <SortableTaskRow key={task.id} task={task}
+                          onComplete={handleComplete} onSnooze={handleSnooze}
+                          onDefer={handleDefer} onDelete={handleDelete}
+                        />
+                      ))}
+                      {queued.length > 0 && (
+                        <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">
+                          {queued.length} more waiting
+                        </Card>
+                      )}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className="space-y-3">
+                  {visible.map(task => (
+                    <TaskCard key={task.id} task={task} variant="today"
+                      onComplete={handleComplete} onSnooze={handleSnooze}
+                      onDefer={handleDefer} onDelete={handleDelete}
+                    />
+                  ))}
+                  {queued.length > 0 && (
+                    <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">
+                      {queued.length} more waiting
+                    </Card>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
