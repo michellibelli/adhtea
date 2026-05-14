@@ -135,10 +135,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
       } else {
         fetchAll()
       }
-    }, 2900)
-    setTimeout(() => setCelebrate('p2'), 2900 + 720)
-    setTimeout(() => setCelebrate('p3'), 2900 + 1180)
-    setTimeout(() => setCelebrate(false), 2900 + 4300)
+    }, 5350)
+    setTimeout(() => setCelebrate('p2'), 5350 + 720)
+    setTimeout(() => setCelebrate('p3'), 5350 + 1180)
+    setTimeout(() => setCelebrate(false), 5350 + 4300)
   }
 
   async function handleDefer() {
@@ -203,17 +203,17 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     <div className="aria-page flex flex-col">
       <div className="flex-1 flex flex-col px-10 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
-        {/* Header — replaced by celebration during task complete */}
+        {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
           <div
-            className="relative overflow-hidden mb-4 cursor-pointer select-none"
-            style={{ height: '52px' }}
+            className="fixed left-0 right-0 overflow-hidden cursor-pointer select-none pointer-events-auto"
+            style={{ top: '20%', height: '90px', zIndex: 20 }}
             onClick={() => setCelebrate(false)}
           >
             {/* Train: cup + rainbow slide in as a unit */}
             {celebrate !== 'p3' && (
               <div
-                className="absolute inset-0 flex items-center"
+                className="absolute inset-0 flex items-center px-4"
                 style={{
                   animation: celebrate === 'p1'
                     ? 'celebrate-slide-in 720ms ease-out forwards'
@@ -225,8 +225,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 <div
                   style={{
                     flex: 1,
-                    height: '6px',
-                    borderRadius: '3px 3px 3px 3px',
+                    height: '10px',
+                    borderRadius: '5px',
                     background: 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)',
                     transformOrigin: 'right center',
                     animation: celebrate === 'p2'
@@ -236,8 +236,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 />
                 {/* Cup — overlaps the rainbow front end */}
                 <span style={{
-                  fontSize: '2em', lineHeight: 1, flexShrink: 0,
-                  paddingRight: '4px', marginLeft: '-0.9em',
+                  fontSize: '3.2em', lineHeight: 1, flexShrink: 0,
+                  paddingRight: '8px', marginLeft: '-1.1em',
                   position: 'relative', zIndex: 1,
                 }}>☕</span>
               </div>
@@ -245,12 +245,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             {/* Pun text */}
             {celebrate === 'p3' && (
               <div
-                className="absolute inset-0 flex items-center justify-center gap-2"
+                className="absolute inset-0 flex items-center justify-center gap-3"
                 style={{ animation: 'celebrate-pun-in 280ms ease-out forwards' }}
               >
-                <span className="sparkle" style={{ fontSize: '1.1em', color: '#C490D1' }}>✨</span>
-                <span className="text-sm font-semibold" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
-                <span className="sparkle" style={{ fontSize: '1.1em', color: '#C490D1', animationDelay: '0.5s' }}>✨</span>
+                <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1' }}>✨</span>
+                <span className="text-lg font-semibold" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
+                <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1', animationDelay: '0.5s' }}>✨</span>
               </div>
             )}
           </div>
@@ -308,7 +308,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           <div className="relative">
 
             {/* Teabag unit — tag + string + card descend as one */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 1500ms ease-in 350ms both', position: 'relative', zIndex: 2 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 3500ms ease-in 350ms both', position: 'relative', zIndex: 2 } : undefined}>
 
             {/* Tag + string */}
             <div
@@ -410,7 +410,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 top: '100%',
                 marginTop: '-12px',
                 zIndex: 1,
-                animation: 'teacup-appear 400ms ease-out 200ms both, teacup-bounce 950ms ease-in-out 1900ms both, teacup-exit 400ms ease-in 2850ms forwards',
+                animation: 'teacup-appear 400ms ease-out 200ms both, teacup-bounce 950ms ease-in-out 3900ms both, teacup-exit 400ms ease-in 4850ms forwards',
               }}>
                 <TeaCupSVG />
               </div>
