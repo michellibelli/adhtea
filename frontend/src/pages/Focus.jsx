@@ -61,12 +61,19 @@ function pickNext(tasks) {
   return copy[0] ?? null
 }
 
-function TeaCupSVG() {
+function TeaCupBack() {
   return (
     <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
       <ellipse cx="52" cy="77" rx="46" ry="7" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
       <path d="M 14 22 L 90 22 L 80 71 L 24 71 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
       <path d="M 90 32 Q 108 32 108 50 Q 108 66 90 62" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function TeaCupFront() {
+  return (
+    <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
       <ellipse cx="52" cy="22" rx="38" ry="6.5" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2.5"/>
       <ellipse cx="52" cy="22" rx="34" ry="4.5" fill="#DBA96A" opacity="0.55"/>
     </svg>
@@ -418,7 +425,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             </div>
             </div>{/* end teabag unit */}
 
-            {/* Teacup — fades in below card, bounces once card enters, then exits */}
+            {/* Teacup back layer — behind bag */}
             {celebrate === 'dunk' && (
               <div style={{
                 position: 'absolute',
@@ -427,10 +434,27 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 width: 'fit-content',
                 top: '100%',
                 marginTop: '-12px',
-                zIndex: 2,
+                zIndex: 0,
                 animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
               }}>
-                <TeaCupSVG />
+                <TeaCupBack />
+              </div>
+            )}
+
+            {/* Teacup front layer (rim only) — in front of bag */}
+            {celebrate === 'dunk' && (
+              <div style={{
+                position: 'absolute',
+                left: 0, right: 0,
+                margin: '0 auto',
+                width: 'fit-content',
+                top: '100%',
+                marginTop: '-12px',
+                zIndex: 3,
+                animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
+                pointerEvents: 'none',
+              }}>
+                <TeaCupFront />
               </div>
             )}
 
