@@ -496,7 +496,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 : ''
               }
             >
-              <div style={{ clipPath: 'polygon(40% 0%, 60% 0%, 100% 8%, 100% 100%, 0% 100%, 0% 8%)' }}>
+              <div style={{ clipPath: 'polygon(10% 0%, 90% 0%, 100% 14%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 14%)' }}>
               <Card className="teabag-card px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center">
 
                 {task.priority && PRIORITY_BADGE[task.priority] && (
