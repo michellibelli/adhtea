@@ -207,9 +207,10 @@ export default function App() {
     <ThemeProvider>
       <div style={{
         position: 'fixed', top: 4, right: 4, zIndex: 9999,
-        background: 'lime', color: 'black', fontWeight: 700,
-        padding: '2px 6px', fontSize: 11, fontFamily: 'monospace',
-        borderRadius: 3, pointerEvents: 'none',
+        background: 'rgba(74,50,96,0.85)', color: '#F5E6D3', fontWeight: 600,
+        padding: '2px 7px', fontSize: 10, fontFamily: 'monospace',
+        borderRadius: 4, pointerEvents: 'none',
+        border: '1px solid rgba(245,230,211,0.25)',
       }}>BUILD 0514-A</div>
       {authed
         ? <AppShell />
