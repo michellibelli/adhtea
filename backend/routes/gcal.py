@@ -79,7 +79,7 @@ def _get_service(token_row: GoogleCalendarToken):
 # ── OAuth flow ────────────────────────────────────────────────────────────────
 
 @router.get("/gcal/debug")
-def gcal_debug(current_user: User = Depends(get_current_user)):
+def gcal_debug():
     """Temporary: shows exactly what redirect_uri the server will send to Google."""
     return {
         "redirect_uri": _env("GOOGLE_REDIRECT_URI"),
