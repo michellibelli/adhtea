@@ -407,11 +407,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             {/* Pun text */}
             {celebrate === 'p3' && (
               <div
-                className="absolute inset-0 flex items-center justify-center gap-3"
+                className="absolute inset-0 flex items-center justify-between px-6"
                 style={{ animation: 'celebrate-pun-in 280ms ease-out forwards' }}
               >
                 <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1' }}>✨</span>
-                <span className="text-lg font-semibold" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
+                <span className="text-lg font-semibold text-center flex-1 px-3" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
                 <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1', animationDelay: '0.5s' }}>✨</span>
               </div>
             )}
