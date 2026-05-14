@@ -29,6 +29,12 @@ const PRIORITY_BADGE = {
   urgent: 'bg-red-500/20 text-red-400',
   high:   'bg-amber-500/20 text-amber-400',
 }
+const TAG_COLORS = {
+  task:        { bg: 'linear-gradient(135deg, #C97068, #E8968C)', border: '#9B4E4E', shadow: '#7A3030' },
+  appointment: { bg: 'linear-gradient(135deg, #5B8FD4, #7FB3F0)', border: '#3D6FA8', shadow: '#2A5080' },
+  routine:     { bg: 'linear-gradient(135deg, #5BA876, #7FC898)', border: '#3D7A56', shadow: '#2A5A3C' },
+  note:        { bg: 'linear-gradient(135deg, #9068C9, #B48CE8)', border: '#6A4A9B', shadow: '#4A3070' },
+}
 
 function minutesUntil(dueTime) {
   const [h, m] = dueTime.split(':').map(Number)
@@ -36,6 +42,21 @@ function minutesUntil(dueTime) {
   const due = new Date(now)
   due.setHours(h, m, 0, 0)
   return (due - now) / 60000
+}
+
+function tagContent(task) {
+  if (!task) return '✦'
+  if (task.due_time) {
+    const [h, m] = task.due_time.split(':').map(Number)
+    const ampm = h >= 12 ? 'p' : 'a'
+    const hour = h % 12 || 12
+    return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`
+  }
+  if (task.due_date) {
+    const d = new Date(task.due_date + 'T12:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+  return TYPE_ICONS[task.task_type] || '✦'
 }
 
 function isImminent(task) {
@@ -347,17 +368,19 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}
             >
               <div style={{
-                width: 32, height: 17,
-                background: 'linear-gradient(135deg, #C97068, #E8968C)',
-                border: '2px solid #9B4E4E',
-                borderRadius: 3,
+                width: 80, height: 43,
+                background: (TAG_COLORS[task?.task_type] || TAG_COLORS.task).bg,
+                border: `2px solid ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).border}`,
+                borderRadius: 7,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '1px 1px 0 #7A3030',
+                boxShadow: `2px 2px 0 ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).shadow}`,
               }}>
-                <span style={{ fontSize: 9, color: '#fff', lineHeight: 1, userSelect: 'none' }}>✦</span>
+                <span style={{ fontSize: 11, color: '#fff', lineHeight: 1.2, userSelect: 'none', fontWeight: 600, textAlign: 'center', padding: '0 4px' }}>
+                  {tagContent(task)}
+                </span>
               </div>
               <div style={{
-                width: 2,
+                width: 3,
                 height: 38,
                 background: 'linear-gradient(to bottom, #8B7355 0%, #C4A882 60%, #D4B892 100%)',
                 borderRadius: 1,
@@ -379,13 +402,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
                     {TYPE_ICONS[task.task_type] || '✦'}
                   </span>
-                  <span className="text-xs text-ui-subtext">{TYPE_LABELS[task.task_type] || 'Task'}</span>
-                  {isBonusMode && (
-                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-700">
-                      Tomorrow
-                    </span>
-                  )}
-                  {!isBonusMode && task.priority && PRIORITY_BADGE[task.priority] && (
+                  {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ml-auto ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                     </span>
