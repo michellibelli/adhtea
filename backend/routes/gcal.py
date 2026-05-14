@@ -35,28 +35,29 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 _code_verifiers: dict[str, str] = {}
 
 
+def _env(key):
+    v = os.getenv(key, "")
+    return v.strip()
+
 def _gcal_available():
-    return (
-        os.getenv("GOOGLE_CLIENT_ID")
-        and os.getenv("GOOGLE_CLIENT_SECRET")
-        and os.getenv("GOOGLE_REDIRECT_URI")
-    )
+    return _env("GOOGLE_CLIENT_ID") and _env("GOOGLE_CLIENT_SECRET") and _env("GOOGLE_REDIRECT_URI")
 
 
 def _build_flow():
     from google_auth_oauthlib.flow import Flow
+    redirect_uri = _env("GOOGLE_REDIRECT_URI")
     return Flow.from_client_config(
         {
             "web": {
-                "client_id":     os.getenv("GOOGLE_CLIENT_ID"),
-                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+                "client_id":     _env("GOOGLE_CLIENT_ID"),
+                "client_secret": _env("GOOGLE_CLIENT_SECRET"),
                 "auth_uri":      "https://accounts.google.com/o/oauth2/auth",
                 "token_uri":     "https://oauth2.googleapis.com/token",
-                "redirect_uris": [os.getenv("GOOGLE_REDIRECT_URI")],
+                "redirect_uris": [redirect_uri],
             }
         },
         scopes=SCOPES,
-        redirect_uri=os.getenv("GOOGLE_REDIRECT_URI"),
+        redirect_uri=redirect_uri,
     )
 
 
@@ -76,6 +77,16 @@ def _get_service(token_row: GoogleCalendarToken):
 
 
 # ── OAuth flow ────────────────────────────────────────────────────────────────
+
+@router.get("/gcal/debug")
+def gcal_debug(current_user: User = Depends(get_current_user)):
+    """Temporary: shows exactly what redirect_uri the server will send to Google."""
+    return {
+        "redirect_uri": _env("GOOGLE_REDIRECT_URI"),
+        "client_id_prefix": _env("GOOGLE_CLIENT_ID")[:20] + "...",
+        "configured": _gcal_available(),
+    }
+
 
 @router.get("/gcal/status")
 def gcal_status(
