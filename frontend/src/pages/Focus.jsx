@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getToday, completeTask, snoozeTask, deferTask, getBonusTasks } from '../api/tasks'
+import { getToday, completeTask, snoozeTask, deferTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import { logout } from '../api/auth'
 import SnoozeSheet from '../components/SnoozeSheet'
@@ -113,6 +113,70 @@ function TeaCupFront() {
   )
 }
 
+function EditTaskSheet({ task, onSave, onClose }) {
+  const [title,   setTitle]   = useState(task.title)
+  const [notes,   setNotes]   = useState(task.notes || '')
+  const [dueDate, setDueDate] = useState(task.due_date || '')
+  const [dueTime, setDueTime] = useState(task.due_time || '')
+
+  async function handleSave() {
+    await onSave({
+      title:    title.trim() || task.title,
+      notes:    notes.trim() || null,
+      due_date: dueDate || null,
+      due_time: dueTime || null,
+    })
+    onClose()
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-ui-surface border-t border-ui-border rounded-t-2xl pb-safe md:left-1/2 md:right-auto md:bottom-auto md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-96 md:rounded-2xl md:border">
+        <div className="flex justify-center pt-3 pb-1 md:hidden">
+          <div className="w-10 h-1 rounded-full bg-ui-border" />
+        </div>
+        <div className="px-4 pt-2 pb-6 space-y-3">
+          <p className="text-base font-semibold text-ui-text">Edit task</p>
+          <input
+            className="w-full text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2.5 text-ui-text outline-none focus:border-ui-accent transition-colors"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose() }}
+            placeholder="Task title"
+            autoFocus
+          />
+          <textarea
+            className="w-full text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2.5 text-ui-text outline-none focus:border-ui-accent transition-colors resize-none"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Notes…"
+          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              className="flex-1 text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2.5 text-ui-text outline-none focus:border-ui-accent transition-colors"
+            />
+            {(task.task_type === 'appointment' || task.task_type === 'routine') && (
+              <input
+                type="time"
+                value={dueTime}
+                onChange={e => setDueTime(e.target.value)}
+                className="flex-1 text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2.5 text-ui-text outline-none focus:border-ui-accent transition-colors"
+              />
+            )}
+          </div>
+          <Button onClick={handleSave} className="w-full">Save</Button>
+          <Button variant="ghost" className="w-full" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
@@ -123,15 +187,19 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   const punRef = useRef('')
   const completedTaskRef     = useRef(null)  // { taskId, wasBonus }
   const celebrationTimersRef = useRef([])
-  const [showSnooze,  setShowSnooze]  = useState(false)
-  const [showMenu,    setShowMenu]    = useState(false)
-  const [localDone,   setLocalDone]   = useState(0)
+  const [showSnooze,    setShowSnooze]    = useState(false)
+  const [showMenu,      setShowMenu]      = useState(false)
+  const [showEdit,      setShowEdit]      = useState(false)
+  const [localDone,     setLocalDone]     = useState(0)
+  const [doneTodayBase, setDoneTodayBase] = useState(0)
 
   const fetchAll = useCallback(async () => {
     try {
-      const [list, cap] = await Promise.all([getToday(), getTodayCapacity()])
+      const [list, cap, done] = await Promise.all([getToday(), getTodayCapacity(), getDoneToday()])
       setTasks(list)
       setCapacity(cap)
+      setDoneTodayBase(done.length)
+      setLocalDone(0)
       if (list.length === 0) {
         const bonus = await getBonusTasks()
         setBonusTasks(bonus)
@@ -148,7 +216,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   const activeList  = isBonusMode ? bonusTasks : tasks
   const task        = pickNext(activeList)
   const remaining   = activeList.length
-  const totalDone   = doneCount + localDone
+  const totalDone   = doneTodayBase + localDone
 
   async function advance(fn) {
     setLeaving(true)
@@ -202,6 +270,32 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   async function handleDefer() {
     if (!task) return
     await advance(() => deferTask(task.id))
+  }
+
+  async function handleEditSave(patch) {
+    if (!task) return
+    try {
+      await updateTask(task.id, patch)
+      const updater = (prev) => prev.map((t) => t.id === task.id ? { ...t, ...patch } : t)
+      if (isBonusMode) setBonusTasks(updater)
+      else setTasks(updater)
+    } catch (err) { console.error(err) }
+  }
+
+  function handleNext() {
+    if (!task) return
+    setLeaving(true)
+    setTimeout(() => {
+      setTasks(prev => {
+        const idx = prev.findIndex(t => t.id === task.id)
+        if (idx === -1) return prev
+        const copy = [...prev]
+        const [moved] = copy.splice(idx, 1)
+        copy.push(moved)
+        return copy
+      })
+      setLeaving(false)
+    }, 300)
   }
 
   function handleBonusSkip() {
@@ -369,14 +463,19 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               className="flex flex-col items-center"
               style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}
             >
-              <div style={{
-                width: 80, height: 43,
-                background: (TAG_COLORS[task?.task_type] || TAG_COLORS.task).bg,
-                border: `2px solid ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).border}`,
-                borderRadius: 7,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `2px 2px 0 ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).shadow}`,
-              }}>
+              <div
+                onClick={() => !celebrate && setShowEdit(true)}
+                title="Edit task"
+                style={{
+                  width: 80, height: 43,
+                  background: (TAG_COLORS[task?.task_type] || TAG_COLORS.task).bg,
+                  border: `2px solid ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).border}`,
+                  borderRadius: 7,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `2px 2px 0 ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).shadow}`,
+                  cursor: celebrate ? 'default' : 'pointer',
+                }}
+              >
                 <span style={{ fontSize: 10, color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '0 4px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <span>{TAG_NAMES[task?.task_type] || 'Task'}</span>
                   {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 9, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
@@ -473,8 +572,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                     Skip
                   </Button>
                 ) : (
-                  <Button variant="ghost" className="flex-1" onClick={handleDefer}>
-                    Back to inbox
+                  <Button variant="ghost" className="flex-1" onClick={handleNext}>
+                    Next
                   </Button>
                 )}
               </div>
@@ -499,6 +598,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
       </div>
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
+      {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
       {showMenu && onNavigate && (
         <HamburgerMenu
           onNavigate={onNavigate}

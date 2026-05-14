@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { SmartPointerSensor } from '../utils/dnd'
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -97,7 +97,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   const [dismissOverload, setDismissOverload] = useState(false)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
 

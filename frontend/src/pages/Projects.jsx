@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import {
-  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
+  DndContext, closestCenter, TouchSensor, useSensor, useSensors,
 } from '@dnd-kit/core'
+import { SmartPointerSensor } from '../utils/dnd'
 import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable'
@@ -136,8 +137,8 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate }) {
 
 function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate }) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,        { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
 
   function handleDragEnd({ active, over }) {
