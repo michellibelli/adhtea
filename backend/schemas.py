@@ -184,6 +184,7 @@ class TaskResponse(BaseModel):
     actuator_category_id: Optional[int]
     routine_id: Optional[int]
     project_id: Optional[int]
+    project_name: Optional[str] = None
     title: str
     notes: Optional[str]
     task_type: TaskType

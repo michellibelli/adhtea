@@ -83,16 +83,28 @@
    Pixel UI utilities — Stardew-style offset borders (doubled)
    ============================================================================= */
 
-.teabag-card {
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E"),
-    #EBE0C4 !important;
-  background-size: 90px 90px, 100% !important;
-}
-
 .teabag-card::before,
 .teabag-card::after {
   display: none !important;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  50%       { opacity: 1; transform: scale(1)   rotate(20deg); }
+}
+
+.sparkle {
+  position: absolute;
+  font-size: 10px;
+  color: #D4A000;
+  animation-name: twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: var(--dur, 2s);
+  animation-delay: var(--delay, 0s);
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
 }
 
 .pixel-card {

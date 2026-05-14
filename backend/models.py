@@ -222,6 +222,10 @@ class Task(Base):
     actuator_category = relationship("ActuatorCategory")
     project = relationship("Project", back_populates="tasks", foreign_keys=[project_id])
 
+    @property
+    def project_name(self):
+        return self.project.name if self.project else None
+
 
 # ---------------------------------------------------------------------------
 # Routine (template — generates Task instances)

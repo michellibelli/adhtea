@@ -8,13 +8,27 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
 
-const TEABAG_BG_SVG = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.88" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="120" height="120" filter="url(#n)" opacity="0.22"/></svg>')}")`
-
-const TEABAG_STYLE = {
-  backgroundColor: '#EBE0C4',
-  backgroundImage: TEABAG_BG_SVG,
-  backgroundSize: '90px 90px',
+function teabagStyle(bonus) {
+  const dot1 = bonus ? 'rgba(180,130,0,0.28)' : 'rgba(130,105,60,0.22)'
+  const dot2 = bonus ? 'rgba(180,130,0,0.15)' : 'rgba(130,105,60,0.12)'
+  return {
+    backgroundColor: bonus ? '#F5E070' : '#EBE0C4',
+    backgroundImage: [
+      `radial-gradient(circle, ${dot1} 0.5px, transparent 0.5px)`,
+      `radial-gradient(circle, ${dot2} 0.5px, transparent 0.5px)`,
+    ].join(', '),
+    backgroundSize: '5px 5px, 10px 10px',
+    backgroundPosition: '0 0, 2.5px 2.5px',
+  }
 }
+
+const SPARKLE_POSITIONS = [
+  { top: '14%', left: '11%',  '--delay': '0s',   '--dur': '2.2s' },
+  { top: '18%', right: '13%', '--delay': '0.8s', '--dur': '1.9s' },
+  { top: '50%', left: '7%',   '--delay': '1.5s', '--dur': '2.5s' },
+  { top: '60%', right: '9%',  '--delay': '0.4s', '--dur': '2.0s' },
+  { top: '38%', left: '48%',  '--delay': '1.1s', '--dur': '2.8s' },
+]
 
 const TEA_PUNS = [
   "Steeped in success! 🍵",
@@ -487,6 +501,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                     return <span style={{ fontSize: fs }}>{name}</span>
                   })()}
                   {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 8, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
+                  {task?.project_name && (
+                    <span style={{ fontWeight: 400, fontSize: 7, opacity: 0.85, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                      {task.project_name}
+                    </span>
+                  )}
                 </span>
               </div>
               <div style={{
@@ -504,8 +523,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 : ''
               }
             >
-              <div style={{ clipPath: 'polygon(18% 0%, 82% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-              <Card className="teabag-card px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center" style={TEABAG_STYLE}>
+              <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
+              <Card className="teabag-card relative px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center" style={teabagStyle(isBonusMode)}>
+                {isBonusMode && SPARKLE_POSITIONS.map((pos, i) => (
+                  <span key={i} className="sparkle" style={pos}>✦</span>
+                ))}
 
                 {task.priority && PRIORITY_BADGE[task.priority] && (
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
