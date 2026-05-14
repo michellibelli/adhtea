@@ -410,7 +410,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 top: '100%',
                 marginTop: '-12px',
                 zIndex: 1,
-                animation: 'teacup-appear 400ms ease-out 200ms both, teacup-bounce 600ms ease-in-out 1900ms both, teacup-exit 400ms ease-in 2550ms forwards',
+                animation: 'teacup-appear 400ms ease-out 200ms both, teacup-bounce 950ms ease-in-out 1900ms both, teacup-exit 400ms ease-in 2850ms forwards',
               }}>
                 <TeaCupSVG />
               </div>
