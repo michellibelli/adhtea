@@ -402,7 +402,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               }
             >
               <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
-              <Card className="px-5 py-5 min-h-[180px]">
+              <Card className="px-5 py-5 min-h-[220px]">
 
                 {/* Type + priority */}
                 <div className="flex items-center gap-2 mb-3 px-3">
