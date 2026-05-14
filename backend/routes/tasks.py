@@ -639,9 +639,37 @@ def update_task(
     db: Session = Depends(get_db),
 ):
     task = own_task(task_id, current_user, db)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    old_due = task.due_date
+
+    for field, value in patch.items():
         setattr(task, field, value)
     task.updated_at = utcnow()
+
+    # Cascade: if a project sub-task's due_date moves, shift later sibling tasks by same delta
+    if (
+        "due_date" in patch
+        and task.project_id is not None
+        and old_due is not None
+        and task.due_date is not None
+        and task.due_date != old_due
+    ):
+        delta = (task.due_date - old_due).days
+        if delta != 0:
+            siblings = (
+                db.query(Task)
+                .filter(
+                    Task.project_id == task.project_id,
+                    Task.id != task.id,
+                    Task.due_date != None,  # noqa: E711
+                    Task.due_date >= old_due,
+                    Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
+                )
+                .all()
+            )
+            for s in siblings:
+                s.due_date = s.due_date + timedelta(days=delta)
+
     db.commit()
     db.refresh(task)
     return task

@@ -2,7 +2,7 @@ import os
 import json
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 from models import Project, Task, TaskStatus, TaskType, TaskWeight, User
@@ -71,6 +71,7 @@ def get_project(
     p = own_project(project_id, current_user, db)
     tasks = (
         db.query(Task)
+        .options(joinedload(Task.project))
         .filter(Task.project_id == p.id, Task.status != TaskStatus.deleted)
         .order_by(Task.due_date.asc(), Task.created_at.asc())
         .all()

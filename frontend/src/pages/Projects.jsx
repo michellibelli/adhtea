@@ -529,11 +529,12 @@ export default function Projects({ onNavigate }) {
                   </div>
                 </div>
 
-                {/* Expanded content */}
-                {isExpanded && (
+                {/* Expanded content (animated open/close via grid-rows trick) */}
+                <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                  <div className="overflow-hidden">
                   <div className="border-t border-ui-border">
 
-                    {!d && (
+                    {!d && isExpanded && (
                       <p className="text-sm text-ui-subtext px-4 py-3">Loading…</p>
                     )}
 
@@ -698,7 +699,8 @@ export default function Projects({ onNavigate }) {
                       </>
                     )}
                   </div>
-                )}
+                  </div>
+                </div>
               </Card>
             )
           })}
