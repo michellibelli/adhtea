@@ -255,7 +255,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-20 md:px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -308,7 +308,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               </div>
             )}
           </div>
-        ) : (
+        ) : celebrate !== 'dunk' ? (
           <>
             <div className="bg-ui-surface/70 rounded-2xl px-3 py-3 mb-4 backdrop-blur-sm border border-ui-border/40">
               <div className="flex items-center justify-between mb-3">
@@ -342,7 +342,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               <CapacityBar capacity={capacity} compact className="" />
             </div>
           </>
-        )}
+        ) : null}
 
         {/* Card */}
         <div
@@ -483,7 +483,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
         </div>
 
         {/* Progress dots */}
-        {remaining > 1 && (
+        {remaining > 1 && !celebrate && (
           <div className="flex justify-center gap-1 mt-4">
             {Array.from({ length: Math.min(remaining, 8) }).map((_, i) => (
               <div key={i} className={`w-2 h-2 rounded-full ${
