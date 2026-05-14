@@ -32,10 +32,9 @@ export default function CapacityBar({ capacity, compact = false }) {
     return (
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs mb-1 px-0.5">
-          <span className="text-ui-subtext">Capacity</span>
-          <span className="text-ui-subtext">{Math.round(pct)}%</span>
+          <span className="text-ui-subtext">Focus</span>
         </div>
-        <div className="h-1 rounded-full bg-ui-border overflow-hidden">
+        <div className="h-2.5 rounded-full bg-ui-border overflow-hidden">
           <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
         </div>
         {note && <p className="text-[11px] text-ui-subtext mt-1 px-0.5">{note}</p>}

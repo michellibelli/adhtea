@@ -19,6 +19,7 @@ import { getTodayCapacity } from '../api/selfcare'
 import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
+import Button from '../components/Button'
 
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 
@@ -91,6 +92,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   const [capacity, setCapacity] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [showDone, setShowDone] = useState(false)
+  const [expandedDoneId, setExpandedDoneId] = useState(null)
   const [sortBy, setSortBy]     = useState('manual')
   const [dismissOverload, setDismissOverload] = useState(false)
 
@@ -143,9 +145,9 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
           <div className="flex items-center gap-3">
             <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
             {onTriage && (
-              <button onClick={onTriage} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
-                Triage →
-              </button>
+              <Button variant="secondary" onClick={onTriage}>
+                ⚡ Triage inbox
+              </Button>
             )}
           </div>
         </div>
@@ -257,14 +259,35 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
             </button>
             {showDone && (
               <div className="space-y-2">
-                {doneTasks.map((task) => (
-                  <Card key={task.id} className="px-4 py-3 opacity-50">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-ui-accent">✓</span>
-                      <span className="text-sm line-through text-ui-subtext">{task.title}</span>
+                {doneTasks.map((t) => {
+                  const expanded = expandedDoneId === t.id
+                  return (
+                    <div key={t.id} className="flex items-center gap-2">
+                      <Card
+                        className={`flex-1 px-4 py-3 cursor-pointer transition-opacity ${expanded ? 'opacity-100' : 'opacity-50'}`}
+                        onClick={() => setExpandedDoneId(expanded ? null : t.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-ui-accent">✓</span>
+                          <span className={`text-sm ${expanded ? 'text-ui-text' : 'line-through text-ui-subtext'}`}>{t.title}</span>
+                        </div>
+                      </Card>
+                      {expanded && (
+                        <Button
+                          variant="secondary"
+                          className="shrink-0"
+                          onClick={async () => {
+                            await deferTask(t.id)
+                            setDone(prev => prev.filter(x => x.id !== t.id))
+                            setExpandedDoneId(null)
+                          }}
+                        >
+                          Redo
+                        </Button>
+                      )}
                     </div>
-                  </Card>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

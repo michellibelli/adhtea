@@ -313,15 +313,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <h1 className={`text-[10px] font-pixel ${
-                  isBonusMode ? 'text-amber-400' : 'text-ui-subtext'
+                  isBonusMode ? 'text-orange-400' : 'text-ui-subtext'
                 }`}>
                   {isBonusMode ? 'Bonus' : 'Now'}
                 </h1>
-                {onTriage && (
-                  <button onClick={onTriage} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
-                    Triage ↻
-                  </button>
-                )}
               </div>
               <div className="flex items-center gap-3">
                 {totalDone > 0 && (
@@ -330,11 +325,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 <span className="text-xs text-ui-subtext">
                   {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
                 </span>
-                {onGoToList && (
-                  <button onClick={onGoToList} className="text-xs text-ui-subtext hover:text-ui-accent transition-colors">
-                    See all →
-                  </button>
-                )}
                 {onNavigate && (
                   <button
                     onClick={() => setShowMenu(true)}
@@ -397,7 +387,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             {/* Bonus glow ring + clipped card */}
             <div
               className={isBonusMode
-                ? 'rounded-2xl ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
+                ? 'rounded-2xl ring-1 ring-orange-400/40 shadow-lg shadow-orange-400/10'
                 : ''
               }
             >
@@ -468,7 +458,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               <Button
                 size="lg"
                 onClick={handleComplete}
-                className={`w-full ${isBonusMode ? 'bg-amber-500 hover:bg-amber-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}
+                className={`w-full ${isBonusMode ? 'bg-orange-500 hover:bg-orange-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}
               >
                 Done ✓
               </Button>
@@ -496,7 +486,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             {Array.from({ length: Math.min(remaining, 8) }).map((_, i) => (
               <div key={i} className={`w-2 h-2 rounded-full ${
                 i === 0
-                  ? (isBonusMode ? 'bg-amber-400' : 'bg-ui-accent')
+                  ? (isBonusMode ? 'bg-orange-400' : 'bg-ui-accent')
                   : 'bg-ui-border'
               }`} />
             ))}
