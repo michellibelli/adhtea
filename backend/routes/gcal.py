@@ -80,12 +80,20 @@ def _get_service(token_row: GoogleCalendarToken):
 
 @router.get("/gcal/debug")
 def gcal_debug():
-    """Temporary: shows exactly what redirect_uri the server will send to Google."""
-    return {
+    """Temporary: shows the exact authorization URL sent to Google."""
+    result = {
         "redirect_uri": _env("GOOGLE_REDIRECT_URI"),
         "client_id_prefix": _env("GOOGLE_CLIENT_ID")[:20] + "...",
-        "configured": _gcal_available(),
+        "configured": bool(_gcal_available()),
     }
+    if _gcal_available():
+        try:
+            flow = _build_flow()
+            url, _ = flow.authorization_url(access_type="offline", state="debug")
+            result["auth_url"] = url
+        except Exception as e:
+            result["auth_url_error"] = str(e)
+    return result
 
 
 @router.get("/gcal/status")
