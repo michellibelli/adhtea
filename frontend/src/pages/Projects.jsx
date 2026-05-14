@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react'
 import {
+  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
   listProjects, createProject, getProject,
   updateProject, generateProjectTasks, removeTaskFromProject,
 } from '../api/projects'
-import { createTask, completeTask } from '../api/tasks'
+import { createTask, completeTask, reorderTasks, updateTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
@@ -23,6 +30,102 @@ function ProgressBar({ done, total }) {
         />
       </div>
     </div>
+  )
+}
+
+function DragHandle(props) {
+  return (
+    <button
+      {...props}
+      className="flex-shrink-0 text-ui-subtext/25 hover:text-ui-subtext transition-colors cursor-grab active:cursor-grabbing touch-none p-0.5"
+      tabIndex={-1}
+    >
+      <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+        <circle cx="5" cy="4"  r="1.2"/><circle cx="11" cy="4"  r="1.2"/>
+        <circle cx="5" cy="8"  r="1.2"/><circle cx="11" cy="8"  r="1.2"/>
+        <circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/>
+      </svg>
+    </button>
+  )
+}
+
+function SortableTaskRow({ task, projectId, onComplete, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className={`flex items-center gap-3 px-4 py-2.5 border-b border-ui-border/40 last:border-0 ${task.status === 'done' ? 'opacity-40' : ''}`}
+    >
+      <DragHandle {...attributes} {...listeners} />
+
+      <button
+        onClick={() => task.status !== 'done' && onComplete(projectId, task.id)}
+        className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+          task.status === 'done'
+            ? 'bg-ui-accent border-ui-accent'
+            : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
+        }`}
+      >
+        {task.status === 'done' && (
+          <svg viewBox="0 0 12 10" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
+            <polyline points="1 5 4.5 8.5 11 1"/>
+          </svg>
+        )}
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm text-ui-text leading-snug ${task.status === 'done' ? 'line-through' : ''}`}>
+          {task.title}
+        </p>
+        {task.due_date && (
+          <p className="text-[10px] text-ui-subtext mt-0.5">{task.due_date}</p>
+        )}
+      </div>
+
+      <button
+        onClick={() => onRemove(projectId, task.id)}
+        className="flex-shrink-0 p-1 text-ui-subtext/25 hover:text-red-400 transition-colors"
+        title="Remove from project"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  )
+}
+
+function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
+
+  function handleDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return
+    const oldIndex = tasks.findIndex(t => t.id === active.id)
+    const newIndex = tasks.findIndex(t => t.id === over.id)
+    // Swap date slots: the date at each position stays, tasks move into new positions
+    const dateSlots = tasks.map(t => t.due_date)
+    const reordered = arrayMove(tasks, oldIndex, newIndex).map((t, i) => ({ ...t, due_date: dateSlots[i] }))
+    onReorder(projectId, reordered)
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+        {tasks.map(task => (
+          <SortableTaskRow
+            key={task.id}
+            task={task}
+            projectId={projectId}
+            onComplete={onComplete}
+            onRemove={onRemove}
+          />
+        ))}
+      </SortableContext>
+    </DndContext>
   )
 }
 
@@ -176,6 +279,15 @@ export default function Projects({ onNavigate }) {
     } catch (err) { console.error(err) }
   }
 
+  async function handleProjectReorder(projectId, updatedTasks) {
+    const original = detail[projectId]?.tasks || []
+    setDetail(prev => ({ ...prev, [projectId]: { ...prev[projectId], tasks: updatedTasks } }))
+    await reorderTasks(updatedTasks.map(t => t.id))
+    const taskMap = Object.fromEntries(original.map(t => [t.id, t]))
+    const changed = updatedTasks.filter(t => taskMap[t.id]?.due_date !== t.due_date)
+    if (changed.length) await Promise.all(changed.map(t => updateTask(t.id, { due_date: t.due_date })))
+  }
+
   async function handleArchive(projectId) {
     try {
       await updateProject(projectId, { status: 'archived' })
@@ -312,48 +424,16 @@ export default function Projects({ onNavigate }) {
                           </p>
                         )}
 
-                        {/* Task rows */}
-                        {d.tasks.map(task => (
-                          <div
-                            key={task.id}
-                            className={`flex items-center gap-3 px-4 py-2.5 border-b border-ui-border/40 last:border-0 ${task.status === 'done' ? 'opacity-40' : ''}`}
-                          >
-                            <button
-                              onClick={() => task.status !== 'done' && handleComplete(project.id, task.id)}
-                              className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                task.status === 'done'
-                                  ? 'bg-ui-accent border-ui-accent'
-                                  : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
-                              }`}
-                            >
-                              {task.status === 'done' && (
-                                <svg viewBox="0 0 12 10" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
-                                  <polyline points="1 5 4.5 8.5 11 1"/>
-                                </svg>
-                              )}
-                            </button>
-
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm text-ui-text leading-snug ${task.status === 'done' ? 'line-through' : ''}`}>
-                                {task.title}
-                              </p>
-                              {task.due_date && (
-                                <p className="text-[10px] text-ui-subtext mt-0.5">{task.due_date}</p>
-                              )}
-                            </div>
-
-                            <button
-                              onClick={() => handleRemove(project.id, task.id)}
-                              className="flex-shrink-0 p-1 text-ui-subtext/25 hover:text-red-400 transition-colors"
-                              title="Remove from project"
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
+                        {/* Sortable task rows */}
+                        {d.tasks.length > 0 && (
+                          <SortableTaskList
+                            tasks={d.tasks}
+                            projectId={project.id}
+                            onReorder={handleProjectReorder}
+                            onComplete={handleComplete}
+                            onRemove={handleRemove}
+                          />
+                        )}
 
                         {/* Add task form */}
                         {showAddTask === project.id && (

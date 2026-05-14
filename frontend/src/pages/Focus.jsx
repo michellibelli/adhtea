@@ -398,31 +398,27 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               }
             >
               <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
-              <Card className="px-5 py-5 min-h-[220px]">
+              <Card className="px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center">
 
-                {/* Type + priority */}
-                <div className="flex items-center gap-2 mb-3 px-3">
-                  {task.priority && PRIORITY_BADGE[task.priority] && (
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ml-auto ${PRIORITY_BADGE[task.priority]}`}>
-                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                    </span>
-                  )}
-                </div>
+                {task.priority && PRIORITY_BADGE[task.priority] && (
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
+                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                  </span>
+                )}
 
                 <h2 className="text-2xl font-bold text-ui-text leading-snug mb-3">
                   {task.title}
                 </h2>
 
-
                 {task.location_detail && (
-                  <div className="mb-3 text-sm text-ui-subtext">
+                  <div className="mb-2 text-sm text-ui-subtext">
                     <span className="mr-1.5">📍</span>
                     <span>{task.location_detail}</span>
                   </div>
                 )}
 
                 {task.notes && (
-                  <p className="text-sm text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-3">
+                  <p className="text-sm text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-1 w-full">
                     {task.notes}
                   </p>
                 )}
