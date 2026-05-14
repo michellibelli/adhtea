@@ -34,6 +34,10 @@ const TAG_COLORS = {
   appointment: { bg: 'linear-gradient(135deg, #5B8FD4, #7FB3F0)', border: '#3D6FA8', shadow: '#2A5080' },
   routine:     { bg: 'linear-gradient(135deg, #5BA876, #7FC898)', border: '#3D7A56', shadow: '#2A5A3C' },
   note:        { bg: 'linear-gradient(135deg, #9068C9, #B48CE8)', border: '#6A4A9B', shadow: '#4A3070' },
+  project:     { bg: 'linear-gradient(135deg, #C98A40, #E8B268)', border: '#9B6A2E', shadow: '#7A4A18' },
+}
+const TAG_NAMES = {
+  task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note', project: 'Project',
 }
 
 function minutesUntil(dueTime) {
@@ -44,8 +48,8 @@ function minutesUntil(dueTime) {
   return (due - now) / 60000
 }
 
-function tagContent(task) {
-  if (!task) return '✦'
+function tagDateLabel(task) {
+  if (!task) return null
   if (task.due_time) {
     const [h, m] = task.due_time.split(':').map(Number)
     const ampm = h >= 12 ? 'p' : 'a'
@@ -53,10 +57,12 @@ function tagContent(task) {
     return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`
   }
   if (task.due_date) {
-    const d = new Date(task.due_date + 'T12:00:00')
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const d = new Date(task.due_date + 'T00:00:00')
+    if (d <= today) return 'Today'
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
-  return TYPE_ICONS[task.task_type] || '✦'
+  return null
 }
 
 function isImminent(task) {
@@ -375,8 +381,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: `2px 2px 0 ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).shadow}`,
               }}>
-                <span style={{ fontSize: 11, color: '#fff', lineHeight: 1.2, userSelect: 'none', fontWeight: 600, textAlign: 'center', padding: '0 4px' }}>
-                  {tagContent(task)}
+                <span style={{ fontSize: 10, color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '0 4px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span>{TAG_NAMES[task?.task_type] || 'Task'}</span>
+                  {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 9, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
                 </span>
               </div>
               <div style={{
