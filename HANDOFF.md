@@ -1,22 +1,25 @@
-# ARIA v2 — Handoff Doc
-*Last updated: 2026-05-11*
+# adhTea — Handoff Doc
+*Last updated: 2026-05-13*
+
+> Full project documentation → see `PROJECT.md`
 
 ## Project layout
 
 ```
-aria/v2/
+aria/
   backend/   FastAPI + SQLite dev / PostgreSQL (Supabase) prod
   frontend/  React 19 + Vite + Tailwind v4
-  docs/      design.md, phases.md, tests.md
+  PROJECT.md full project docs
+  HANDOFF.md this file
 ```
 
 Run locally:
-```
+```bash
 cd backend && python -m uvicorn main:app --reload
 cd frontend && npm run dev
 ```
 
-Primary user (prod): username=`demo_user`, password=`Blueberrywaffles`, user_id=2.
+Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
@@ -24,192 +27,115 @@ Primary user (prod): username=`demo_user`, password=`Blueberrywaffles`, user_id=
 
 | Service | URL | Notes |
 |---------|-----|-------|
-| Frontend | https://adh-tea.fun | Vercel, auto-deploys on push |
+| Frontend | https://adh-tea.fun | Vercel, auto-deploys on push to master |
 | Backend | https://api.adh-tea.fun | Render free tier, sleeps after 15 min idle |
 | Database | Supabase PostgreSQL | Pooler connection, project ref `yyolrtwpsbtamncihmls` |
 
-**Render sleeps** — add UptimeRobot ping to `https://api.adh-tea.fun/health` every 5 min when ready.
+**Render sleeps** — set up UptimeRobot ping to `https://api.adh-tea.fun/health` every 5 min.
 
 **Render DATABASE_URL** — password must be URL-encoded (`&` → `%26`, `@` → `%40`).
 
 ---
 
-## Status
+## Current status — Phases 1–3.7 complete ✅
 
-Phases 1–3.6 complete. All previous handoff tasks complete.
+Everything below is shipped and live on adh-tea.fun.
 
-**Completed this session:**
-- Task 1: `pickNext()` in `Focus.jsx` — appointments only surface when ≤5 min away (`isImminent()` helper, lines 16–34)
-- Task 2: Focus card visual redesign — bigger padding, `text-3xl` title, amber time pill, larger dots
-- Task 3: Deployed to Render + Vercel + Supabase (adh-tea.fun live)
+### Phase 3.7 completed this session (2026-05-13)
+- AI project breakdown via Claude Haiku — `backend/routes/projects.py` lines 116–190
+- `ANTHROPIC_API_KEY` added to Render env vars → live
+- Frontend: `Projects.jsx` fully wired — ✨ button triggers generation, inline task list, add/complete/remove/archive
+- `frontend/src/api/projects.js` — all endpoints including `generateProjectTasks`
 
----
-
-## Design direction — adhTea
-
-**Vibe:** Lighthearted, queer, slightly pixelated. Queer Stardew Valley energy.
-
-**Color palette** — pulled from colorTea logo (`colorfinder/colorTeaLogo.png`):
-
-| Token | Color | Hex |
-|-------|-------|-----|
-| Background | Warm cream | `#F5F0E8` |
-| Card | Slightly warmer cream | `#EDE8DC` |
-| Text | Dark brown | `#3D2B1F` |
-| Subtext | Medium brown | `#7A6152` |
-| Border | Soft brown | `#C8B8A8` |
-| Accent | Periwinkle (steam) | `#B8C5E8` |
-| Accent 2 | Peach (steam) | `#F4C5A8` |
-| Accent 3 | Lavender (steam) | `#C5B8E8` |
-| Pride stripe | Full rainbow | red→violet |
-
-**Pixel details:** Use `rounded-none` or `rounded-sm` on cards + subtle pixel-border effect (2px solid outline) to get the pixelated feel. Consider a pixel font for headings (e.g. Press Start 2P for titles, readable sans for body).
-
-**App name:** `adhTea` (user-facing). Domain: `adh-tea.fun`.
+### Previously completed (all live)
+- **Phase 1** — Core loop: inbox, today, waiting, snooze, carry-forward, time-of-day theming
+- **Phase 2** — Triage: one-at-a-time, capacity bar, critical list, localStorage done-flag
+- **Phase 3** — Foundation: routines, self-care log, medication, EOD gate
+- **Phase 3.5** — Focus home screen, type-aware capture, Google Calendar OAuth, inline task edit
+- **Phase 3.6** — Nav redesign (hamburger + FAB), AllTasks, Search, batch ops, bonus mode, Render/Vercel/Supabase deployment
+- **Design system** — adhTea palette + pixel utilities fully implemented in `index.css`
+- **WakeScreen** — backend wake splash wired in `App.jsx`
+- **PWA** — `vite-plugin-pwa` installed + configured in `vite.config.js`
 
 ---
 
-## Task 1 — Multi-user support (up to ~20 test users)
+## Known issues / small todos
 
-**What:** Family and friends, each with their own login and isolated data. No registration page — admin creates users.
-
-**Goals:**
-- Admin endpoint to create users (or a simple invite-code flow)
-- Each user sees only their own data (already isolated by `user_id` in DB)
-- Cap ~20 users
-
-**Where to start:**
-- `backend/routes/auth.py` — add `/register` endpoint gated by admin role or invite code
-- `backend/models.py` — `User` model already has `role` field
-- `frontend/src/pages/Settings.jsx` — admin section to create users
+1. **UptimeRobot** — Render sleep workaround not set up yet. Add ping to `https://api.adh-tea.fun/health` every 5 min.
+2. **TriageCard inline edit** — `TriageCard.jsx` lacks pencil edit button (`TaskCard.jsx` has it).
+3. **Google Calendar multi-calendar** — no UI to select which calendars to sync (defaults to primary).
+4. **Loading/error states** — some pages lack skeleton loaders or graceful API failure UI.
+5. **BottomNav crowding** — 8 items tight on mobile; may need redesign before wider rollout.
 
 ---
 
-## Task 2 — Aesthetic overhaul (adhTea design system)
 
-**What:** Apply the adhTea palette and pixel vibe across the whole app.
 
-**Order of attack:**
-1. `frontend/tailwind.config.js` — define color tokens from palette above
-2. `frontend/src/index.css` — global bg, text defaults, pixel font import
-3. `frontend/src/components/Card.jsx` — pixel border style, warm bg
-4. `frontend/src/pages/Focus.jsx` — most important screen, get right first
-5. Remaining pages top-down
+**Groundwork already in place:**
+- `User` model has `role` (primary/child) and `parent_id` fields
+- `Task` model has `assigned_to_id`
+- Invite token flow exists in `backend/routes/auth.py`
+- `AlphaChallenge.jsx` + `OnboardingWelcome.jsx` pages exist
 
-**Pixel font option:** [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) for headings only (it's very small at body size). Pair with a clean readable sans for body text.
+**What needs building:**
+1. **Backend** — filter delegated tasks for child users, delegation endpoint (`POST /tasks/{id}/delegate`)
+2. **Frontend** — child home view (simplified: just his routines + delegated tasks, big checkboxes)
+3. **the user's view** — delegation UI on triage/today cards, completion status visible
 
----
-
-## Task 3 — Focus as home + navigation hub
-
-**What:** App always opens to Focus. All navigation radiates from there.
-
-**Decisions made:**
-- FAB "+" in bottom right stays — it's for Capture, keep it
-- Hamburger/sandwich menu replaces Settings tab — contains Today, Triage, Routines, SelfCare, etc. listed by their own name (no "Settings" label, no section title)
-- Bottom nav bar removed or collapsed to just the FAB
-- Back always returns to Focus
-
-**Where:**
-- `frontend/src/App.jsx` — default route → Focus
-- `frontend/src/components/BottomNav.jsx` — strip down to FAB only
-- `frontend/src/pages/Focus.jsx` — add hamburger menu icon (top right or top left)
-- New component: `HamburgerMenu.jsx` — slide-out or dropdown with nav links
+**Where to start:** `backend/routes/auth.py` (child account creation) → `backend/routes/tasks.py` (delegation endpoint) → new `frontend/src/pages/AndeView.jsx`
 
 ---
 
-## Task 4 — Persistent login
-
-**Current state:** Token stored in `localStorage`, 30-day expiry. Likely not a real problem — was probably just reloads during dev. Monitor in prod — if users report getting logged out, extend `TOKEN_EXPIRY_DAYS` in `backend/routes/auth.py` line 15 to 90 or 365.
-
-**No action needed now.**
-
----
-
-## Task 5 — adhTea Android app (PWA → Play Store)
-
-**Yes, PWA is a real thing.** Users install from browser, get a home screen icon, app opens fullscreen with no browser chrome — feels native. No app store needed for Phase A.
-
-### Phase A — PWA (do first, ~1 hour)
-```bash
-cd frontend && npm install vite-plugin-pwa
-```
-
-Add to `vite.config.js`:
-```js
-import { VitePWA } from 'vite-plugin-pwa'
-
-VitePWA({
-  registerType: 'autoUpdate',
-  manifest: {
-    name: 'adhTea',
-    short_name: 'adhTea',
-    theme_color: '#F5F0E8',
-    background_color: '#F5F0E8',
-    display: 'standalone',
-    start_url: '/',
-    icons: [/* 192x192, 512x512 pixel art icons */]
-  }
-})
-```
-
-Need to create pixel-art icons (192×192 and 512×512) using the colorTea mug as inspiration.
-
-Android users: open `adh-tea.fun` in Chrome → three dots → "Add to Home Screen" → done.
-iOS users: open in Safari → share → "Add to Home Screen" → done.
-
-### Phase B — Google Play Store via TWA (later)
-Wrap the PWA using [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap). Generates an APK. Requires $25 Google Play Developer account one-time fee.
-
-### Phase C — iOS App Store (later)
-Use Capacitor. Requires $99/year Apple Developer account.
-
----
-
-## Backend file map (quick reference)
+## Backend file map
 
 ```
 backend/
-  main.py           app setup, CORS, router registration
-  database.py       SQLAlchemy engine, session, DATABASE_URL env var
-  models.py         all ORM models
-  schemas.py        Pydantic request/response schemas
+  main.py             app setup, CORS, router registration, auto-migration (_migrate fn)
+  database.py         SQLAlchemy engine + session
+  models.py           all ORM models
+  schemas.py          Pydantic schemas
   routes/
-    auth.py         login, session tokens (TOKEN_EXPIRY_DAYS=30)
-    tasks.py        CRUD + today/inbox/bonus/search/backlog endpoints
-    routines.py     routines + lazy daily instance generation
-    selfcare.py     SelfCareLog + CapacitySnapshot
-    medication.py   MedicationSchedule + MedicationLog
-    gcal.py         Google Calendar OAuth + sync
-    import_csv.py   CSV import endpoint
+    auth.py           login, session tokens (TOKEN_EXPIRY_DAYS=30), invite codes
+    tasks.py          CRUD + today/inbox/bonus/search/backlog/critical-list endpoints
+    routines.py       routine CRUD + lazy daily instance generation
+    selfcare.py       SelfCareLog + CapacitySnapshot
+    medication.py     MedicationSchedule + MedicationLog
+    gcal.py           Google Calendar OAuth 2.0 + lazy sync
+    projects.py       Project CRUD + Claude Haiku AI breakdown (POST /{id}/generate)
+    import_csv.py     Notion CSV import
 ```
 
-## Frontend file map (quick reference)
+## Frontend file map
 
 ```
 frontend/src/
-  App.jsx                   routing, nav state
+  App.jsx                     routing, nav state, WakeScreen gate
+  api/client.js               singleton, warmUp(), likelySleeping(), smart retry
   pages/
-    Focus.jsx               home screen — single next-task card + bonus mode
-    Triage.jsx              one-at-a-time inbox triage
-    Today.jsx               full today list (drag to reorder)
-    Capture.jsx             type-aware capture form
-    Routines.jsx            routine CRUD
-    SelfCare.jsx            foundation / self-care log page
-    AllTasks.jsx            consolidated search + batch actions
-    Settings.jsx            integrations, import, nav to triage/all-tasks
-    EODGate.jsx             end-of-day mood + summary
+    Focus.jsx                 home — pickNext(), bonus mode, isImminent() for appts
+    Triage.jsx                one-at-a-time, slide animation, defer vs snooze
+    Today.jsx                 full list, drag-to-reorder
+    Capture.jsx               type-aware (task/appt/routine/note)
+    SelfCare.jsx              foundation log + full capacity bar
+    EODGate.jsx               mood gate (required) + warm summary
+    AllTasks.jsx              filter + batch snooze/date, optimistic updates
+    Projects.jsx              list + detail + AI generation + manual add
+    Search.jsx                title+notes search + batch date assign
+    Settings.jsx              integrations, CSV import, nav links
   components/
-    TriageCard.jsx          triage item card (inline edit at line 263)
-    TaskCard.jsx            today/list item card
-    CapacityBar.jsx         load indicator (compact + full modes)
-    BottomNav.jsx           mobile bottom nav + FAB (strip to FAB only)
-    SnoozeSheet.jsx         snooze date picker sheet
-    Card.jsx / Button.jsx / Input.jsx   base UI primitives
+    TaskCard.jsx              inline edit (pencil), done/snooze actions
+    TriageCard.jsx            triage item (needs pencil edit — see known issues)
+    CapacityBar.jsx           compact (Focus/Triage) + full (Foundation)
+    BottomNav.jsx             mobile: Routines | Log | ☰ + FAB
+    HamburgerMenu.jsx         slide-out nav
+    WakeScreen.jsx            5s splash → 60s diary + countdown + health check
+    SnoozeSheet.jsx           snooze date picker
+    Card.jsx / Button.jsx / Input.jsx
 ```
 
 ---
 
-## What's next after these tasks
+## Further roadmap
 
-- Phase 6: pattern learning + weekly insights
+- **Phase 6** — pattern learning: PowerModelObservation logging, weekly insights, actuator correlations (ActuatorCategory model exists with preset list)
+- **Play Store** — PWA is ready; wrap with Bubblewrap for Android TWA ($25 dev account). iOS via Capacitor ($99/yr).
