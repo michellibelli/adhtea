@@ -308,7 +308,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           <div className="relative">
 
             {/* Teabag unit — tag + string + card descend as one */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 3500ms ease-in 350ms both', position: 'relative', zIndex: 2 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 2 } : undefined}>
 
             {/* Tag + string */}
             <div
@@ -410,7 +410,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 top: '100%',
                 marginTop: '-12px',
                 zIndex: 1,
-                animation: 'teacup-appear 400ms ease-out 200ms both, teacup-bounce 950ms ease-in-out 3900ms both, teacup-exit 400ms ease-in 4850ms forwards',
+                animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
               }}>
                 <TeaCupSVG />
               </div>
