@@ -319,7 +319,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             : ''
           }>
             {/* Teabag shape — pinched top corners */}
-            <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 90%, 88% 100%, 12% 100%, 0% 90%, 0% 28%)' }}>
+            <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
             <Card className="px-8 py-10 min-h-[280px]">
 
               {/* Type + priority */}
