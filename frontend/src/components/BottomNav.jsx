@@ -99,13 +99,42 @@ const DESKTOP_NAV_ITEMS = [
   ...MOBILE_NAV_ITEMS,
 ]
 
+const MOBILE_BOTTOM_ITEMS = [
+  { id: 'focus',    label: 'Now',      icon: <TeacupIcon /> },
+  { id: 'today',    label: 'Today',    icon: <SunIcon /> },
+  { id: 'routines', label: 'Routines', icon: <MoonIcon /> },
+  { id: 'selfcare', label: 'Log',      icon: <HeartSparkleIcon /> },
+  { id: 'settings', label: 'Menu',     icon: <FlowerIcon /> },
+]
+
 export default function BottomNav({ active, onNavigate, onCapture }) {
   return (
     <>
-      {/* Mobile FAB — capture */}
+      {/* Mobile bottom nav bar */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch"
+        style={{ background: '#2A0E58', borderTop: '4px solid #6A3090', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {MOBILE_BOTTOM_ITEMS.map(({ id, label, icon }) => {
+          const isActive = active === id
+          return (
+            <button
+              key={id}
+              onClick={() => onNavigate(id)}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-opacity"
+              style={{ opacity: isActive ? 1 : 0.45 }}
+            >
+              <span style={{ display: 'flex', transform: 'scale(0.65)', transformOrigin: 'center' }}>{icon}</span>
+              <span className="text-[9px] font-semibold" style={{ color: '#fff' }}>{label}</span>
+            </button>
+          )
+        })}
+      </nav>
+
+      {/* Mobile FAB — capture, floats above bottom nav */}
       <button
         onClick={onCapture}
-        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
+        className="fixed bottom-[76px] right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
         style={{ background: 'linear-gradient(135deg, #C490D1, #B4A8E0)' }}
         aria-label="Capture"
       >

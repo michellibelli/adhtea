@@ -166,14 +166,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = []
     setCelebrate(false)
+    setLeaving(true)
     const pending = completedTaskRef.current
+    completedTaskRef.current = null
     if (pending) {
       if (pending.wasBonus) {
         setBonusTasks((prev) => prev.filter((t) => t.id !== pending.taskId))
+        setTimeout(() => setLeaving(false), 50)
       } else {
-        fetchAll()
+        fetchAll().then(() => setTimeout(() => setLeaving(false), 50))
       }
-      completedTaskRef.current = null
+    } else {
+      setLeaving(false)
     }
   }
 
