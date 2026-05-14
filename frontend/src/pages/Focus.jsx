@@ -481,33 +481,46 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               className="flex flex-col items-center"
               style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}
             >
-              <div
-                onClick={() => !celebrate && setShowEdit(true)}
-                title="Edit task"
-                style={{
-                  width: 80, height: 43,
-                  background: (TAG_COLORS[task?.task_type] || TAG_COLORS.task).bg,
-                  border: `2px solid ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).border}`,
-                  borderRadius: 7,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `2px 2px 0 ${(TAG_COLORS[task?.task_type] || TAG_COLORS.task).shadow}`,
-                  cursor: celebrate ? 'default' : 'pointer',
-                }}
-              >
-                <span style={{ color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  {(() => {
-                    const name = TAG_NAMES[task?.task_type] || 'Task'
-                    const fs = name.length <= 4 ? 10 : name.length <= 5 ? 9 : 8
-                    return <span style={{ fontSize: fs }}>{name}</span>
-                  })()}
-                  {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 8, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
-                  {task?.project_name && (
-                    <span style={{ fontWeight: 400, fontSize: 7, opacity: 0.85, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                      {task.project_name}
+              {(() => {
+                const isProject = !!task?.project_name
+                const colors = isProject ? TAG_COLORS.project : (TAG_COLORS[task?.task_type] || TAG_COLORS.task)
+                const tagH = isProject ? 54 : 43
+                return (
+                  <div
+                    onClick={() => !celebrate && setShowEdit(true)}
+                    title="Edit task"
+                    style={{
+                      width: 80, height: tagH,
+                      background: colors.bg,
+                      border: `2px solid ${colors.border}`,
+                      borderRadius: 7,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `2px 2px 0 ${colors.shadow}`,
+                      cursor: celebrate ? 'default' : 'pointer',
+                    }}
+                  >
+                    <span style={{ color: '#fff', lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                      {isProject ? (
+                        <>
+                          <span style={{ fontSize: 16 }}>Project</span>
+                          <span style={{ fontWeight: 500, fontSize: 10, opacity: 0.9, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                            {task.project_name}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {(() => {
+                            const name = TAG_NAMES[task?.task_type] || 'Task'
+                            const fs = name.length <= 4 ? 10 : name.length <= 5 ? 9 : 8
+                            return <span style={{ fontSize: fs }}>{name}</span>
+                          })()}
+                          {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 8, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
+                        </>
+                      )}
                     </span>
-                  )}
-                </span>
-              </div>
+                  </div>
+                )
+              })()}
               <div style={{
                 width: 3,
                 height: 38,
