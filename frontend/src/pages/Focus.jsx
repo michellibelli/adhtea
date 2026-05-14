@@ -63,7 +63,7 @@ function pickNext(tasks) {
 
 function TeaCupSVG() {
   return (
-    <svg width="110" height="86" viewBox="0 0 110 86" fill="none">
+    <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
       <ellipse cx="52" cy="77" rx="46" ry="7" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
       <path d="M 14 22 L 90 22 L 80 71 L 24 71 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
       <path d="M 90 32 Q 108 32 108 50 Q 108 66 90 62" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
