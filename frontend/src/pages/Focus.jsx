@@ -392,7 +392,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   )}
                 </div>
 
-                <h2 className="text-3xl font-bold text-ui-text leading-snug mb-3">
+                <h2 className="text-2xl font-bold text-ui-text leading-snug mb-3">
                   {task.title}
                 </h2>
 
