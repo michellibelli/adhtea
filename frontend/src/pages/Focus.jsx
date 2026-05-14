@@ -295,10 +295,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     if (!task) return
     setLeaving(true)
     setTimeout(() => {
-      setTasks(prev => {
+      const updater = (prev) => {
         const maxOrder = Math.max(0, ...prev.map(t => t.sort_order ?? 0))
         return prev.map(t => t.id === task.id ? { ...t, sort_order: maxOrder + 1 } : t)
-      })
+      }
+      if (isBonusMode) setBonusTasks(updater)
+      else setTasks(updater)
       setLeaving(false)
     }, 300)
   }
