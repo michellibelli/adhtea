@@ -287,12 +287,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     setLeaving(true)
     setTimeout(() => {
       setTasks(prev => {
-        const idx = prev.findIndex(t => t.id === task.id)
-        if (idx === -1) return prev
-        const copy = [...prev]
-        const [moved] = copy.splice(idx, 1)
-        copy.push(moved)
-        return copy
+        const maxOrder = Math.max(0, ...prev.map(t => t.sort_order ?? 0))
+        return prev.map(t => t.id === task.id ? { ...t, sort_order: maxOrder + 1 } : t)
       })
       setLeaving(false)
     }, 300)
