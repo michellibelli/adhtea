@@ -233,21 +233,21 @@
 }
 
 @keyframes teabag-descend {
-  /* Shrink to center in place */
+  /* Shrink to center, smooth collapse */
   0%  { transform: translateY(0px)   scale(1);   opacity: 1; animation-timing-function: ease-in-out; }
-  /* Shrink done — begin constant-speed descent */
-  12% { transform: translateY(0px)   scale(0.6); opacity: 1; animation-timing-function: linear; }
-  /* 30% of bag past cup rim */
-  36% { transform: translateY(162px) scale(0.6); opacity: 1; animation-timing-function: linear; }
-  /* Bounced back — bottom of bag 20px above cup top */
-  53% { transform: translateY(49px)  scale(0.6); opacity: 1; animation-timing-function: linear; }
-  /* Opacity fades linearly across this segment — ends at 75% into cup */
+  /* Fall with gravity — ease-in = accelerates into cup */
+  12% { transform: translateY(0px)   scale(0.6); opacity: 1; animation-timing-function: ease-in; }
+  /* Hit cup 30% in — ease-out = decelerates, bounces back up */
+  36% { transform: translateY(162px) scale(0.6); opacity: 1; animation-timing-function: ease-out; }
+  /* Top of bounce — ease-in = falls again with gravity, opacity fades across this segment */
+  53% { transform: translateY(49px)  scale(0.6); opacity: 1; animation-timing-function: ease-in; }
+  /* 75% into cup, fully transparent — ease-out = decelerates to stop */
   82% { transform: translateY(246px) scale(0.6); opacity: 0; animation-timing-function: ease-out; }
-  /* Decelerate (0.2s) */
+  /* Decelerate done */
   86% { transform: translateY(260px) scale(0.6); opacity: 0; animation-timing-function: linear; }
-  /* Pause (0.1s) */
+  /* Pause */
   88% { transform: translateY(260px) scale(0.6); opacity: 0; animation-timing-function: ease-in; }
-  /* Accelerate (0.2s) */
+  /* Accelerate */
   92% { transform: translateY(287px) scale(0.6); opacity: 0; }
   100%{ transform: translateY(320px) scale(0.6); opacity: 0; }
 }

@@ -79,8 +79,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   const [capacity,    setCapacity]    = useState(null)
   const [loading,     setLoading]     = useState(true)
   const [leaving,     setLeaving]     = useState(false)
-  const [celebrate,   setCelebrate]   = useState(false)  // false | 'p1' | 'p2' | 'p3'
+  const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'p1' | 'p2' | 'p3'
   const punRef = useRef('')
+  const completedTaskRef     = useRef(null)  // { taskId, wasBonus }
+  const celebrationTimersRef = useRef([])
   const [showSnooze,  setShowSnooze]  = useState(false)
   const [showMenu,    setShowMenu]    = useState(false)
   const [localDone,   setLocalDone]   = useState(0)
@@ -120,25 +122,37 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     }
   }
 
+  function skipCelebration() {
+    celebrationTimersRef.current.forEach(clearTimeout)
+    celebrationTimersRef.current = []
+    setCelebrate(false)
+    const pending = completedTaskRef.current
+    if (pending) {
+      if (pending.wasBonus) {
+        setBonusTasks((prev) => prev.filter((t) => t.id !== pending.taskId))
+      } else {
+        fetchAll()
+      }
+      completedTaskRef.current = null
+    }
+  }
+
   async function handleComplete() {
     if (!task) return
     setLocalDone((n) => n + 1)
     punRef.current = TEA_PUNS[Math.floor(Math.random() * TEA_PUNS.length)]
-    setCelebrate('dunk')
     const taskId = task.id
     const wasBonus = isBonusMode
+    completedTaskRef.current = { taskId, wasBonus }
     completeTask(taskId)
-    setTimeout(() => {
-      setCelebrate('p1')
-      if (wasBonus) {
-        setBonusTasks((prev) => prev.filter((t) => t.id !== taskId))
-      } else {
-        fetchAll()
-      }
-    }, 5350)
-    setTimeout(() => setCelebrate('p2'), 5350 + 720)
-    setTimeout(() => setCelebrate('p3'), 5350 + 1180)
-    setTimeout(() => setCelebrate(false), 5350 + 4300)
+    setCelebrate('dunk')
+    celebrationTimersRef.current.forEach(clearTimeout)
+    celebrationTimersRef.current = [
+      setTimeout(() => setCelebrate('p1'),  5350),
+      setTimeout(() => setCelebrate('p2'),  5350 + 720),
+      setTimeout(() => setCelebrate('p3'),  5350 + 1180),
+      setTimeout(() => skipCelebration(),   5350 + 1180 + 3000),
+    ]
   }
 
   async function handleDefer() {
@@ -208,7 +222,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           <div
             className="fixed left-0 right-0 overflow-hidden cursor-pointer select-none pointer-events-auto"
             style={{ top: '20%', height: '90px', zIndex: 20 }}
-            onClick={() => setCelebrate(false)}
+            onClick={skipCelebration}
           >
             {/* Train: cup + rainbow slide in as a unit */}
             {celebrate !== 'p3' && (
@@ -301,7 +315,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
         {/* Card */}
         <div
           className={`flex-1 flex flex-col justify-center ${
-            !celebrate ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}` : ''
+            celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
+              ? 'invisible'
+              : !celebrate
+                ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
+                : ''
           }`}
         >
           {/* Relative wrapper — anchors cup position */}
@@ -350,7 +368,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   </span>
                   <span className="text-xs text-ui-subtext">{TYPE_LABELS[task.task_type] || 'Task'}</span>
                   {isBonusMode && (
-                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-400">
+                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-700">
                       Tomorrow
                     </span>
                   )}
