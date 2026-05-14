@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from sqlalchemy import or_, and_
 from database import get_db
@@ -342,6 +342,7 @@ def get_bonus_tasks(
     today = date.today()
     tasks = (
         db.query(Task)
+        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == current_user.id,
             Task.status.in_([TaskStatus.inbox, TaskStatus.snoozed]),
@@ -465,6 +466,7 @@ def get_today(
 
     tasks = (
         db.query(Task)
+        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.today,

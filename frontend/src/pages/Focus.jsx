@@ -8,19 +8,6 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
 
-function teabagStyle(bonus) {
-  const dot1 = bonus ? 'rgba(180,130,0,0.28)' : 'rgba(130,105,60,0.22)'
-  const dot2 = bonus ? 'rgba(180,130,0,0.15)' : 'rgba(130,105,60,0.12)'
-  return {
-    backgroundColor: bonus ? '#F5E070' : '#EBE0C4',
-    backgroundImage: [
-      `radial-gradient(circle, ${dot1} 0.5px, transparent 0.5px)`,
-      `radial-gradient(circle, ${dot2} 0.5px, transparent 0.5px)`,
-    ].join(', '),
-    backgroundSize: '5px 5px, 10px 10px',
-    backgroundPosition: '0 0, 2.5px 2.5px',
-  }
-}
 
 const SPARKLE_POSITIONS = [
   { top: '14%', left: '11%',  '--delay': '0s',   '--dur': '2.2s' },
@@ -537,7 +524,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               }
             >
               <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-              <Card className="teabag-card relative px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center" style={teabagStyle(isBonusMode)}>
+              <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center`}>
                 {isBonusMode && SPARKLE_POSITIONS.map((pos, i) => (
                   <span key={i} className="sparkle" style={pos}>✦</span>
                 ))}
