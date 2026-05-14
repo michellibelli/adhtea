@@ -472,9 +472,13 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   cursor: celebrate ? 'default' : 'pointer',
                 }}
               >
-                <span style={{ fontSize: 10, color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <span>{TAG_NAMES[task?.task_type] || 'Task'}</span>
-                  {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 9, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
+                <span style={{ color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  {(() => {
+                    const name = TAG_NAMES[task?.task_type] || 'Task'
+                    const fs = name.length <= 4 ? 10 : name.length <= 5 ? 9 : 8
+                    return <span style={{ fontSize: fs }}>{name}</span>
+                  })()}
+                  {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 8, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
                 </span>
               </div>
               <div style={{
