@@ -293,12 +293,34 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           style={celebrate ? { animation: 'celebrate-card-dunk 680ms ease-in 440ms both' } : undefined}
         >
 
+          {/* Tea bag tag + string */}
+          <div className="flex flex-col items-center" style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}>
+            <div style={{
+              width: 32, height: 17,
+              background: 'linear-gradient(135deg, #C97068, #E8968C)',
+              border: '2px solid #9B4E4E',
+              borderRadius: 3,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '1px 1px 0 #7A3030',
+            }}>
+              <span style={{ fontSize: 9, color: '#fff', lineHeight: 1, userSelect: 'none' }}>✦</span>
+            </div>
+            <div style={{
+              width: 2,
+              height: 38,
+              background: 'linear-gradient(to bottom, #8B7355 0%, #C4A882 60%, #D4B892 100%)',
+              borderRadius: 1,
+            }} />
+          </div>
+
           {/* Bonus glow ring wrapper */}
           <div className={isBonusMode
             ? 'rounded-2xl ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
             : ''
           }>
-            <Card className="px-8 py-10 min-h-[220px]">
+            {/* Teabag shape — pinched top corners */}
+            <div style={{ clipPath: 'polygon(14% 0%, 86% 0%, 100% 11%, 100% 100%, 0% 100%, 0% 11%)' }}>
+            <Card className="px-8 py-10 min-h-[280px]">
 
               {/* Type + priority */}
               <div className="flex items-center gap-2 mb-7">
@@ -353,6 +375,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               )}
 
             </Card>
+            </div>{/* end teabag clip-path */}
           </div>
 
           {/* Actions */}
