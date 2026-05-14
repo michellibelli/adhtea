@@ -442,7 +442,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
         <div
           className={`flex-1 flex flex-col justify-center ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
-              ? 'invisible'
+              ? 'opacity-0 pointer-events-none'
               : !celebrate
                 ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
                 : ''
