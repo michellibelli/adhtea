@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   DndContext, closestCenter, TouchSensor, useSensor, useSensors,
 } from '@dnd-kit/core'
@@ -43,18 +43,71 @@ function ProgressBar({ done, total }) {
 }
 
 function DragHandle(props) {
+  // Not a <button>: SmartPointerSensor blocks drag activation on buttons.
   return (
-    <button
+    <div
       {...props}
-      className="flex-shrink-0 text-ui-subtext/25 hover:text-ui-subtext transition-colors cursor-grab active:cursor-grabbing touch-none p-0.5"
-      tabIndex={-1}
+      role="button"
+      aria-label="Drag to reorder"
+      className="flex-shrink-0 text-ui-subtext/25 hover:text-ui-subtext transition-colors cursor-grab active:cursor-grabbing touch-none p-0.5 inline-flex items-center"
     >
       <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
         <circle cx="5" cy="4"  r="1.2"/><circle cx="11" cy="4"  r="1.2"/>
         <circle cx="5" cy="8"  r="1.2"/><circle cx="11" cy="8"  r="1.2"/>
         <circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/>
       </svg>
-    </button>
+    </div>
+  )
+}
+
+function LongPressCircle({ task, selected, onComplete, onToggleSelect }) {
+  const timerRef = useRef(null)
+  const heldRef  = useRef(false)
+
+  function start(e) {
+    e.preventDefault?.()
+    heldRef.current = false
+    timerRef.current = setTimeout(() => {
+      heldRef.current = true
+      timerRef.current = null
+      onToggleSelect()
+    }, 500)
+  }
+  function cancel() {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+  }
+  function end() {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current); timerRef.current = null
+      if (!heldRef.current) onComplete()
+    }
+  }
+
+  const isDone = task.status === 'done'
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onPointerDown={start}
+      onPointerUp={end}
+      onPointerLeave={cancel}
+      onPointerCancel={cancel}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onComplete() } }}
+      title={selected ? 'Selected — long-press to deselect' : 'Tap = complete · long-press = select'}
+      className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer select-none ${
+        selected
+          ? 'ring-2 ring-ui-accent ring-offset-1 ring-offset-ui-surface bg-ui-accent/30 border-ui-accent'
+          : isDone
+            ? 'bg-ui-accent border-ui-accent hover:opacity-70'
+            : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
+      }`}
+    >
+      {isDone && !selected && (
+        <svg viewBox="0 0 12 10" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
+          <polyline points="1 5 4.5 8.5 11 1"/>
+        </svg>
+      )}
+    </div>
   )
 }
 
@@ -98,38 +151,16 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, sele
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-3 px-4 py-2.5">
+        <div className={`flex items-center gap-3 px-4 py-2.5 ${selected ? 'bg-ui-accent/10' : ''}`}>
           <DragHandle {...attributes} {...listeners} />
 
-          {/* Multi-select checkbox */}
-          <button
-            onClick={() => onToggleSelect(task.id)}
-            className={`flex-shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-              selected ? 'bg-ui-accent border-ui-accent' : 'border-ui-border hover:border-ui-accent'
-            }`}
-          >
-            {selected && (
-              <svg viewBox="0 0 10 8" fill="none" stroke="white" strokeWidth={2.5} className="w-2 h-2">
-                <polyline points="1 4 3.5 6.5 9 1"/>
-              </svg>
-            )}
-          </button>
-
-          {/* Complete / uncomplete circle */}
-          <button
-            onClick={() => onComplete(projectId, task.id)}
-            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-              task.status === 'done'
-                ? 'bg-ui-accent border-ui-accent hover:opacity-70'
-                : 'border-ui-accent/50 hover:border-ui-accent active:scale-90'
-            }`}
-          >
-            {task.status === 'done' && (
-              <svg viewBox="0 0 12 10" fill="none" stroke="white" strokeWidth={2.5} className="w-2.5 h-2.5">
-                <polyline points="1 5 4.5 8.5 11 1"/>
-              </svg>
-            )}
-          </button>
+          {/* Single circle: tap = toggle done; long-press (500ms) = toggle multi-select */}
+          <LongPressCircle
+            task={task}
+            selected={selected}
+            onComplete={() => onComplete(projectId, task.id)}
+            onToggleSelect={() => onToggleSelect(task.id)}
+          />
 
           <div className="flex-1 min-w-0">
             <p className={`text-sm text-ui-text leading-snug ${task.status === 'done' ? 'line-through' : ''}`}>

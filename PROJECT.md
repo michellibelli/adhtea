@@ -1,5 +1,5 @@
 # adhTea — Project Documentation
-*Last updated: 2026-05-13*
+*Last updated: 2026-05-14*
 
 ## What is this
 
@@ -148,6 +148,28 @@ Full OAuth 2.0 (read-only). Connect via Settings → Integrations. Lazy morning 
 
 Create a project with a description → hit ✨ → Claude Haiku generates 4–12 bite-sized tasks respecting a 90-min daily budget, spread across day_offset (tomorrow, day after, etc.). Tasks auto-created in inbox with weights and due dates. Manual task add also available.
 
+**Sub-task date cascade:** Editing a project task's `due_date` shifts all later sibling tasks (status not done/deleted) by the same delta. Pushing back an earlier item makes the rest follow automatically.
+
+**Multi-select / batch date:** Project page has selection checkboxes; selecting 2+ surfaces a sticky bar to set a single due date across all selected tasks.
+
+**Uncomplete:** clicking the filled circle on a completed sub-task reverts it to inbox.
+
+**Open/close animation:** project cards expand/collapse with a 300ms grid-rows transition.
+
+### Project domains
+
+Each project can be tagged with a **Domain** that constrains where its tasks land:
+
+- **Work** (default seeded per user) — weekday-only.
+- **Home** (default seeded per user) — light tasks on weekday evenings; anything on weekends.
+- **Other** — user-defined. Inline "+ Other" button in the create form opens an editor for days / times-of-day / task weights.
+
+Backend model: `Domain` has a JSON `rules` list. Each rule is `{ days?, times?, weights? }`. A task is allowed if it matches at least one rule (empty fields = unrestricted). Lazy seed: defaults are inserted the first time a user hits `GET /domains`.
+
+Domain can be changed at any time from the expanded project view. Settings → "Project domains" lists every domain with full rule editor (add/remove rules, edit days/times/weights/name; delete non-default).
+
+*Enforcement note:* Phase 1 ships data + UI + selection. Date enforcement and AI generation respecting domain rules are tracked for Phase 2.
+
 ### AllTasks + Search
 
 AllTasks: all active tasks with filter bar, batch snooze, batch date assignment, optimistic updates.
@@ -155,7 +177,16 @@ Search: case-insensitive title + notes search with same batch operations.
 
 ### Bonus mode
 
-When today's list is fully cleared, Focus enters amber "bonus mode" showing future-dated inbox and snoozed tasks. "Skip" removes locally (not inbox). Done button turns amber.
+When today's list has nothing *visible* (no immediately-actionable item — done, snoozed, or only timed routines >5 min away), Focus enters amber "bonus mode" showing future-dated inbox and snoozed tasks. The bag turns golden with twinkling sparkles. "Skip" removes locally (not inbox). Done button turns amber.
+
+### Focus teabag visual
+
+The Focus card is rendered as a teabag pillow:
+- **Bag body**: chamfered hex via `clip-path`, cream paper background (`#FBF6E5`) with a fine yellow-brown dot mesh for texture.
+- **String**: short vertical gradient from the top of the bag to the **tag**.
+- **Tag**: colored block whose color/label reflects task type. For project sub-tasks, the tag is amber with "Project" + the parent project name on a second line.
+- **Bonus mode**: bag turns golden; five `✦` sparkles twinkle at staggered intervals around the card.
+- **Next button**: bumps the current task's `sort_order` past the rest of the queue so `pickNext()` advances. Works in both regular and bonus modes.
 
 ---
 
@@ -211,7 +242,8 @@ backend/
     selfcare.py       SelfCareLog + CapacitySnapshot
     medication.py     MedicationSchedule + MedicationLog
     gcal.py           Google Calendar OAuth 2.0 + sync
-    projects.py       Project CRUD + Claude Haiku AI breakdown
+    projects.py       Project CRUD + Claude Haiku AI breakdown + date cascade
+    domains.py        Project domain CRUD; lazy-seeds Work/Home for new users
     import_csv.py     Notion CSV import
 ```
 
@@ -223,7 +255,7 @@ frontend/src/
   api/
     client.js                 singleton API client, warmUp, smart retry
     tasks.js / routines.js / selfcare.js / medication.js
-    gcal.js / projects.js / auth.js
+    gcal.js / projects.js / domains.js / auth.js
   pages/
     Focus.jsx                 home — next task card, bonus mode, imminent appts
     Triage.jsx                one-at-a-time triage with slide animation
@@ -250,8 +282,27 @@ frontend/src/
     SnoozeSheet.jsx           snooze date picker
     WakeScreen.jsx            backend wake splash
     PageProgress.jsx          pride progress bar
+    DomainPicker.jsx          pill picker for project domain + inline "Other" editor
     Card.jsx / Button.jsx / Input.jsx   base UI primitives
+  utils/
+    dnd.js                    SmartPointerSensor — blocks drag on interactive elements
 ```
+
+### Diagnostic / deploy tooling
+
+```
+scripts/
+  deploy-check.sh             unauth'd curl check: production HTML/JS/CSS hashes,
+                              optional marker grep, backend health, local HEAD compare
+  aria-api.sh <path>          authenticated production API helper.
+                              Reads bearer token from ~/.aria-token (outside repo).
+                              Get token: localStorage.getItem('aria_token') on
+                              adh-tea.fun while logged in.
+```
+
+The `BUILD <timestamp>` chip in the top-right corner of every page is the
+live-deployment marker — its value is injected by `vite.config.js` `define`
+at build time. If a fix isn't propagating, hard-refresh and check the chip.
 
 ---
 
