@@ -12,6 +12,8 @@ import {
   updateProject, generateProjectTasks, removeTaskFromProject,
 } from '../api/projects'
 import { createTask, completeTask, reorderTasks, updateTask } from '../api/tasks'
+import { listDomains, createDomain } from '../api/domains'
+import DomainPicker from '../components/DomainPicker'
 
 function fmtDate(iso) {
   if (!iso) return null
@@ -220,11 +222,15 @@ export default function Projects({ onNavigate }) {
   const [batchDateMode, setBatchDateMode] = useState(false)
   const [batchDate,     setBatchDate]     = useState('')
 
+  const [domains,      setDomains]      = useState([])
+  const [newDomainId,  setNewDomainId]  = useState(null)
+
   useEffect(() => {
     listProjects()
       .then(setProjects)
       .catch(console.error)
       .finally(() => setLoading(false))
+    listDomains().then(setDomains).catch(console.error)
   }, [])
 
   async function loadDetail(id) {
@@ -257,7 +263,7 @@ export default function Projects({ onNavigate }) {
     if (!newForm.title.trim()) return
     setCreating(true)
     try {
-      const p = await createProject(newForm.title, newForm.description || null)
+      const p = await createProject(newForm.title, newForm.description || null, newDomainId)
       setProjects(prev => [{ ...p }, ...prev])
       setShowCreate(false)
       setExpanded(p.id)
@@ -267,8 +273,19 @@ export default function Projects({ onNavigate }) {
         setGenerateDesc(newForm.description)
       }
       setNewForm({ title: '', description: '' })
+      setNewDomainId(null)
     } catch (err) { console.error(err) }
     finally { setCreating(false) }
+  }
+
+  async function handleSetProjectDomain(projectId, domainId) {
+    try {
+      const updated = await updateProject(projectId, { domain_id: domainId })
+      setProjects(prev => prev.map(p => p.id === projectId
+        ? { ...p, domain_id: updated.domain_id, domain_name: updated.domain_name }
+        : p
+      ))
+    } catch (err) { console.error(err) }
   }
 
   async function handleGenerate(projectId) {
@@ -453,6 +470,12 @@ export default function Projects({ onNavigate }) {
               rows={3}
               placeholder="Describe the project — AI will generate tasks from this (optional)"
             />
+            <DomainPicker
+              domains={domains}
+              value={newDomainId}
+              onChange={setNewDomainId}
+              onCreate={d => setDomains(prev => [...prev, d])}
+            />
             <Button onClick={handleCreate} disabled={!newForm.title.trim() || creating}>
               {creating
                 ? 'Creating…'
@@ -502,7 +525,14 @@ export default function Projects({ onNavigate }) {
                       </div>
                     ) : (
                       <button className="flex-1 text-left min-w-0" onClick={() => toggleExpand(project.id)}>
-                        <p className="text-sm font-semibold text-ui-text leading-snug">{project.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-ui-text leading-snug">{project.title}</p>
+                          {project.domain_name && (
+                            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-ui-accent/15 text-ui-accent font-semibold">
+                              {project.domain_name}
+                            </span>
+                          )}
+                        </div>
                         <ProgressBar done={project.done_count} total={project.task_count} />
                       </button>
                     )}
@@ -540,6 +570,19 @@ export default function Projects({ onNavigate }) {
 
                     {d && (
                       <>
+                        {/* Domain selector — change at any time */}
+                        <div className="px-4 py-3 border-b border-ui-border/40">
+                          <DomainPicker
+                            domains={domains}
+                            value={project.domain_id}
+                            onChange={(id) => handleSetProjectDomain(project.id, id)}
+                            onCreate={d => {
+                              setDomains(prev => [...prev, d])
+                              handleSetProjectDomain(project.id, d.id)
+                            }}
+                          />
+                        </div>
+
                         {d.tasks.length === 0 && showGenerate !== project.id && showAddTask !== project.id && (
                           <p className="text-sm text-ui-subtext px-4 py-3">
                             No tasks yet — add some below.

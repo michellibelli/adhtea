@@ -31,6 +31,7 @@ def _summary(p: Project, db: Session) -> dict:
     return {
         "id": p.id, "user_id": p.user_id, "title": p.title,
         "description": p.description, "status": p.status,
+        "domain_id": p.domain_id, "domain_name": p.domain_name,
         "created_at": p.created_at, "task_count": len(tasks), "done_count": done,
     }
 
@@ -55,7 +56,12 @@ def create_project(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    p = Project(user_id=current_user.id, title=body.title.strip(), description=body.description)
+    p = Project(
+        user_id=current_user.id,
+        title=body.title.strip(),
+        description=body.description,
+        domain_id=body.domain_id,
+    )
     db.add(p)
     db.commit()
     db.refresh(p)
@@ -79,6 +85,7 @@ def get_project(
     return {
         "id": p.id, "user_id": p.user_id, "title": p.title,
         "description": p.description, "status": p.status,
+        "domain_id": p.domain_id, "domain_name": p.domain_name,
         "created_at": p.created_at, "tasks": tasks,
     }
 
@@ -97,6 +104,10 @@ def update_project(
         p.description = body.description
     if body.status is not None:
         p.status = body.status
+    # Use exclude_unset so explicit null clears the domain
+    patch = body.model_dump(exclude_unset=True)
+    if "domain_id" in patch:
+        p.domain_id = patch["domain_id"]
     db.commit()
     db.refresh(p)
     return _summary(p, db)

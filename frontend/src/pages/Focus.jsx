@@ -221,9 +221,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  const isBonusMode = tasks.length === 0 && bonusTasks.length > 0
-  const activeList  = isBonusMode ? bonusTasks : tasks
-  const task        = pickNext(activeList)
+  // Bonus mode triggers when no visible today-task exists. pickNext filters
+  // routines that aren't yet within 5 min — those don't count as "anything to do".
+  const todayVisible = pickNext(tasks) !== null
+  const isBonusMode  = !todayVisible && bonusTasks.length > 0
+  const activeList   = isBonusMode ? bonusTasks : tasks
+  const task         = pickNext(activeList)
   const remaining   = activeList.length
   const totalDone   = doneTodayBase + localDone
 

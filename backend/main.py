@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from database import engine, Base
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects
+from routes import projects, domains
 
 load_dotenv()
 
@@ -33,6 +33,9 @@ def _migrate():
             if "is_onboarded" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_onboarded BOOLEAN NOT NULL DEFAULT 0"))
                 conn.execute(text("UPDATE users SET is_onboarded=1"))  # existing users skip onboarding
+            projects_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(projects)")).fetchall()}
+            if "domain_id" not in projects_cols:
+                conn.execute(text("ALTER TABLE projects ADD COLUMN domain_id INTEGER REFERENCES domains(id)"))
             conn.commit()
         else:
             conn.execute(text(
@@ -45,6 +48,9 @@ def _migrate():
             conn.execute(text("UPDATE users SET is_onboarded=TRUE WHERE is_onboarded=FALSE"))
             conn.execute(text(
                 "UPDATE users SET is_owner=TRUE WHERE id=(SELECT MIN(id) FROM users) AND is_owner=FALSE"
+            ))
+            conn.execute(text(
+                "ALTER TABLE projects ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
             ))
             conn.commit()
 
@@ -79,6 +85,7 @@ app.include_router(medication.router,  tags=["medication"])
 app.include_router(import_csv.router,  tags=["import"])
 app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
+app.include_router(domains.router)
 
 
 @app.get("/health")

@@ -159,6 +159,28 @@ class ActuatorCategory(Base):
 # Project
 # ---------------------------------------------------------------------------
 
+class Domain(Base):
+    """Project domain — scheduling rules for when tasks in this domain can be placed.
+
+    rules JSON: list of rule objects. Each rule specifies allowed days/times/weights.
+    A task is allowed if it matches AT LEAST ONE rule. Empty list = no restrictions.
+
+    Example (Home): light tasks evenings on weekdays, anything on weekends
+        [
+          {"days": [0,1,2,3,4], "times": ["evening"], "weights": ["light"]},
+          {"days": [5,6]}
+        ]
+    """
+    __tablename__ = "domains"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(50), nullable=False)
+    rules = Column(Text, nullable=False, default="[]")  # JSON list of rule dicts
+    is_default = Column(Boolean, default=False, nullable=False)  # work/home seeded for each user
+    created_at = Column(DateTime, default=utcnow)
+
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -167,9 +189,15 @@ class Project(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(String(20), default="active", nullable=False)  # active, completed, archived
+    domain_id = Column(Integer, ForeignKey("domains.id"), nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     tasks = relationship("Task", back_populates="project", foreign_keys="[Task.project_id]")
+    domain = relationship("Domain", foreign_keys=[domain_id])
+
+    @property
+    def domain_name(self):
+        return self.domain.name if self.domain else None
 
 
 # ---------------------------------------------------------------------------

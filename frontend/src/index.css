@@ -87,10 +87,10 @@
    Required because both rules use !important and .pixel-card is defined later. */
 .teabag-card.pixel-card,
 .teabag-card {
-  background-color: #EBE0C4 !important;
+  background-color: #FBF6E5 !important;
   background-image:
-    radial-gradient(circle, rgba(130,105,60,0.22) 0.5px, transparent 0.5px),
-    radial-gradient(circle, rgba(130,105,60,0.12) 0.5px, transparent 0.5px) !important;
+    radial-gradient(circle, rgba(190,150,50,0.32) 0.5px, transparent 0.5px),
+    radial-gradient(circle, rgba(190,150,50,0.18) 0.5px, transparent 0.5px) !important;
   background-size: 5px 5px, 10px 10px !important;
   background-position: 0 0, 2.5px 2.5px !important;
 }
