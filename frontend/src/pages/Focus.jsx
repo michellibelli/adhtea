@@ -228,7 +228,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-10 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -336,10 +336,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           }`}
         >
           {/* Relative wrapper — anchors cup position; pb reserves space for scale(1.15) overflow */}
-          <div className="relative pb-8">
+          <div className="relative">
 
             {/* Teabag unit — tag + string + card descend as one */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : { transform: 'scale(1.15)', transformOrigin: 'top center' }}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : undefined}>
 
             {/* Tag + string */}
             <div
@@ -372,10 +372,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               }
             >
               <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
-              <Card className="px-8 py-8 min-h-[220px]">
+              <Card className="px-5 py-5 min-h-[180px]">
 
                 {/* Type + priority */}
-                <div className="flex items-center gap-2 mb-7">
+                <div className="flex items-center gap-2 mb-3">
                   <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
                     {TYPE_ICONS[task.task_type] || '✦'}
                   </span>
