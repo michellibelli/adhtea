@@ -326,12 +326,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           <div className="relative">
 
             {/* Teabag unit — tag + string + card descend as one */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 2 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : undefined}>
 
             {/* Tag + string */}
             <div
               className="flex flex-col items-center"
-              style={{ marginBottom: '-1px', zIndex: 2, position: 'relative' }}
+              style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}
             >
               <div style={{
                 width: 32, height: 17,
@@ -427,7 +427,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 width: 'fit-content',
                 top: '100%',
                 marginTop: '-12px',
-                zIndex: 1,
+                zIndex: 2,
                 animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
               }}>
                 <TeaCupSVG />
