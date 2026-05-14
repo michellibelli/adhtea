@@ -61,14 +61,27 @@ function pickNext(tasks) {
   return copy[0] ?? null
 }
 
+function TeaCupBack() {
+  // Back of cup — renders BEHIND the bag
+  // Tea pool + back arc of rim (top half of oval = the far side)
+  return (
+    <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
+      <ellipse cx="52" cy="22" rx="34" ry="4.5" fill="#DBA96A" opacity="0.55"/>
+      <path d="M 14 22 A 38 6.5 0 0 0 90 22" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
+    </svg>
+  )
+}
+
 function TeaCupFront() {
+  // Front of cup — renders IN FRONT of the bag
+  // Base, body (front wall), handle, rim fill + front arc of rim (bottom half of oval = near side)
   return (
     <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
       <ellipse cx="52" cy="77" rx="46" ry="7" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
       <path d="M 14 22 L 90 22 L 80 71 L 24 71 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
       <path d="M 90 32 Q 108 32 108 50 Q 108 66 90 62" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
-      <ellipse cx="52" cy="22" rx="38" ry="6.5" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2.5"/>
-      <ellipse cx="52" cy="22" rx="34" ry="4.5" fill="#DBA96A" opacity="0.55"/>
+      <ellipse cx="52" cy="22" rx="38" ry="6.5" fill="#EDD5A8" stroke="none"/>
+      <path d="M 14 22 A 38 6.5 0 0 1 90 22" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
     </svg>
   )
 }
@@ -418,18 +431,25 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             </div>
             </div>{/* end teabag unit */}
 
-            {/* Teacup — entire cup in front of bag so bag disappears into it */}
+            {/* Teacup back — behind bag (back rim arc + tea pool) */}
             {celebrate === 'dunk' && (
               <div style={{
-                position: 'absolute',
-                left: 0, right: 0,
-                margin: '0 auto',
-                width: 'fit-content',
-                top: '100%',
-                marginTop: '-12px',
-                zIndex: 3,
+                position: 'absolute', left: 0, right: 0, margin: '0 auto',
+                width: 'fit-content', top: '100%', marginTop: '-12px',
+                zIndex: 0, pointerEvents: 'none',
                 animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
-                pointerEvents: 'none',
+              }}>
+                <TeaCupBack />
+              </div>
+            )}
+
+            {/* Teacup front — in front of bag (body, handle, base, front rim arc) */}
+            {celebrate === 'dunk' && (
+              <div style={{
+                position: 'absolute', left: 0, right: 0, margin: '0 auto',
+                width: 'fit-content', top: '100%', marginTop: '-12px',
+                zIndex: 3, pointerEvents: 'none',
+                animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
               }}>
                 <TeaCupFront />
               </div>
