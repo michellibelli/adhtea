@@ -224,7 +224,7 @@ class Task(Base):
 
     @property
     def project_name(self):
-        return self.project.name if self.project else None
+        return self.project.title if self.project else None
 
 
 # ---------------------------------------------------------------------------
