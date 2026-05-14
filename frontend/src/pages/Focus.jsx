@@ -186,7 +186,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
+      <div className="flex-1 flex flex-col px-10 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — replaced by celebration during task complete */}
         {celebrate ? (
@@ -319,7 +319,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             : ''
           }>
             {/* Teabag shape — pinched top corners */}
-            <div style={{ clipPath: 'polygon(14% 0%, 86% 0%, 100% 11%, 100% 100%, 0% 100%, 0% 11%)' }}>
+            <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%)' }}>
             <Card className="px-8 py-10 min-h-[280px]">
 
               {/* Type + priority */}
