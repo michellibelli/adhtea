@@ -61,6 +61,18 @@ function pickNext(tasks) {
   return copy[0] ?? null
 }
 
+function TeaCupSVG() {
+  return (
+    <svg width="110" height="86" viewBox="0 0 110 86" fill="none">
+      <ellipse cx="52" cy="77" rx="46" ry="7" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
+      <path d="M 14 22 L 90 22 L 80 71 L 24 71 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
+      <path d="M 90 32 Q 108 32 108 50 Q 108 66 90 62" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+      <ellipse cx="52" cy="22" rx="38" ry="6.5" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2.5"/>
+      <ellipse cx="52" cy="22" rx="34" ry="4.5" fill="#DBA96A" opacity="0.55"/>
+    </svg>
+  )
+}
+
 export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
@@ -112,18 +124,21 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     if (!task) return
     setLocalDone((n) => n + 1)
     punRef.current = TEA_PUNS[Math.floor(Math.random() * TEA_PUNS.length)]
-    setCelebrate('p1')
-    setTimeout(() => setCelebrate('p2'), 720)
-    setTimeout(() => setCelebrate('p3'), 1180)
-    setTimeout(() => setCelebrate(false), 4300)
-    if (isBonusMode) {
-      setLeaving(true)
-      await completeTask(task.id)
-      setLeaving(false)
-      setBonusTasks((prev) => prev.filter((t) => t.id !== task.id))
-    } else {
-      await advance(() => completeTask(task.id))
-    }
+    setCelebrate('dunk')
+    const taskId = task.id
+    const wasBonus = isBonusMode
+    completeTask(taskId)
+    setTimeout(() => {
+      setCelebrate('p1')
+      if (wasBonus) {
+        setBonusTasks((prev) => prev.filter((t) => t.id !== taskId))
+      } else {
+        fetchAll()
+      }
+    }, 2900)
+    setTimeout(() => setCelebrate('p2'), 2900 + 720)
+    setTimeout(() => setCelebrate('p3'), 2900 + 1180)
+    setTimeout(() => setCelebrate(false), 2900 + 4300)
   }
 
   async function handleDefer() {
@@ -189,7 +204,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
       <div className="flex-1 flex flex-col px-10 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — replaced by celebration during task complete */}
-        {celebrate ? (
+        {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
           <div
             className="relative overflow-hidden mb-4 cursor-pointer select-none"
             style={{ height: '52px' }}
@@ -283,125 +298,154 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           </>
         )}
 
-        {/* Card — dunks during celebration, normal fade otherwise */}
+        {/* Card */}
         <div
           className={`flex-1 flex flex-col justify-center ${
-            celebrate
-              ? ''
-              : `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
+            !celebrate ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}` : ''
           }`}
-          style={celebrate ? { animation: 'celebrate-card-dunk 680ms ease-in 440ms both' } : undefined}
         >
+          {/* Relative wrapper — anchors cup position */}
+          <div className="relative">
 
-          {/* Tea bag tag + string */}
-          <div className="flex flex-col items-center" style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}>
-            <div style={{
-              width: 32, height: 17,
-              background: 'linear-gradient(135deg, #C97068, #E8968C)',
-              border: '2px solid #9B4E4E',
-              borderRadius: 3,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '1px 1px 0 #7A3030',
-            }}>
-              <span style={{ fontSize: 9, color: '#fff', lineHeight: 1, userSelect: 'none' }}>✦</span>
+            {/* Tag + string — rise during dunk */}
+            <div
+              className="flex flex-col items-center"
+              style={{
+                marginBottom: '-1px', zIndex: 2, position: 'relative',
+                animation: celebrate === 'dunk' ? 'teabag-tag-rise 700ms ease-out 100ms forwards' : undefined,
+              }}
+            >
+              <div style={{
+                width: 32, height: 17,
+                background: 'linear-gradient(135deg, #C97068, #E8968C)',
+                border: '2px solid #9B4E4E',
+                borderRadius: 3,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '1px 1px 0 #7A3030',
+              }}>
+                <span style={{ fontSize: 9, color: '#fff', lineHeight: 1, userSelect: 'none' }}>✦</span>
+              </div>
+              <div style={{
+                width: 2,
+                height: 38,
+                background: 'linear-gradient(to bottom, #8B7355 0%, #C4A882 60%, #D4B892 100%)',
+                borderRadius: 1,
+                transformOrigin: 'top center',
+                animation: celebrate === 'dunk' ? 'teabag-string-extend 700ms ease-out 100ms forwards' : undefined,
+              }} />
             </div>
-            <div style={{
-              width: 2,
-              height: 38,
-              background: 'linear-gradient(to bottom, #8B7355 0%, #C4A882 60%, #D4B892 100%)',
-              borderRadius: 1,
-            }} />
-          </div>
 
-          {/* Bonus glow ring wrapper */}
-          <div className={isBonusMode
-            ? 'rounded-2xl ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
-            : ''
-          }>
-            {/* Teabag shape — pinched top corners */}
-            <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
-            <Card className="px-8 py-10 min-h-[280px]">
+            {/* Bonus glow ring + clipped card — descend during dunk */}
+            <div
+              className={isBonusMode
+                ? 'rounded-2xl ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
+                : ''
+              }
+              style={celebrate === 'dunk' ? { animation: 'teabag-descend 1500ms ease-in 350ms both', position: 'relative', zIndex: 2 } : undefined}
+            >
+              <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
+              <Card className="px-8 py-10 min-h-[280px]">
 
-              {/* Type + priority */}
-              <div className="flex items-center gap-2 mb-7">
-                <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
-                  {TYPE_ICONS[task.task_type] || '✦'}
-                </span>
-                <span className="text-xs text-ui-subtext">{TYPE_LABELS[task.task_type] || 'Task'}</span>
-                {isBonusMode && (
-                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-400">
-                    Tomorrow
+                {/* Type + priority */}
+                <div className="flex items-center gap-2 mb-7">
+                  <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
+                    {TYPE_ICONS[task.task_type] || '✦'}
                   </span>
+                  <span className="text-xs text-ui-subtext">{TYPE_LABELS[task.task_type] || 'Task'}</span>
+                  {isBonusMode && (
+                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-400">
+                      Tomorrow
+                    </span>
+                  )}
+                  {!isBonusMode && task.priority && PRIORITY_BADGE[task.priority] && (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ml-auto ${PRIORITY_BADGE[task.priority]}`}>
+                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                    </span>
+                  )}
+                </div>
+
+                <h2 className="text-3xl font-bold text-ui-text leading-snug mb-3">
+                  {task.title}
+                </h2>
+
+                {(task.due_time || task.due_date) && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className={`inline-flex items-center gap-1.5 text-base px-2.5 py-0.5 rounded-full ${
+                      isImminent(task)
+                        ? 'bg-amber-400/20 text-amber-400'
+                        : 'text-ui-subtext'
+                    }`}>
+                      <span>◷</span>
+                      <span>
+                        {task.due_time
+                          ? `${task.due_time}${task.due_date ? ` · ${task.due_date}` : ''}`
+                          : task.due_date}
+                      </span>
+                    </span>
+                  </div>
                 )}
-                {!isBonusMode && task.priority && PRIORITY_BADGE[task.priority] && (
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ml-auto ${PRIORITY_BADGE[task.priority]}`}>
-                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                  </span>
+
+                {task.location_detail && (
+                  <div className="mb-3 text-sm text-ui-subtext">
+                    <span className="mr-1.5">📍</span>
+                    <span>{task.location_detail}</span>
+                  </div>
+                )}
+
+                {task.notes && (
+                  <p className="text-sm text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-3">
+                    {task.notes}
+                  </p>
+                )}
+
+              </Card>
+              </div>{/* end teabag clip-path */}
+            </div>
+
+            {/* Teacup — fades in below card, bounces once card enters, then exits */}
+            {celebrate === 'dunk' && (
+              <div style={{
+                position: 'absolute',
+                left: 0, right: 0,
+                margin: '0 auto',
+                width: 'fit-content',
+                top: '100%',
+                marginTop: '-12px',
+                zIndex: 1,
+                animation: 'teacup-appear 400ms ease-out 200ms both, teacup-bounce 600ms ease-in-out 1900ms both, teacup-exit 400ms ease-in 2550ms forwards',
+              }}>
+                <TeaCupSVG />
+              </div>
+            )}
+
+          </div>{/* end relative wrapper */}
+
+          {/* Actions — hidden during dunk */}
+          {celebrate !== 'dunk' && (
+            <div className="mt-4 flex flex-col gap-2 relative">
+              <Button
+                size="lg"
+                onClick={handleComplete}
+                className={`w-full ${isBonusMode ? 'bg-amber-500 hover:bg-amber-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}
+              >
+                Done ✓
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>
+                  Snooze
+                </Button>
+                {isBonusMode ? (
+                  <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>
+                    Skip
+                  </Button>
+                ) : (
+                  <Button variant="ghost" className="flex-1" onClick={handleDefer}>
+                    Back to inbox
+                  </Button>
                 )}
               </div>
-
-              <h2 className="text-3xl font-bold text-ui-text leading-snug mb-3">
-                {task.title}
-              </h2>
-
-              {(task.due_time || task.due_date) && (
-                <div className="flex items-center gap-1.5 mb-3">
-                  <span className={`inline-flex items-center gap-1.5 text-base px-2.5 py-0.5 rounded-full ${
-                    isImminent(task)
-                      ? 'bg-amber-400/20 text-amber-400'
-                      : 'text-ui-subtext'
-                  }`}>
-                    <span>◷</span>
-                    <span>
-                      {task.due_time
-                        ? `${task.due_time}${task.due_date ? ` · ${task.due_date}` : ''}`
-                        : task.due_date}
-                    </span>
-                  </span>
-                </div>
-              )}
-
-              {task.location_detail && (
-                <div className="mb-3 text-sm text-ui-subtext">
-                  <span className="mr-1.5">📍</span>
-                  <span>{task.location_detail}</span>
-                </div>
-              )}
-
-              {task.notes && (
-                <p className="text-sm text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-3">
-                  {task.notes}
-                </p>
-              )}
-
-            </Card>
-            </div>{/* end teabag clip-path */}
-          </div>
-
-          {/* Actions */}
-          <div className="mt-4 flex flex-col gap-2 relative">
-            <Button
-              size="lg"
-              onClick={handleComplete}
-              className={`w-full ${isBonusMode ? 'bg-amber-500 hover:bg-amber-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}
-            >
-              Done ✓
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>
-                Snooze
-              </Button>
-              {isBonusMode ? (
-                <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>
-                  Skip
-                </Button>
-              ) : (
-                <Button variant="ghost" className="flex-1" onClick={handleDefer}>
-                  Back to inbox
-                </Button>
-              )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Progress dots */}
