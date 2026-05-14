@@ -205,6 +205,12 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <div style={{
+        position: 'fixed', top: 4, right: 4, zIndex: 9999,
+        background: 'lime', color: 'black', fontWeight: 700,
+        padding: '2px 6px', fontSize: 11, fontFamily: 'monospace',
+        borderRadius: 3, pointerEvents: 'none',
+      }}>BUILD 0514-A</div>
       {authed
         ? <AppShell />
         : <Login onLogin={() => setAuthed(true)} onGoSignup={() => { window.history.replaceState({}, '', '/signup'); setPreAuthScreen('signup') }} />
