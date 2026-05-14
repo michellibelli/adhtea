@@ -399,9 +399,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
                 {/* Type + priority */}
                 <div className="flex items-center gap-2 mb-3 px-3">
-                  <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
-                    {TYPE_ICONS[task.task_type] || '✦'}
-                  </span>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ml-auto ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
@@ -413,22 +410,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   {task.title}
                 </h2>
 
-                {(task.due_time || task.due_date) && (
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <span className={`inline-flex items-center gap-1.5 text-base px-2.5 py-0.5 rounded-full ${
-                      isImminent(task)
-                        ? 'bg-amber-400/20 text-amber-400'
-                        : 'text-ui-subtext'
-                    }`}>
-                      <span>◷</span>
-                      <span>
-                        {task.due_time
-                          ? `${task.due_time}${task.due_date ? ` · ${task.due_date}` : ''}`
-                          : task.due_date}
-                      </span>
-                    </span>
-                  </div>
-                )}
 
                 {task.location_detail && (
                   <div className="mb-3 text-sm text-ui-subtext">
