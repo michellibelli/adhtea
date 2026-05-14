@@ -375,7 +375,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               <Card className="px-5 py-5 min-h-[180px]">
 
                 {/* Type + priority */}
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 px-3">
                   <span className={`text-xl ${isBonusMode ? 'text-amber-400' : 'text-ui-accent'}`}>
                     {TYPE_ICONS[task.task_type] || '✦'}
                   </span>
