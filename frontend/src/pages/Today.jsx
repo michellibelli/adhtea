@@ -146,7 +146,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
             <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
             {onTriage && (
               <Button variant="secondary" onClick={onTriage}>
-                ⚡ Triage inbox
+                <span className="text-red-500">✚</span> Triage
               </Button>
             )}
           </div>

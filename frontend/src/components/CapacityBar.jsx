@@ -15,7 +15,7 @@ function execNote(val) {
 
 // compact=true: single overall bar + note (for Today / Triage headers)
 // compact=false: full source breakdown (for SelfCare page)
-export default function CapacityBar({ capacity, compact = false }) {
+export default function CapacityBar({ capacity, compact = false, className }) {
   if (!capacity) {
     return (
       <div className="px-4 py-2.5 rounded-2xl bg-ui-surface border border-ui-border">
@@ -30,14 +30,14 @@ export default function CapacityBar({ capacity, compact = false }) {
     const pct = capacity.overall
     const color = pct >= 70 ? 'bg-emerald-400' : pct >= 45 ? 'bg-blue-400' : pct >= 25 ? 'bg-amber-400' : 'bg-red-400'
     return (
-      <div className="mb-4">
-        <div className="flex items-center justify-between text-xs mb-1 px-0.5">
-          <span className="text-ui-subtext">Focus</span>
+      <div className={className ?? 'mb-4'}>
+        <div className="flex items-center justify-between mb-1 px-0.5">
+          <span className="text-sm text-ui-subtext">Focus</span>
         </div>
         <div className="h-2.5 rounded-full bg-ui-border overflow-hidden">
           <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
         </div>
-        {note && <p className="text-[11px] text-ui-subtext mt-1 px-0.5">{note}</p>}
+        {note && <p className="text-[13px] text-ui-subtext mt-1 px-0.5">{note}</p>}
       </div>
     )
   }

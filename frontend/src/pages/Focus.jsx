@@ -310,35 +310,37 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <h1 className={`text-[10px] font-pixel ${
-                  isBonusMode ? 'text-orange-400' : 'text-ui-subtext'
-                }`}>
-                  {isBonusMode ? 'Bonus' : 'Now'}
-                </h1>
+            <div className="bg-ui-surface/70 rounded-2xl px-3 py-3 mb-4 backdrop-blur-sm border border-ui-border/40">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <h1 className={`text-[10px] font-pixel ${
+                    isBonusMode ? 'text-orange-400' : 'text-ui-subtext'
+                  }`}>
+                    {isBonusMode ? 'Bonus' : 'Now'}
+                  </h1>
+                </div>
+                <div className="flex items-center gap-3">
+                  {totalDone > 0 && (
+                    <span className="text-xs text-ui-subtext">{totalDone} done</span>
+                  )}
+                  <span className="text-xs text-ui-subtext">
+                    {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
+                  </span>
+                  {onNavigate && (
+                    <button
+                      onClick={() => setShowMenu(true)}
+                      className="text-ui-subtext hover:text-ui-text transition-colors p-1 md:hidden"
+                      aria-label="Menu"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                        <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                {totalDone > 0 && (
-                  <span className="text-xs text-ui-subtext">{totalDone} done</span>
-                )}
-                <span className="text-xs text-ui-subtext">
-                  {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
-                </span>
-                {onNavigate && (
-                  <button
-                    onClick={() => setShowMenu(true)}
-                    className="text-ui-subtext hover:text-ui-text transition-colors p-1 md:hidden"
-                    aria-label="Menu"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-                      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+              <CapacityBar capacity={capacity} compact className="" />
             </div>
-            <CapacityBar capacity={capacity} compact />
           </>
         )}
 
