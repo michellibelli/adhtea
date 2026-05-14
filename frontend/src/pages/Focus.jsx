@@ -339,7 +339,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           <div className="relative">
 
             {/* Teabag unit — tag + string + card descend as one */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : { transform: 'scale(1.15)' }}>
 
             {/* Tag + string */}
             <div
