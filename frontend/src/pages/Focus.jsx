@@ -476,9 +476,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   cursor: celebrate ? 'default' : 'pointer',
                 }}
               >
-                <span style={{ fontSize: 10, color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '0 4px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: 9, color: '#fff', lineHeight: 1.3, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '0 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>
                   <span>{TAG_NAMES[task?.task_type] || 'Task'}</span>
-                  {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 9, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
+                  {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 8, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
                 </span>
               </div>
               <div style={{
@@ -517,7 +517,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 )}
 
                 {task.notes && (
-                  <p className="text-sm text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-1 w-full">
+                  <p className="text-xs italic text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-1 w-full">
                     {task.notes}
                   </p>
                 )}
