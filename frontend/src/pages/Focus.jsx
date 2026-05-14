@@ -335,11 +335,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 : ''
           }`}
         >
-          {/* Relative wrapper — anchors cup position */}
-          <div className="relative">
+          {/* Relative wrapper — anchors cup position; pb reserves space for scale(1.15) overflow */}
+          <div className="relative pb-8">
 
             {/* Teabag unit — tag + string + card descend as one */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : { transform: 'scale(1.15)' }}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : { transform: 'scale(1.15)', transformOrigin: 'top center' }}>
 
             {/* Tag + string */}
             <div
@@ -372,7 +372,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               }
             >
               <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
-              <Card className="px-8 py-10 min-h-[280px]">
+              <Card className="px-8 py-8 min-h-[220px]">
 
                 {/* Type + priority */}
                 <div className="flex items-center gap-2 mb-7">
