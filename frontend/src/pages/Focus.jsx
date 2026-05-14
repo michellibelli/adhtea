@@ -484,7 +484,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               <div style={{
                 width: 3,
                 height: 38,
-                background: 'linear-gradient(to bottom, #8B7355 0%, #C4A882 60%, #D4B892 100%)',
+                background: 'linear-gradient(to bottom, #B8AE98 0%, #CEC4AE 55%, #DED4BE 100%)',
                 borderRadius: 1,
               }} />
             </div>
@@ -496,7 +496,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 : ''
               }
             >
-              <div style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 28%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 28%)' }}>
+              <div style={{ clipPath: 'polygon(40% 0%, 60% 0%, 100% 8%, 100% 100%, 0% 100%, 0% 8%)' }}>
               <Card className="teabag-card px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center">
 
                 {task.priority && PRIORITY_BADGE[task.priority] && (

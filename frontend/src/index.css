@@ -85,9 +85,14 @@
 
 .teabag-card {
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E"),
-    #EDE4A0 !important;
-  background-size: 150px 150px, 100% !important;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, #F2ECE0 0%, #EDE5D0 48%, #C2B4CC 70%, #A690BC 100%) !important;
+  background-size: 120px 120px, 100% !important;
+}
+
+.teabag-card::before,
+.teabag-card::after {
+  display: none !important;
 }
 
 .pixel-card {
