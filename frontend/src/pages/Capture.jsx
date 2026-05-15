@@ -216,8 +216,8 @@ export default function Capture({ onNavigate }) {
           <p className="text-sm mt-1 text-ui-subtext">Get it out of your head</p>
         </div>
 
-        {/* Type selector */}
-        <div className="flex gap-1 mb-5 justify-center">
+        {/* Type selector — wraps on very narrow screens so 5 pills can't overflow */}
+        <div className="flex flex-wrap gap-1 mb-5 justify-center">
           {TASK_TYPES.map((type) => (
             <button
               key={type.id}
