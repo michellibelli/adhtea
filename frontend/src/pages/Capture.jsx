@@ -217,13 +217,13 @@ export default function Capture({ onNavigate }) {
         </div>
 
         {/* Type selector */}
-        <div className="flex gap-2 mb-5 justify-center">
+        <div className="flex gap-1 mb-5 justify-center">
           {TASK_TYPES.map((type) => (
             <button
               key={type.id}
               type="button"
               onClick={() => { setTaskType(type.id); setForm(BLANK) }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all duration-150 ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-medium border transition-all duration-150 ${
                 taskType === type.id
                   ? 'bg-ui-primary text-ui-primary-text border-transparent'
                   : 'bg-ui-surface border-ui-border text-ui-subtext hover:text-ui-accent'

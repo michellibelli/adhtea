@@ -100,7 +100,6 @@ const DESKTOP_NAV_ITEMS = [
 ]
 
 const MOBILE_BOTTOM_ITEMS = [
-  { id: 'focus',    label: 'Now',      icon: <TeacupIcon /> },
   { id: 'today',    label: 'Today',    icon: <SunIcon /> },
   { id: 'routines', label: 'Routines', icon: <MoonIcon /> },
   { id: 'selfcare', label: 'Log',      icon: <HeartSparkleIcon /> },
@@ -121,11 +120,11 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-opacity"
-              style={{ opacity: isActive ? 1 : 0.45 }}
+              className="flex-1 flex flex-col items-center justify-center gap-1 py-2 transition-opacity"
+              style={{ opacity: isActive ? 1 : 0.62 }}
             >
-              <span style={{ display: 'flex', transform: 'scale(0.65)', transformOrigin: 'center' }}>{icon}</span>
-              <span className="text-[9px] font-semibold" style={{ color: '#fff' }}>{label}</span>
+              <span style={{ display: 'flex', transform: 'scale(0.78)', transformOrigin: 'center' }}>{icon}</span>
+              <span className="text-[10px] font-bold" style={{ color: isActive ? '#fff' : '#C8AAEE' }}>{label}</span>
             </button>
           )
         })}
@@ -134,7 +133,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
       {/* Mobile FAB — capture, floats above bottom nav */}
       <button
         onClick={onCapture}
-        className="fixed bottom-[76px] right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
+        className="fixed bottom-[86px] right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
         style={{ background: 'linear-gradient(135deg, #C490D1, #B4A8E0)' }}
         aria-label="Capture"
       >

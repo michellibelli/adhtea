@@ -1,5 +1,60 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { seedOnboarding } from '../api/auth'
+
+function detectPlatform() {
+  const ua = navigator.userAgent
+  const isIOS     = /iPhone|iPad|iPod/.test(ua)
+  const isAndroid = /Android/.test(ua)
+  const isChrome  = /Chrome/.test(ua) && !/Edg/.test(ua)
+  const isSafari  = /Safari/.test(ua) && !/Chrome/.test(ua)
+  if (isIOS)                    return 'ios'
+  if (isAndroid && isChrome)    return 'android'
+  if (!isIOS && !isAndroid && isSafari)  return 'desktop-safari'
+  if (!isIOS && !isAndroid && isChrome)  return 'desktop-chrome'
+  return 'other'
+}
+
+const INSTALL_INSTRUCTIONS = {
+  ios: {
+    note: 'In Safari on iPhone or iPad:',
+    bullets: [
+      'Tap the Share button (⎙) at the bottom of the screen',
+      'Scroll and tap "Add to Home Screen"',
+      'Tap "Add" — done!',
+    ],
+  },
+  android: {
+    note: 'In Chrome on Android:',
+    bullets: [
+      'Tap the ⋮ menu in the top-right corner',
+      'Tap "Add to Home Screen" or "Install app"',
+      'Tap "Add" to confirm',
+    ],
+  },
+  'desktop-chrome': {
+    note: 'In Chrome on your computer:',
+    bullets: [
+      'Look for the ⊕ install icon at the right of the address bar',
+      'Or click ⋮ → "Install adhTea…"',
+      'Click "Install" to confirm',
+    ],
+  },
+  'desktop-safari': {
+    note: 'In Safari on Mac:',
+    bullets: [
+      'Click the Share button in the toolbar',
+      'Choose "Add to Dock" (macOS Sonoma+)',
+    ],
+  },
+  other: {
+    note: 'Depending on your browser:',
+    bullets: [
+      'Chrome: click ⋮ → "Install" or "Add to Home Screen"',
+      'Firefox: tap address bar → "Install"',
+      'Safari (iOS): Share → "Add to Home Screen"',
+    ],
+  },
+}
 
 const PRIDE = 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)'
 
@@ -35,6 +90,12 @@ const STEPS = [
     ],
   },
   {
+    emoji: '📲',
+    heading: 'Add it to your home screen',
+    body: "adhTea works best as an app — instant access, no browser bars in the way.",
+    installStep: true,
+  },
+  {
     emoji: '💜',
     heading: "You've got this",
     body: "adhTea is built for ADHD brains — it's okay to move slow, skip things, and come back later. The app works around you, not the other way around.",
@@ -44,6 +105,7 @@ const STEPS = [
 export default function OnboardingWelcome({ onDone }) {
   const [step, setStep]       = useState(0)
   const [loading, setLoading] = useState(false)
+  const platform = useMemo(() => detectPlatform(), [])
 
   const current = STEPS[step]
   const isLast  = step === STEPS.length - 1
@@ -106,6 +168,23 @@ export default function OnboardingWelcome({ onDone }) {
               ))}
             </ul>
           )}
+          {current.installStep && (() => {
+            const inst = INSTALL_INSTRUCTIONS[platform]
+            return (
+              <div className="mt-3 text-left">
+                <p className="text-xs font-semibold text-[#7A6152] mb-1.5">{inst.note}</p>
+                <ol className="space-y-1.5">
+                  {inst.bullets.map((b, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-[#7A6152]">
+                      <span className="text-[#B4A8E0] font-bold flex-shrink-0">{i + 1}.</span>
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[10px] text-[#A8967E] mt-3">You can always come back to this later — just look for the install option in your browser.</p>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Step dots */}

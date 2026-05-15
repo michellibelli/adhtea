@@ -368,7 +368,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-20 md:px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-20 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -423,7 +423,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           </div>
         ) : celebrate !== 'dunk' ? (
           <>
-            <div className="bg-ui-surface/70 rounded-2xl px-3 py-3 mb-4 backdrop-blur-sm border border-ui-border/40">
+            <div className="bg-ui-surface/70 rounded-2xl px-3 py-1.5 md:py-3 mb-1 md:mb-4 backdrop-blur-sm border border-ui-border/40">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <h1 className={`text-[10px] font-pixel ${
@@ -459,7 +459,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
         {/* Card */}
         <div
-          className={`flex-1 flex flex-col justify-center ${
+          className={`flex-1 flex flex-col justify-start pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate
@@ -467,8 +467,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 : ''
           }`}
         >
-          {/* Relative wrapper — anchors cup position; pb reserves space for scale(1.15) overflow */}
-          <div className="relative">
+          {/* Relative wrapper — mx-14 narrows bag on mobile without affecting focus box */}
+          <div className="relative mx-14 md:mx-0">
 
             {/* Teabag unit — tag + string + card descend as one */}
             <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : undefined}>
@@ -528,13 +528,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
             {/* Bonus glow ring + clipped card */}
             <div
-              className={isBonusMode
-                ? 'rounded-2xl ring-1 ring-orange-400/40 shadow-lg shadow-orange-400/10'
-                : ''
-              }
+              className={isBonusMode ? 'rounded-2xl ring-1 ring-orange-400/40 shadow-lg shadow-orange-400/10' : ''}
+              style={!isBonusMode ? { filter: 'drop-shadow(3px 3px 0 #7A5090)' } : undefined}
             >
               <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-              <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-5 min-h-[220px] flex flex-col items-center justify-center text-center`}>
+              <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-3 md:py-5 min-h-[150px] md:min-h-[220px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                 {isBonusMode && SPARKLE_POSITIONS.map((pos, i) => (
                   <span key={i} className="sparkle" style={pos}>✦</span>
                 ))}
@@ -595,27 +593,27 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
           {/* Actions — hidden during dunk */}
           {celebrate !== 'dunk' && (
-            <div className="mt-4 flex flex-col gap-2 relative">
-              <Button
-                size="lg"
-                onClick={handleComplete}
-                className={`w-full ${isBonusMode ? 'bg-orange-500 hover:bg-orange-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}
-              >
-                Done ✓
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>
-                  Snooze
+            <div className="mt-2 md:mt-4">
+              {/* Mobile: single row */}
+              <div className="flex gap-2 md:hidden">
+                <Button size="lg" onClick={handleComplete} className={`flex-1 ${isBonusMode ? 'bg-orange-500 hover:bg-orange-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}>
+                  Done ✓
                 </Button>
-                {isBonusMode ? (
-                  <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>
-                    Skip
-                  </Button>
-                ) : (
-                  <Button variant="ghost" className="flex-1" onClick={handleNext}>
-                    Next
-                  </Button>
-                )}
+                {isBonusMode
+                  ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
+                  : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
+              </div>
+              {/* Desktop: stacked */}
+              <div className="hidden md:flex md:flex-col gap-2">
+                <Button size="lg" onClick={handleComplete} className={`w-full ${isBonusMode ? 'bg-orange-500 hover:bg-orange-400 text-white border-transparent' : 'pixel-btn-rainbow'}`}>
+                  Done ✓
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>Snooze</Button>
+                  {isBonusMode
+                    ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
+                    : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
+                </div>
               </div>
             </div>
           )}
@@ -623,7 +621,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
         {/* Progress dots */}
         {remaining > 1 && !celebrate && (
-          <div className="flex justify-center gap-1 mt-4">
+          <div className="flex justify-center gap-1 mt-1 md:mt-4">
             {Array.from({ length: Math.min(remaining, 8) }).map((_, i) => (
               <div key={i} className={`w-2 h-2 rounded-full ${
                 i === 0

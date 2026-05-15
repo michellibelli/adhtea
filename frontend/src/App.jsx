@@ -3,7 +3,8 @@ import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn, likelySleeping } from './api/client'
 import WakeScreen from './components/WakeScreen'
 import { getMe, logout } from './api/auth'
-import { getTodayLog } from './api/selfcare'
+import { getTodayLog, getTodayCapacity } from './api/selfcare'
+import CapacityBar from './components/CapacityBar'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Signup from './pages/Signup'
@@ -48,6 +49,7 @@ async function getOpeningScreen() {
 function AppShell() {
   const [screen, setScreen]                   = useState('focus')
   const [user, setUser]                       = useState(null)
+  const [capacity, setCapacity]               = useState(null)
   const [carriedOver, setCarriedOver]         = useState(false)
   const [ready, setReady]                     = useState(false)
   const [showEOD, setShowEOD]                 = useState(false)
@@ -70,6 +72,7 @@ function AppShell() {
         }
         const opening = await getOpeningScreen()
         setScreen(opening)
+        getTodayCapacity().then(setCapacity).catch(() => {})
         if (isEODWindow(u)) {
           try {
             const log = await getTodayLog()
@@ -121,20 +124,20 @@ function AppShell() {
       {/* Mobile top bar */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden" style={{background:'#2A0E58', borderBottom:'4px solid #6A3090'}}>
         <div className="pride-stripe" />
-        <div className="flex items-center justify-between px-5 h-14">
+        <div className="flex items-center gap-3 px-4 h-[84px]">
           <button
             onClick={() => setScreen('focus')}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex-shrink-0 hover:opacity-80 transition-opacity"
           >
-            <img src="/adhTeaLogo.png" alt="adhTea" className="h-10 w-10 object-contain rounded-lg" />
+            <img src="/adhTeaLogo.png" alt="adhTea" className="h-16 w-16 object-contain rounded-xl" />
           </button>
-          {user && (
-            <span className="text-xs" style={{color:'#6A4080'}}>{user.name}</span>
-          )}
+          <div className="flex-1 min-w-0">
+            <CapacityBar capacity={capacity} compact hideLabels className="" />
+          </div>
         </div>
       </header>
 
-      <main className="pt-[57px] md:pt-0">
+      <main className="pt-[88px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'triage'   && <Triage onTriageDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('triage')} onNavigate={setScreen} />}
