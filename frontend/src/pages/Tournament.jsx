@@ -7,6 +7,7 @@ import { getTournamentState, submitTournamentRound, startTournament, deleteTask,
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ProjectBadge from '../components/ProjectBadge'
+import SnoozeSheet from '../components/SnoozeSheet'
 import { markTriageDone } from './Triage'
 
 // Random tea-pun pool reused for the 20% surprise reward
@@ -158,12 +159,6 @@ function TaskTile({ task, rank, onSnooze, onDelete, onComplete }) {
   )
 }
 
-function oneMonthFromNow() {
-  const d = new Date()
-  d.setMonth(d.getMonth() + 1)
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString()
-}
 
 export default function Tournament({ onDone }) {
   const [state,      setState]      = useState(null)
@@ -173,6 +168,7 @@ export default function Tournament({ onDone }) {
   const [punFlash,   setPunFlash]   = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState(null)
+  const [snoozeTarget, setSnoozeTarget] = useState(null)  // task id currently picking snooze date
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
@@ -226,11 +222,14 @@ export default function Tournament({ onDone }) {
     onDone?.()
   }
 
-  async function handleSnooze(taskId) {
+  async function handleSnoozePick(isoDate) {
+    const taskId = snoozeTarget
+    setSnoozeTarget(null)
+    if (!taskId) return
     setSubmitting(true)
     setError(null)
     try {
-      await snoozeTask(taskId, oneMonthFromNow())
+      await snoozeTask(taskId, isoDate)
       await refresh()
     } catch (e) {
       setError(e?.message || 'Snooze failed')
@@ -275,6 +274,12 @@ export default function Tournament({ onDone }) {
 
   return (
     <div className="aria-page">
+      {snoozeTarget && (
+        <SnoozeSheet
+          onSnooze={handleSnoozePick}
+          onClose={() => setSnoozeTarget(null)}
+        />
+      )}
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-md mx-auto w-full">
 
         {/* Header */}
@@ -338,7 +343,7 @@ export default function Tournament({ onDone }) {
                         key={id}
                         task={task}
                         rank={i + 1}
-                        onSnooze={() => handleSnooze(id)}
+                        onSnooze={() => setSnoozeTarget(id)}
                         onDelete={() => handleDelete(id)}
                         onComplete={() => handleComplete(id)}
                       />
