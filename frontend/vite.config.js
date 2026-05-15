@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite'
+import { readFileSync } from 'fs'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const BUILD_TIME = new Date().toISOString().slice(0, 16).replace('T', ' ')
+let BUILD_TIME = 'dev'
+try { BUILD_TIME = readFileSync('../BUILD', 'utf8').trim() } catch { /* local fallback */ }
 
 export default defineConfig({
   define: {

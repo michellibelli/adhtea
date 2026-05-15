@@ -214,7 +214,7 @@ export default function App() {
         padding: '2px 7px', fontSize: 10, fontFamily: 'monospace',
         borderRadius: 4, pointerEvents: 'none',
         border: '1px solid rgba(245,230,211,0.25)',
-      }}>{typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
+      }}>build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
       {authed
         ? <AppShell />
         : <Login onLogin={() => setAuthed(true)} onGoSignup={() => { window.history.replaceState({}, '', '/signup'); setPreAuthScreen('signup') }} />
