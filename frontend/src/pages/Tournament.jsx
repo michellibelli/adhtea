@@ -1,4 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { DndContext, closestCenter, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { SmartPointerSensor } from '../utils/dnd'
 import { getTournamentState, submitTournamentRound, startTournament, deleteTask, snoozeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -81,20 +85,31 @@ function TeaCupProgress({ filled, cap }) {
   )
 }
 
-// One task card. Visual rank changes if the user has tapped it this round.
-// onSnooze / onDelete are corner-action buttons that don't trigger the rank tap.
-function TaskTile({ task, rank, dimmed, onRank, onSnooze, onDelete }) {
+// Sortable tile — user drags to reorder. Top of list = most important.
+// onSnooze / onDelete corner buttons stop drag propagation.
+function TaskTile({ task, rank, onSnooze, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const meta = rank && RANK_META[rank]
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 30 : 'auto',
+  }
   function stop(e) { e.stopPropagation() }
   return (
     <div
-      onClick={onRank}
-      className={`w-full cursor-pointer transition-all duration-200 ${dimmed ? 'opacity-40 scale-[0.98]' : 'opacity-100'}`}
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="w-full cursor-grab active:cursor-grabbing select-none"
     >
       <Card className={`relative px-4 py-3 ${meta ? `ring-2 ring-offset-2 ring-offset-ui-surface ${meta.ring} ${meta.bg}` : ''}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
+              <span className="text-ui-subtext/40 text-base leading-none" title="Drag">⋮⋮</span>
               <span className="text-ui-accent text-sm">✦</span>
               {meta && (
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${meta.text}`}>
@@ -118,13 +133,15 @@ function TaskTile({ task, rank, dimmed, onRank, onSnooze, onDelete }) {
               <ProjectBadge name={task.project_name} size="xs" />
             </div>
           </div>
-          <div className="flex flex-col gap-1 flex-shrink-0">
+          <div className="flex flex-col gap-1 flex-shrink-0" onPointerDown={stop}>
             <button
+              onPointerDown={stop}
               onClick={(e) => { stop(e); onSnooze() }}
               title="Snooze (defer to later)"
               className="w-7 h-7 rounded-full border border-ui-border text-ui-subtext/60 hover:text-amber-400 hover:border-amber-400/50 transition-colors flex items-center justify-center"
             >🌙</button>
             <button
+              onPointerDown={stop}
               onClick={(e) => { stop(e); onDelete() }}
               title="Delete this task"
               className="w-7 h-7 rounded-full border border-ui-border text-ui-subtext/60 hover:text-red-400 hover:border-red-400/50 transition-colors flex items-center justify-center text-xs"
@@ -144,18 +161,24 @@ function oneMonthFromNow() {
 }
 
 export default function Tournament({ onDone }) {
-  const [state,    setState]    = useState(null)   // {today_count, cap, remaining_slots, inbox_pending, next_batch}
-  const [loading,  setLoading]  = useState(true)
-  const [taps,     setTaps]     = useState([])     // ordered task IDs the user has tapped this round
-  const [round,    setRound]    = useState(1)
-  const [punFlash, setPunFlash] = useState(null)
+  const [state,      setState]      = useState(null)
+  const [loading,    setLoading]    = useState(true)
+  const [order,      setOrder]      = useState([])     // task IDs in user's current rank order (top = most important)
+  const [round,      setRound]      = useState(1)
+  const [punFlash,   setPunFlash]   = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [error,    setError]    = useState(null)
+  const [error,      setError]      = useState(null)
+
+  const sensors = useSensors(
+    useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor,        { activationConstraint: { delay: 180, tolerance: 6 } }),
+  )
 
   const refresh = useCallback(async () => {
     try {
       const s = await getTournamentState()
       setState(s)
+      setOrder((s.next_batch || []).map(t => t.id))
     } catch (e) {
       setError(e?.message || 'Could not load tournament')
     }
@@ -163,53 +186,31 @@ export default function Tournament({ onDone }) {
 
   useEffect(() => { (async () => { await refresh(); setLoading(false) })() }, [refresh])
 
-  // Auto-submit when 3 picked (after a brief beat so the 3rd-place ring is visible).
-  // Declared BEFORE any conditional return — rules of hooks.
-  useEffect(() => {
-    if (taps.length === 3 && !submitting) {
-      const t = setTimeout(() => handleSubmit(), 350)
-      return () => clearTimeout(t)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taps])
-
-  function handleTap(taskId) {
-    if (taps.includes(taskId)) {
-      // Tap again to un-rank
-      setTaps(taps.filter(id => id !== taskId))
-      return
-    }
-    if (taps.length >= 3) return
-    const next = [...taps, taskId]
-    setTaps(next)
+  function handleDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return
+    setOrder(prev => {
+      const oldIdx = prev.indexOf(active.id)
+      const newIdx = prev.indexOf(over.id)
+      if (oldIdx < 0 || newIdx < 0) return prev
+      return arrayMove(prev, oldIdx, newIdx)
+    })
   }
 
   async function handleSubmit() {
-    if (taps.length === 0) return
-    const ordered = [...taps]
-    // If 2 tapped, infer the 3rd
-    const batch = state?.next_batch || []
-    if (ordered.length === 2 && batch.length === 3) {
-      const remaining = batch.find(t => !ordered.includes(t.id))
-      if (remaining) ordered.push(remaining.id)
-    }
+    if (order.length === 0) return
     setSubmitting(true)
     setError(null)
     try {
-      const fresh = await submitTournamentRound(ordered)
-      // 20% surprise pun
+      const fresh = await submitTournamentRound(order)
       if (Math.random() < 0.2) {
         setPunFlash(randomPun())
         setTimeout(() => setPunFlash(null), 1200)
       }
       setState(fresh)
-      setTaps([])
+      setOrder((fresh.next_batch || []).map(t => t.id))
       setRound(r => r + 1)
-      // If horizon full or inbox empty → tournament complete
       const done = fresh.horizon_full || fresh.inbox_pending === 0
-      if (done) {
-        markTriageDone()
-      }
+      if (done) markTriageDone()
     } catch (e) {
       setError(e?.message || 'Could not submit round')
     } finally { setSubmitting(false) }
@@ -225,7 +226,6 @@ export default function Tournament({ onDone }) {
     setError(null)
     try {
       await snoozeTask(taskId, oneMonthFromNow())
-      setTaps(taps.filter(id => id !== taskId))
       await refresh()
     } catch (e) {
       setError(e?.message || 'Snooze failed')
@@ -233,12 +233,10 @@ export default function Tournament({ onDone }) {
   }
 
   async function handleDelete(taskId) {
-    if (!confirm('Delete this task?')) return
     setSubmitting(true)
     setError(null)
     try {
       await deleteTask(taskId)
-      setTaps(taps.filter(id => id !== taskId))
       await refresh()
     } catch (e) {
       setError(e?.message || 'Delete failed')
@@ -258,7 +256,6 @@ export default function Tournament({ onDone }) {
   const targetTotal  = state?.target_total ?? 0
   const maxTasks     = state?.max_tasks_per_day ?? 10
   const maxTotal     = state?.max_total_per_day ?? 15
-  const canSubmit = taps.length >= 1 && !submitting
 
   return (
     <div className="aria-page">
@@ -311,48 +308,36 @@ export default function Tournament({ onDone }) {
         ) : (
           <>
             <p className="text-xs text-ui-subtext text-center mb-3">
-              Tap in order of importance: most important first
+              Drag to reorder — top is most important, bottom is least
             </p>
 
-            <div className="space-y-3">
-              {batch.map((task) => {
-                const tapIndex = taps.indexOf(task.id)
-                const rank = tapIndex === -1 ? null : tapIndex + 1
-                const dimmed = taps.length === 3 && rank === null
-                return (
-                  <TaskTile
-                    key={task.id}
-                    task={task}
-                    rank={rank}
-                    dimmed={dimmed}
-                    onRank={() => handleTap(task.id)}
-                    onSnooze={() => handleSnooze(task.id)}
-                    onDelete={() => handleDelete(task.id)}
-                  />
-                )
-              })}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={order} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {order.map((id, i) => {
+                    const task = batch.find(t => t.id === id)
+                    if (!task) return null
+                    return (
+                      <TaskTile
+                        key={id}
+                        task={task}
+                        rank={i + 1}
+                        onSnooze={() => handleSnooze(id)}
+                        onDelete={() => handleDelete(id)}
+                      />
+                    )
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
 
             {/* Action row */}
-            <div className="flex items-center justify-between mt-5 gap-3">
-              <button
-                onClick={() => setTaps([])}
-                disabled={taps.length === 0 || submitting}
-                className="text-xs text-ui-subtext/70 hover:opacity-70 transition-opacity disabled:opacity-30"
-              >
-                Reset taps
-              </button>
+            <div className="flex items-center justify-end mt-5 gap-3">
               <Button
                 onClick={handleSubmit}
-                disabled={!canSubmit}
+                disabled={submitting || order.length === 0}
               >
-                {submitting
-                  ? '…'
-                  : taps.length === 0
-                    ? 'Tap to rank'
-                    : taps.length === 3
-                      ? 'Confirm'
-                      : `Confirm (${taps.length} ranked)`}
+                {submitting ? '…' : 'Confirm this round'}
               </Button>
             </div>
 

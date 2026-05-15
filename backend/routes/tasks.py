@@ -500,7 +500,7 @@ def get_inbox(
             or_(
                 Task.task_type != TaskType.routine,
                 Task.scheduled_date == None,
-                Task.scheduled_date >= today_start(),
+                Task.scheduled_date >= _day_start(current_user),
             ),
         )
         .order_by(Task.created_at.asc())
@@ -973,7 +973,7 @@ def tournament_submit(
             continue
         if cur_offset == 0:
             t.status = TaskStatus.today
-            t.scheduled_date = today_start()
+            t.scheduled_date = _day_start(current_user)
             t.due_date = today_d
             t.sort_order = next_sort
         else:
