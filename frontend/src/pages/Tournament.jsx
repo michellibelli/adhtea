@@ -161,6 +161,16 @@ export default function Tournament({ onDone }) {
 
   useEffect(() => { (async () => { await refresh(); setLoading(false) })() }, [refresh])
 
+  // Auto-submit when 3 picked (after a brief beat so the 3rd-place ring is visible).
+  // Declared BEFORE any conditional return — rules of hooks.
+  useEffect(() => {
+    if (taps.length === 3 && !submitting) {
+      const t = setTimeout(() => handleSubmit(), 350)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taps])
+
   function handleTap(taskId) {
     if (taps.includes(taskId)) {
       // Tap again to un-rank
@@ -193,8 +203,8 @@ export default function Tournament({ onDone }) {
       setState(fresh)
       setTaps([])
       setRound(r => r + 1)
-      // If cap reached or inbox empty → tournament complete
-      const done = fresh.remaining_slots === 0 || fresh.inbox_pending === 0
+      // If horizon full or inbox empty → tournament complete
+      const done = fresh.horizon_full || fresh.inbox_pending === 0
       if (done) {
         markTriageDone()
       }
@@ -245,15 +255,6 @@ export default function Tournament({ onDone }) {
   const targetCount = state?.target_count ?? 0
   const bundlePerDay = state?.bundle_per_day ?? 10
   const canSubmit = taps.length >= 1 && !submitting
-
-  // Auto-submit when 3 picked (after a brief beat so the 3rd-place ring is visible)
-  useEffect(() => {
-    if (taps.length === 3 && !submitting) {
-      const t = setTimeout(() => handleSubmit(), 350)
-      return () => clearTimeout(t)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taps])
 
   return (
     <div className="aria-page">
