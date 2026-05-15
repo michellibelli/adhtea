@@ -851,28 +851,28 @@ def tournament_state(
     today_d = date.today()
     target, offset, target_count = _find_target(db, current_user.id)
 
+    # Tournament pulls ALL inbox tasks (any due_date). The whole point is to
+    # re-rank and distribute, possibly overriding stale future dates assigned
+    # by some prior path. Routines and appointments stay excluded.
+    inbox_filter = (
+        Task.owner_id == current_user.id,
+        Task.status == TaskStatus.inbox,
+        Task.task_type == TaskType.task,
+    )
     next_three = (
         db.query(Task)
-        .filter(
-            Task.owner_id == current_user.id,
-            Task.status == TaskStatus.inbox,
-            Task.task_type == TaskType.task,
-            or_(Task.due_date == None, Task.due_date <= today_d),  # noqa: E711
+        .filter(*inbox_filter)
+        .order_by(
+            Task.due_date.asc().nullsfirst(),
+            Task.sort_order.asc().nullslast(),
+            Task.created_at.asc(),
         )
-        .order_by(Task.sort_order.asc().nullslast(), Task.created_at.asc())
         .limit(3)
         .all()
     )
 
     inbox_pending = (
-        db.query(Task)
-        .filter(
-            Task.owner_id == current_user.id,
-            Task.status == TaskStatus.inbox,
-            Task.task_type == TaskType.task,
-            or_(Task.due_date == None, Task.due_date <= today_d),  # noqa: E711
-        )
-        .count()
+        db.query(Task).filter(*inbox_filter).count()
     )
 
     return {
