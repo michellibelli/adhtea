@@ -212,9 +212,12 @@ export default function App() {
         position: 'fixed', top: 4, right: 4, zIndex: 9999,
         background: 'rgba(74,50,96,0.85)', color: '#F5E6D3', fontWeight: 600,
         padding: '2px 7px', fontSize: 10, fontFamily: 'monospace',
-        borderRadius: 4, pointerEvents: 'none',
+        borderRadius: 4, pointerEvents: 'none', textAlign: 'right', lineHeight: '1.5',
         border: '1px solid rgba(245,230,211,0.25)',
-      }}>build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
+      }}>
+        <div>build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
+        <div style={{fontWeight:400, opacity:0.75}}>{new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit'})}</div>
+      </div>
       {authed
         ? <AppShell />
         : <Login onLogin={() => setAuthed(true)} onGoSignup={() => { window.history.replaceState({}, '', '/signup'); setPreAuthScreen('signup') }} />
