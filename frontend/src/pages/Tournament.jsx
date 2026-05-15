@@ -26,6 +26,14 @@ const RANK_META = {
   3: { label: '3rd', ring: 'ring-amber-700',  bg: 'bg-amber-700/10',   text: 'text-amber-600' },
 }
 
+function dayLabel(offset, isoDate) {
+  if (offset === 0) return 'Today'
+  if (offset === 1) return 'Tomorrow'
+  if (!isoDate) return `Day +${offset}`
+  const d = new Date(isoDate + 'T00:00:00')
+  return d.toLocaleDateString(undefined, { weekday: 'long' })
+}
+
 // Tea-cup with leaf-drop progress visual
 function TeaCupProgress({ filled, cap }) {
   const pct = Math.min(100, Math.round((filled / cap) * 100))
@@ -230,9 +238,12 @@ export default function Tournament({ onDone }) {
   }
 
   const batch = state?.next_batch || []
-  const capReached = state?.remaining_slots === 0
+  const horizonFull = state?.horizon_full
   const inboxEmpty = state?.inbox_pending === 0 || batch.length === 0
-  const isDone = capReached || inboxEmpty
+  const isDone = horizonFull || inboxEmpty
+  const targetLabel = dayLabel(state?.target_offset ?? 0, state?.target_date)
+  const targetCount = state?.target_count ?? 0
+  const bundlePerDay = state?.bundle_per_day ?? 10
   const canSubmit = taps.length >= 1 && !submitting
 
   // Auto-submit when 3 picked (after a brief beat so the 3rd-place ring is visible)
@@ -252,19 +263,24 @@ export default function Tournament({ onDone }) {
         <div className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-[10px] text-ui-subtext uppercase tracking-wider mb-0.5">Triage tournament</p>
+              <p className="text-[10px] text-ui-subtext uppercase tracking-wider mb-0.5">
+                Filling <span className="text-ui-accent font-semibold">{targetLabel}</span>
+              </p>
               <h1 className="text-2xl font-semibold text-ui-text">Round {round}</h1>
             </div>
-            <TeaCupProgress filled={state?.today_count ?? 0} cap={state?.cap ?? 12} />
+            <TeaCupProgress filled={targetCount} cap={bundlePerDay} />
           </div>
 
-          {/* Progress bar */}
+          {/* Progress bar for current target day */}
           <div className="h-1.5 rounded-full bg-ui-border/40 overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-ui-accent to-ui-primary transition-all duration-500"
-              style={{ width: `${Math.min(100, ((state?.today_count ?? 0) / (state?.cap ?? 12)) * 100)}%` }}
+              style={{ width: `${Math.min(100, (targetCount / bundlePerDay) * 100)}%` }}
             />
           </div>
+          <p className="text-[10px] text-ui-subtext mt-1 text-right">
+            {state?.inbox_pending ?? 0} inbox tasks left
+          </p>
         </div>
 
         {/* Variable surprise pun */}
@@ -274,12 +290,12 @@ export default function Tournament({ onDone }) {
           </div>
         )}
 
-        {/* Cap reached or inbox empty */}
+        {/* Horizon full or inbox empty */}
         {isDone ? (
           <Card className="px-5 py-6 text-center">
             <div className="text-3xl mb-2">🍵</div>
             <p className="text-base font-semibold text-ui-text mb-1">
-              {capReached ? "Today's brew is ready" : 'Inbox cleared'}
+              {inboxEmpty ? 'Inbox cleared' : 'All days full'}
             </p>
             <p className="text-xs text-ui-subtext mb-4">
               {state?.today_count ?? 0} tasks queued for today

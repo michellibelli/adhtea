@@ -771,35 +771,64 @@ def reorder_tasks(
 
 
 # ---------------------------------------------------------------------------
-# Triage tournament — 3-card pairwise ranking
+# Triage tournament — 3-card pairwise ranking with multi-day bundling
 # ---------------------------------------------------------------------------
 
-TOURNAMENT_DAILY_CAP = 12
+TOURNAMENT_BUNDLE_PER_DAY = 10  # tournament tasks per day (excludes routines)
+TOURNAMENT_HORIZON_DAYS = 30   # max days ahead we'll bundle into
+
+
+def _count_tasks_on_day(db, user_id: int, target: date, today_d: date) -> int:
+    """How many non-routine tasks already target this date."""
+    if target == today_d:
+        return (
+            db.query(Task)
+            .filter(
+                Task.owner_id == user_id,
+                Task.status == TaskStatus.today,
+                Task.task_type != TaskType.routine,
+            )
+            .count()
+        )
+    return (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user_id,
+            Task.status == TaskStatus.inbox,
+            Task.due_date == target,
+            Task.task_type != TaskType.routine,
+        )
+        .count()
+    )
+
+
+def _find_target(db, user_id: int):
+    """First day in horizon with fewer than BUNDLE_PER_DAY tournament tasks."""
+    today_d = date.today()
+    for offset in range(TOURNAMENT_HORIZON_DAYS):
+        target = today_d + timedelta(days=offset)
+        count = _count_tasks_on_day(db, user_id, target, today_d)
+        if count < TOURNAMENT_BUNDLE_PER_DAY:
+            return target, offset, count
+    return None, None, None
+
 
 @router.get("/tasks/tournament/state")
 def tournament_state(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return current state: next 3 inbox tasks, today count, cap."""
-    today_count = (
-        db.query(Task)
-        .filter(
-            Task.owner_id == current_user.id,
-            Task.status == TaskStatus.today,
-        )
-        .count()
-    )
-    remaining = max(0, TOURNAMENT_DAILY_CAP - today_count)
+    """Return current state: next 3 inbox tasks + the day they'll fill."""
+    today_d = date.today()
+    target, offset, target_count = _find_target(db, current_user.id)
 
-    today = date.today()
     next_three = (
         db.query(Task)
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.inbox,
             Task.task_type == TaskType.task,
-            or_(Task.due_date == None, Task.due_date <= today),  # noqa: E711
+            or_(Task.due_date == None, Task.due_date <= today_d),  # noqa: E711
         )
         .order_by(Task.sort_order.asc().nullslast(), Task.created_at.asc())
         .limit(3)
@@ -812,15 +841,18 @@ def tournament_state(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.inbox,
             Task.task_type == TaskType.task,
-            or_(Task.due_date == None, Task.due_date <= today),  # noqa: E711
+            or_(Task.due_date == None, Task.due_date <= today_d),  # noqa: E711
         )
         .count()
     )
 
     return {
-        "today_count": today_count,
-        "cap": TOURNAMENT_DAILY_CAP,
-        "remaining_slots": remaining,
+        "bundle_per_day": TOURNAMENT_BUNDLE_PER_DAY,
+        "target_date": target.isoformat() if target else None,
+        "target_offset": offset,                     # 0=today, 1=tomorrow, …
+        "target_count": target_count,                # how full target day is
+        "today_count": _count_tasks_on_day(db, current_user.id, today_d, today_d),
+        "horizon_full": target is None,
         "inbox_pending": inbox_pending,
         "next_batch": [TaskResponse.model_validate(t).model_dump(mode="json") for t in next_three],
     }
@@ -828,39 +860,38 @@ def tournament_state(
 
 @router.post("/tasks/tournament/submit")
 def tournament_submit(
-    body: TaskReorderRequest,  # reuse: ordered_ids = [first, second, third]
+    body: TaskReorderRequest,  # reuse: ordered_ids = ranked task IDs
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Promote the ranked tasks to Today with incrementing sort_order.
-
-    body.ordered_ids must be 1, 2, or 3 task IDs in priority order.
-    Returns fresh tournament state for the next round.
-    """
+    """Distribute ranked tasks across days, 10 per day, starting today."""
     if not body.ordered_ids:
         raise HTTPException(status_code=400, detail="ordered_ids required")
     if len(body.ordered_ids) > 3:
         raise HTTPException(status_code=400, detail="max 3 tasks per round")
 
-    today_count = (
-        db.query(Task)
-        .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
-        .count()
-    )
-    if today_count >= TOURNAMENT_DAILY_CAP:
-        raise HTTPException(status_code=409, detail="Today is full (cap reached)")
+    today_d = date.today()
+    target, offset, target_count = _find_target(db, current_user.id)
+    if target is None:
+        raise HTTPException(status_code=409, detail="All days in horizon are full")
 
-    max_sort_row = (
-        db.query(Task.sort_order)
-        .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
-        .order_by(Task.sort_order.desc().nullslast())
-        .first()
-    )
-    max_sort = (max_sort_row[0] if max_sort_row and max_sort_row[0] is not None else 0)
+    # If target is today, append after existing today sort_order range
+    max_sort = 0.0
+    if offset == 0:
+        max_sort_row = (
+            db.query(Task.sort_order)
+            .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
+            .order_by(Task.sort_order.desc().nullslast())
+            .first()
+        )
+        if max_sort_row and max_sort_row[0] is not None:
+            max_sort = float(max_sort_row[0])
 
     placed = 0
     for i, tid in enumerate(body.ordered_ids):
-        if today_count + placed >= TOURNAMENT_DAILY_CAP:
+        # Re-pick target if current day fills mid-round
+        cur_target, cur_offset, cur_count = _find_target(db, current_user.id)
+        if cur_target is None:
             break
         t = (
             db.query(Task)
@@ -873,13 +904,19 @@ def tournament_submit(
         )
         if not t:
             continue
-        t.status = TaskStatus.today
-        t.scheduled_date = today_start()
-        t.sort_order = float(max_sort + i + 1)
+        if cur_offset == 0:
+            t.status = TaskStatus.today
+            t.scheduled_date = today_start()
+            t.sort_order = float(max_sort + i + 1)
+        else:
+            t.status = TaskStatus.inbox
+            t.due_date = cur_target
+            t.scheduled_date = None
+            t.sort_order = None
         placed += 1
+        db.flush()  # so next _find_target() sees this placement
 
     db.commit()
-    # Reuse state endpoint logic
     return tournament_state(current_user=current_user, db=db)
 
 
