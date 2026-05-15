@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getTournamentState, submitTournamentRound } from '../api/tasks'
+import { getTournamentState, submitTournamentRound, deleteTask, snoozeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { markTriageDone } from './Triage'
@@ -73,14 +73,16 @@ function TeaCupProgress({ filled, cap }) {
 }
 
 // One task card. Visual rank changes if the user has tapped it this round.
-function TaskTile({ task, rank, dimmed, onClick }) {
+// onSnooze / onDelete are corner-action buttons that don't trigger the rank tap.
+function TaskTile({ task, rank, dimmed, onRank, onSnooze, onDelete }) {
   const meta = rank && RANK_META[rank]
+  function stop(e) { e.stopPropagation() }
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left transition-all duration-200 ${dimmed ? 'opacity-40 scale-[0.98]' : 'opacity-100'}`}
+    <div
+      onClick={onRank}
+      className={`w-full cursor-pointer transition-all duration-200 ${dimmed ? 'opacity-40 scale-[0.98]' : 'opacity-100'}`}
     >
-      <Card className={`px-4 py-3 ${meta ? `ring-2 ring-offset-2 ring-offset-ui-surface ${meta.ring} ${meta.bg}` : ''}`}>
+      <Card className={`relative px-4 py-3 ${meta ? `ring-2 ring-offset-2 ring-offset-ui-surface ${meta.ring} ${meta.bg}` : ''}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -106,10 +108,29 @@ function TaskTile({ task, rank, dimmed, onClick }) {
               )}
             </div>
           </div>
+          <div className="flex flex-col gap-1 flex-shrink-0">
+            <button
+              onClick={(e) => { stop(e); onSnooze() }}
+              title="Snooze (defer to later)"
+              className="w-7 h-7 rounded-full border border-ui-border text-ui-subtext/60 hover:text-amber-400 hover:border-amber-400/50 transition-colors flex items-center justify-center"
+            >🌙</button>
+            <button
+              onClick={(e) => { stop(e); onDelete() }}
+              title="Delete this task"
+              className="w-7 h-7 rounded-full border border-ui-border text-ui-subtext/60 hover:text-red-400 hover:border-red-400/50 transition-colors flex items-center justify-center text-xs"
+            >✕</button>
+          </div>
         </div>
       </Card>
-    </button>
+    </div>
   )
+}
+
+function oneMonthFromNow() {
+  const d = new Date()
+  d.setMonth(d.getMonth() + 1)
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
 }
 
 export default function Tournament({ onDone }) {
@@ -177,6 +198,31 @@ export default function Tournament({ onDone }) {
   function handleFinish() {
     markTriageDone()
     onDone?.()
+  }
+
+  async function handleSnooze(taskId) {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await snoozeTask(taskId, oneMonthFromNow())
+      setTaps(taps.filter(id => id !== taskId))
+      await refresh()
+    } catch (e) {
+      setError(e?.message || 'Snooze failed')
+    } finally { setSubmitting(false) }
+  }
+
+  async function handleDelete(taskId) {
+    if (!confirm('Delete this task?')) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await deleteTask(taskId)
+      setTaps(taps.filter(id => id !== taskId))
+      await refresh()
+    } catch (e) {
+      setError(e?.message || 'Delete failed')
+    } finally { setSubmitting(false) }
   }
 
   if (loading) {
@@ -257,7 +303,9 @@ export default function Tournament({ onDone }) {
                     task={task}
                     rank={rank}
                     dimmed={dimmed}
-                    onClick={() => handleTap(task.id)}
+                    onRank={() => handleTap(task.id)}
+                    onSnooze={() => handleSnooze(task.id)}
+                    onDelete={() => handleDelete(task.id)}
                   />
                 )
               })}

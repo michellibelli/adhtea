@@ -86,7 +86,7 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
   )
 }
 
-export default function Today({ visibleLimit = 10, carriedOver = false, onTriage }) {
+export default function Today({ visibleLimit = 10, carriedOver = false, onTriage, onTournament }) {
   const [tasks, setTasks]       = useState([])
   const [doneTasks, setDone]    = useState([])
   const [capacity, setCapacity] = useState(null)
@@ -154,8 +154,13 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-semibold text-ui-text">Today</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
+            {onTournament && (
+              <Button variant="secondary" onClick={onTournament}>
+                🍵 Triage all
+              </Button>
+            )}
             {onTriage && (
               <Button variant="secondary" onClick={onTriage}>
                 <span className="text-red-500">✚</span> Triage

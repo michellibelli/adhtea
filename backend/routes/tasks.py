@@ -678,6 +678,19 @@ def update_task(
         setattr(task, field, value)
     task.updated_at = utcnow()
 
+    # If a Today-list task gets pushed to a future due_date, demote it back to inbox
+    # so it leaves the Today view automatically.
+    today = date.today()
+    if (
+        "due_date" in patch
+        and task.status == TaskStatus.today
+        and task.due_date is not None
+        and task.due_date > today
+    ):
+        task.status = TaskStatus.inbox
+        task.scheduled_date = None
+        task.sort_order = None
+
     # Domain snap: if project has a domain, snap the new due_date to next allowed day
     domain_rules = []
     if "due_date" in patch and task.due_date is not None and task.project_id:
