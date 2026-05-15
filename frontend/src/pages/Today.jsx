@@ -20,6 +20,7 @@ import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import ConfirmModal from '../components/ConfirmModal'
 
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 
@@ -95,6 +96,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   const [expandedDoneId, setExpandedDoneId] = useState(null)
   const [sortBy, setSortBy]     = useState('manual')
   const [dismissOverload, setDismissOverload] = useState(false)
+  const [askTriage, setAskTriage] = useState(false)
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -149,6 +151,20 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
 
   return (
     <div className="aria-page">
+      <ConfirmModal
+        open={askTriage}
+        emoji="🍵"
+        title="Ready to triage everything?"
+        body="I'll re-rank every incomplete task across your days using your daily caps. Current day assignments get cleared so you start fresh."
+        confirmLabel="Let's brew it"
+        cancelLabel="Not now"
+        onCancel={() => setAskTriage(false)}
+        onConfirm={async () => {
+          setAskTriage(false)
+          try { await startTournament() } catch (e) { console.error(e) }
+          onTournament?.()
+        }}
+      />
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
 
         {/* Header */}
@@ -157,11 +173,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
             {onTournament && (
-              <Button variant="secondary" onClick={async () => {
-                if (!confirm('This will re-rank all your incomplete tasks across consecutive days. Existing day assignments will be cleared. Continue?')) return
-                try { await startTournament() } catch (e) { console.error(e) }
-                onTournament()
-              }}>
+              <Button variant="secondary" onClick={() => setAskTriage(true)}>
                 🍵 Triage all
               </Button>
             )}

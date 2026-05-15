@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { getBacklog, updateTask, snoozeTask, unsnoozeTask } from '../api/tasks'
+import { getBacklog, updateTask, snoozeTask, unsnoozeTask, deleteTask } from '../api/tasks'
 import { listProjects, addTaskToProject } from '../api/projects'
 import Card from '../components/Card'
 import { Input } from '../components/Input'
+import ProjectBadge from '../components/ProjectBadge'
+import ConfirmModal from '../components/ConfirmModal'
 
 const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 
@@ -44,7 +46,7 @@ function SnoozeIcon({ active }) {
 
 // ── Task row ─────────────────────────────────────────────────────────────────
 
-function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditing, onStartEdit, onCancelEdit, projects, isProjectPicking, onStartProjectPick, onCancelProjectPick, onProjectPick }) {
+function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditing, onStartEdit, onCancelEdit, projects, isProjectPicking, onStartProjectPick, onCancelProjectPick, onProjectPick, onDelete }) {
   const [localDate, setLocalDate] = useState(task.due_date || '')
   const isSnoozed = !!task.snooze_until
   const badge = STATUS_STYLE[task.status]
@@ -70,11 +72,14 @@ function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditi
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-ui-text leading-snug truncate">{task.title}</p>
-          {badge && (
-            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge}`}>
-              {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-            </span>
-          )}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {badge && (
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge}`}>
+                {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+              </span>
+            )}
+            <ProjectBadge name={task.project_name} size="xs" />
+          </div>
         </div>
 
         {/* Date pill */}
@@ -107,6 +112,17 @@ function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditi
         {/* Snooze toggle */}
         <button onClick={() => onSnoozeToggle(task)} title={isSnoozed ? 'Remove snooze' : 'Snooze 1 month'}>
           <SnoozeIcon active={isSnoozed} />
+        </button>
+
+        {/* Delete */}
+        <button
+          onClick={() => onDelete?.(task)}
+          title="Delete task"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-ui-subtext/40 hover:text-red-400 transition-colors"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/>
+          </svg>
         </button>
       </div>
 
@@ -169,6 +185,7 @@ export default function AllTasks() {
   const [projectPickerId,  setProjectPickerId]  = useState(null)
   const [batchDateMode,    setBatchDateMode]    = useState(false)
   const [batchDate,        setBatchDate]        = useState('')
+  const [askDelete,        setAskDelete]        = useState(null)  // task object or null
 
   useEffect(() => {
     Promise.all([getBacklog(), listProjects()])
@@ -209,6 +226,16 @@ export default function AllTasks() {
     try {
       await updateTask(id, { due_date })
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, due_date } : t))
+    } catch (err) { console.error(err) }
+  }
+
+  async function handleDeleteConfirm() {
+    const task = askDelete
+    setAskDelete(null)
+    if (!task) return
+    try {
+      await deleteTask(task.id)
+      setTasks(prev => prev.filter(t => t.id !== task.id))
     } catch (err) { console.error(err) }
   }
 
@@ -267,6 +294,16 @@ export default function AllTasks() {
 
   return (
     <div className="aria-page">
+      <ConfirmModal
+        open={!!askDelete}
+        emoji="🗑️"
+        title="Delete this task?"
+        body={askDelete ? `"${askDelete.title}" — gone for good. This can't be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        onCancel={() => setAskDelete(null)}
+        onConfirm={handleDeleteConfirm}
+      />
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
 
         <h1 className="text-2xl font-semibold text-ui-text mb-4">All Tasks</h1>
@@ -368,6 +405,7 @@ export default function AllTasks() {
                 onStartProjectPick={(id) => { setProjectPickerId(id); setEditingId(null) }}
                 onCancelProjectPick={() => setProjectPickerId(null)}
                 onProjectPick={handleProjectPick}
+                onDelete={(t) => setAskDelete(t)}
               />
             ))}
           </Card>

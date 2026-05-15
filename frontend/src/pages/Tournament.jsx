@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getTournamentState, submitTournamentRound, startTournament, deleteTask, snoozeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import ProjectBadge from '../components/ProjectBadge'
 import { markTriageDone } from './Triage'
 
 // Random tea-pun pool reused for the 20% surprise reward
@@ -105,7 +106,7 @@ function TaskTile({ task, rank, dimmed, onRank, onSnooze, onDelete }) {
             {task.notes && (
               <p className="text-xs text-ui-subtext mt-1 leading-snug line-clamp-2">{task.notes}</p>
             )}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               {task.due_date && (
                 <span className="text-[10px] text-ui-subtext">📅 {task.due_date}</span>
               )}
@@ -114,6 +115,7 @@ function TaskTile({ task, rank, dimmed, onRank, onSnooze, onDelete }) {
                   {task.weight}
                 </span>
               )}
+              <ProjectBadge name={task.project_name} size="xs" />
             </div>
           </div>
           <div className="flex flex-col gap-1 flex-shrink-0">

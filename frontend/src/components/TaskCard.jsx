@@ -5,6 +5,7 @@ import SnoozeSheet from './SnoozeSheet'
 import Button from './Button'
 import Card from './Card'
 import { Input, Textarea } from './Input'
+import ProjectBadge from './ProjectBadge'
 
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 const WEIGHT_DOTS = { light: 1, medium: 2, heavy: 3 }
@@ -241,6 +242,8 @@ export default function TaskCard({
                       <div key={d} className={`w-1.5 h-1.5 rounded-full ${d <= dots ? 'bg-ui-accent' : 'bg-ui-border'}`} />
                     ))}
                   </div>
+
+                  <ProjectBadge name={task.project_name} size="xs" />
 
                   {task.due_time && (
                     <span className="text-[10px] text-ui-subtext">{task.due_time}</span>

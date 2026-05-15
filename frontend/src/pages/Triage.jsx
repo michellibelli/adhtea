@@ -4,6 +4,7 @@ import { getTodayCapacity } from '../api/selfcare'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import ProjectBadge from '../components/ProjectBadge'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -129,6 +130,9 @@ function TournamentCard({ task, onPick, picking }) {
               )}
             </div>
             <p className="text-sm font-medium text-ui-text leading-snug">{task.title}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <ProjectBadge name={task.project_name} size="xs" />
+            </div>
             {task.notes && (
               <p className="text-[10px] text-ui-subtext/60 mt-0.5 truncate">{task.notes}</p>
             )}
