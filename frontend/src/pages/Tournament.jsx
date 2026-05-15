@@ -3,7 +3,7 @@ import { DndContext, closestCenter, TouchSensor, useSensor, useSensors } from '@
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { SmartPointerSensor } from '../utils/dnd'
-import { getTournamentState, submitTournamentRound, startTournament, deleteTask, snoozeTask } from '../api/tasks'
+import { getTournamentState, submitTournamentRound, startTournament, deleteTask, snoozeTask, completeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ProjectBadge from '../components/ProjectBadge'
@@ -87,7 +87,7 @@ function TeaCupProgress({ filled, cap }) {
 
 // Sortable tile — user drags to reorder. Top of list = most important.
 // onSnooze / onDelete corner buttons stop drag propagation.
-function TaskTile({ task, rank, onSnooze, onDelete }) {
+function TaskTile({ task, rank, onSnooze, onDelete, onComplete }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const meta = rank && RANK_META[rank]
   const style = {
@@ -133,6 +133,12 @@ function TaskTile({ task, rank, onSnooze, onDelete }) {
             </div>
           </div>
           <div className="flex flex-col gap-1 flex-shrink-0" onPointerDown={stop}>
+            <button
+              onPointerDown={stop}
+              onClick={(e) => { stop(e); onComplete() }}
+              title="Already done — mark complete"
+              className="w-7 h-7 rounded-full border border-ui-border text-ui-subtext/60 hover:text-emerald-400 hover:border-emerald-400/50 transition-colors flex items-center justify-center text-xs font-bold"
+            >✓</button>
             <button
               onPointerDown={stop}
               onClick={(e) => { stop(e); onSnooze() }}
@@ -242,6 +248,17 @@ export default function Tournament({ onDone }) {
     } finally { setSubmitting(false) }
   }
 
+  async function handleComplete(taskId) {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await completeTask(taskId)
+      await refresh()
+    } catch (e) {
+      setError(e?.message || 'Complete failed')
+    } finally { setSubmitting(false) }
+  }
+
   if (loading) {
     return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
   }
@@ -323,6 +340,7 @@ export default function Tournament({ onDone }) {
                         rank={i + 1}
                         onSnooze={() => handleSnooze(id)}
                         onDelete={() => handleDelete(id)}
+                        onComplete={() => handleComplete(id)}
                       />
                     )
                   })}
