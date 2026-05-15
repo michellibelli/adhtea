@@ -36,6 +36,10 @@ def _migrate():
             projects_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(projects)")).fetchall()}
             if "domain_id" not in projects_cols:
                 conn.execute(text("ALTER TABLE projects ADD COLUMN domain_id INTEGER REFERENCES domains(id)"))
+            if "max_tasks_per_day" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN max_tasks_per_day INTEGER NOT NULL DEFAULT 10"))
+            if "max_total_per_day" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN max_total_per_day INTEGER NOT NULL DEFAULT 15"))
             conn.commit()
         else:
             conn.execute(text(
@@ -57,6 +61,12 @@ def _migrate():
             ))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS day_start_hour INTEGER NOT NULL DEFAULT 6"
+            ))
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_tasks_per_day INTEGER NOT NULL DEFAULT 10"
+            ))
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_total_per_day INTEGER NOT NULL DEFAULT 15"
             ))
             conn.commit()
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getTournamentState, submitTournamentRound, deleteTask, snoozeTask } from '../api/tasks'
+import { getTournamentState, submitTournamentRound, startTournament, deleteTask, snoozeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { markTriageDone } from './Triage'
@@ -251,9 +251,11 @@ export default function Tournament({ onDone }) {
   const horizonFull = state?.horizon_full
   const inboxEmpty = state?.inbox_pending === 0 || batch.length === 0
   const isDone = horizonFull || inboxEmpty
-  const targetLabel = dayLabel(state?.target_offset ?? 0, state?.target_date)
-  const targetCount = state?.target_count ?? 0
-  const bundlePerDay = state?.bundle_per_day ?? 10
+  const targetLabel  = dayLabel(state?.target_offset ?? 0, state?.target_date)
+  const targetTasks  = state?.target_tasks ?? 0
+  const targetTotal  = state?.target_total ?? 0
+  const maxTasks     = state?.max_tasks_per_day ?? 10
+  const maxTotal     = state?.max_total_per_day ?? 15
   const canSubmit = taps.length >= 1 && !submitting
 
   return (
@@ -269,19 +271,20 @@ export default function Tournament({ onDone }) {
               </p>
               <h1 className="text-2xl font-semibold text-ui-text">Round {round}</h1>
             </div>
-            <TeaCupProgress filled={targetCount} cap={bundlePerDay} />
+            <TeaCupProgress filled={targetTasks} cap={maxTasks} />
           </div>
 
           {/* Progress bar for current target day */}
           <div className="h-1.5 rounded-full bg-ui-border/40 overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-ui-accent to-ui-primary transition-all duration-500"
-              style={{ width: `${Math.min(100, (targetCount / bundlePerDay) * 100)}%` }}
+              style={{ width: `${Math.min(100, (targetTasks / maxTasks) * 100)}%` }}
             />
           </div>
-          <p className="text-[10px] text-ui-subtext mt-1 text-right">
-            {state?.inbox_pending ?? 0} inbox tasks left
-          </p>
+          <div className="flex justify-between text-[10px] text-ui-subtext mt-1">
+            <span>total {targetTotal}/{maxTotal} (incl. routines + appts)</span>
+            <span>{state?.inbox_pending ?? 0} inbox left</span>
+          </div>
         </div>
 
         {/* Variable surprise pun */}

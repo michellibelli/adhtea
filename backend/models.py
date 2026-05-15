@@ -112,6 +112,9 @@ class User(Base):
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     # Settings
     task_visible_limit = Column(Integer, default=10)
+    # Triage caps — sliders in Settings, ±5 from defaults
+    max_tasks_per_day = Column(Integer, default=10, nullable=False)   # range 5..15
+    max_total_per_day = Column(Integer, default=15, nullable=False)   # tasks+appts+routines; range 10..20
     notification_morning = Column(String(5), default="08:00")   # HH:MM
     notification_evening = Column(String(5), default="21:00")
     triage_start_hour = Column(Integer, default=8)

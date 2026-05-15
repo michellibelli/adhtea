@@ -800,46 +800,83 @@ def reorder_tasks(
 
 
 # ---------------------------------------------------------------------------
-# Triage tournament — 3-card pairwise ranking with multi-day bundling
+# Triage tournament — 3-card pairwise ranking with multi-day bundling.
+#
+# Caps are user-configurable in Settings:
+#   max_tasks_per_day  (5..15, default 10) — task_type=task only
+#   max_total_per_day  (10..20, default 15) — tasks + appointments + routines
 # ---------------------------------------------------------------------------
 
-TOURNAMENT_BUNDLE_PER_DAY = 10  # tournament tasks per day (excludes routines)
-TOURNAMENT_HORIZON_DAYS = 30   # max days ahead we'll bundle into
+TOURNAMENT_HORIZON_DAYS = 30
 
 
-def _count_tasks_on_day(db, user_id: int, target: date, today_d: date) -> int:
-    """How many non-routine tasks already target this date."""
+def _count_for_day(db, user_id: int, target: date, today_d: date):
+    """Return (task_count, total_count) for the given day."""
     if target == today_d:
-        return (
+        rows = (
+            db.query(Task)
+            .filter(Task.owner_id == user_id, Task.status == TaskStatus.today)
+            .all()
+        )
+    else:
+        # Tasks/appointments scheduled for a future day live in inbox with due_date set.
+        # Routines on future days are generated lazily, so they aren't in DB yet — count 0.
+        rows = (
             db.query(Task)
             .filter(
                 Task.owner_id == user_id,
-                Task.status == TaskStatus.today,
-                Task.task_type != TaskType.routine,
+                Task.status == TaskStatus.inbox,
+                Task.due_date == target,
             )
-            .count()
+            .all()
         )
-    return (
-        db.query(Task)
-        .filter(
-            Task.owner_id == user_id,
-            Task.status == TaskStatus.inbox,
-            Task.due_date == target,
-            Task.task_type != TaskType.routine,
-        )
-        .count()
-    )
+    task_count  = sum(1 for r in rows if r.task_type == TaskType.task)
+    total_count = len(rows)
+    return task_count, total_count
 
 
-def _find_target(db, user_id: int):
-    """First day in horizon with fewer than BUNDLE_PER_DAY tournament tasks."""
+def _find_target(db, user: User):
+    """First day in horizon where BOTH caps are not yet reached."""
     today_d = date.today()
+    max_tasks = user.max_tasks_per_day or 10
+    max_total = user.max_total_per_day or 15
     for offset in range(TOURNAMENT_HORIZON_DAYS):
         target = today_d + timedelta(days=offset)
-        count = _count_tasks_on_day(db, user_id, target, today_d)
-        if count < TOURNAMENT_BUNDLE_PER_DAY:
-            return target, offset, count
-    return None, None, None
+        tcount, total = _count_for_day(db, user.id, target, today_d)
+        if tcount < max_tasks and total < max_total:
+            return target, offset, tcount, total
+    return None, None, None, None
+
+
+@router.post("/tasks/tournament/start")
+def tournament_start(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Begin a Triage-all campaign.
+
+    Resets day placements for all incomplete tasks (task_type=task) so the
+    user can re-rank everything from scratch. Routines and appointments
+    stay where they are — they have their own schedules.
+    """
+    affected = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.task_type == TaskType.task,
+            Task.status.in_([TaskStatus.today, TaskStatus.snoozed]),
+        )
+        .all()
+    )
+    for t in affected:
+        t.status = TaskStatus.inbox
+        t.scheduled_date = None
+        t.sort_order = None
+        t.snooze_until = None
+        t.due_date = None
+    if affected:
+        db.commit()
+    return {"reset_count": len(affected)}
 
 
 @router.get("/tasks/tournament/state")
@@ -849,11 +886,9 @@ def tournament_state(
 ):
     """Return current state: next 3 inbox tasks + the day they'll fill."""
     today_d = date.today()
-    target, offset, target_count = _find_target(db, current_user.id)
+    target, offset, target_tasks, target_total = _find_target(db, current_user)
 
-    # Tournament pulls ALL inbox tasks (any due_date). The whole point is to
-    # re-rank and distribute, possibly overriding stale future dates assigned
-    # by some prior path. Routines and appointments stay excluded.
+    # Pool: ALL incomplete user tasks. Routines and appointments excluded.
     inbox_filter = (
         Task.owner_id == current_user.id,
         Task.status == TaskStatus.inbox,
@@ -871,18 +906,20 @@ def tournament_state(
         .all()
     )
 
-    inbox_pending = (
-        db.query(Task).filter(*inbox_filter).count()
-    )
+    inbox_pending = db.query(Task).filter(*inbox_filter).count()
+    today_tasks, today_total = _count_for_day(db, current_user.id, today_d, today_d)
 
     return {
-        "bundle_per_day": TOURNAMENT_BUNDLE_PER_DAY,
-        "target_date": target.isoformat() if target else None,
-        "target_offset": offset,                     # 0=today, 1=tomorrow, …
-        "target_count": target_count,                # how full target day is
-        "today_count": _count_tasks_on_day(db, current_user.id, today_d, today_d),
-        "horizon_full": target is None,
-        "inbox_pending": inbox_pending,
+        "max_tasks_per_day": current_user.max_tasks_per_day or 10,
+        "max_total_per_day": current_user.max_total_per_day or 15,
+        "target_date":    target.isoformat() if target else None,
+        "target_offset":  offset,            # 0=today, 1=tomorrow …
+        "target_tasks":   target_tasks,      # task count currently on target day
+        "target_total":   target_total,      # total count currently on target day
+        "today_count":    today_tasks,
+        "today_total":    today_total,
+        "horizon_full":   target is None,
+        "inbox_pending":  inbox_pending,
         "next_batch": [TaskResponse.model_validate(t).model_dump(mode="json") for t in next_three],
     }
 
@@ -900,28 +937,29 @@ def tournament_submit(
         raise HTTPException(status_code=400, detail="max 3 tasks per round")
 
     today_d = date.today()
-    target, offset, target_count = _find_target(db, current_user.id)
+    target, offset, target_tasks, target_total = _find_target(db, current_user)
     if target is None:
         raise HTTPException(status_code=409, detail="All days in horizon are full")
 
-    # If target is today, append after existing today sort_order range
-    max_sort = 0.0
-    if offset == 0:
-        max_sort_row = (
-            db.query(Task.sort_order)
-            .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
-            .order_by(Task.sort_order.desc().nullslast())
-            .first()
-        )
-        if max_sort_row and max_sort_row[0] is not None:
-            max_sort = float(max_sort_row[0])
-
     placed = 0
-    for i, tid in enumerate(body.ordered_ids):
-        # Re-pick target if current day fills mid-round
-        cur_target, cur_offset, cur_count = _find_target(db, current_user.id)
+    for tid in body.ordered_ids:
+        # Re-pick target each task so a mid-round day-flip rolls cleanly
+        cur_target, cur_offset, _, _ = _find_target(db, current_user)
         if cur_target is None:
             break
+
+        # Recompute next sort_order for whichever target we landed on
+        if cur_offset == 0:
+            max_row = (
+                db.query(Task.sort_order)
+                .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
+                .order_by(Task.sort_order.desc().nullslast())
+                .first()
+            )
+            next_sort = float((max_row[0] if max_row and max_row[0] is not None else 0) + 1)
+        else:
+            next_sort = None
+
         t = (
             db.query(Task)
             .filter(
@@ -936,14 +974,15 @@ def tournament_submit(
         if cur_offset == 0:
             t.status = TaskStatus.today
             t.scheduled_date = today_start()
-            t.sort_order = float(max_sort + i + 1)
+            t.due_date = today_d
+            t.sort_order = next_sort
         else:
             t.status = TaskStatus.inbox
             t.due_date = cur_target
             t.scheduled_date = None
             t.sort_order = None
         placed += 1
-        db.flush()  # so next _find_target() sees this placement
+        db.flush()
 
     db.commit()
     return tournament_state(current_user=current_user, db=db)

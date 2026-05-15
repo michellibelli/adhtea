@@ -72,6 +72,8 @@ class UserSettingsUpdate(BaseModel):
     triage_end_hour: Optional[int] = None
     timezone: Optional[str] = None
     day_start_hour: Optional[int] = None
+    max_tasks_per_day: Optional[int] = None    # range 5..15
+    max_total_per_day: Optional[int] = None    # range 10..20
 
 
 class SignupRequest(BaseModel):
@@ -104,6 +106,8 @@ class UserResponse(BaseModel):
     triage_end_hour: int
     timezone: str
     day_start_hour: int
+    max_tasks_per_day: int = 10
+    max_total_per_day: int = 15
     created_at: datetime
     needs_alpha_challenge: bool = False
     is_onboarded: bool = True
