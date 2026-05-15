@@ -37,11 +37,26 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
-## Current status — Phases 1–3.8 complete ✅
+## Current status — Phases 1–3.9 complete ✅
 
 Everything below is shipped and live on adh-tea.fun.
 
-### Phase 3.8 completed this session (2026-05-14)
+### Phase 3.9 completed (2026-05-15)
+
+Tournament-driven Triage at scale.
+
+- **Triage tournament** — 3-card drag-to-reorder (top = most important), 10-tasks-per-day distribution across a 30-day horizon, tea-themed UX (cup-fill progress, random tea puns at 20% rate, ConfirmModal). Reachable from Today's "🍵 Triage all" and Settings → "Triage tournament 🍵".
+- **Daily caps (user-configurable)** — `max_tasks_per_day` (5–15, default 10) and `max_total_per_day` (10–20, default 15) with sliders in Settings. Both enforced by `_find_target` when bundling.
+- **Reset-on-start** — `POST /tasks/tournament/start` clears placements on all incomplete user tasks (task_type=task) so a campaign re-ranks from scratch. Routines + appointments stay where they are.
+- **Per-card corner actions** in tournament — ✓ already done, 🌙 snooze (full SnoozeSheet picker), ✕ delete. All stop drag propagation.
+- **App-styled `ConfirmModal`** replaces browser `confirm()` everywhere. Tea-themed copy ("Ready to triage everything? Let's brew it").
+- **`ProjectBadge` 🌱 amber pill** renders wherever a task appears (TaskCard, AllTasks rows, Triage daily card, Tournament card, Focus teabag tag).
+- **AllTasks delete** — trash-can button per row + tea-themed delete confirm.
+- **Focus refetch on date-push** — editing the active task's due_date to a future day now drops the task out and backfills the next-priority item.
+- **Backend hardening** — auto-sweep of misclassified `status=today` tasks whose `due_date` is in the future. Filter fixes so the inbox query includes all incomplete tasks regardless of date.
+- **Triage skips routines + appointments** entirely. Tournament does too.
+
+### Phase 3.8 completed (2026-05-14)
 
 **Project domains** (data + UI shipped; date enforcement is Phase 2):
 - `Domain` model (rules JSON: list of `{days, times, weights}` rule dicts)
