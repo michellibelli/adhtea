@@ -109,7 +109,6 @@ function TaskTile({ task, rank, onSnooze, onDelete }) {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-ui-subtext/40 text-base leading-none" title="Drag">⋮⋮</span>
               <span className="text-ui-accent text-sm">✦</span>
               {meta && (
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${meta.text}`}>
