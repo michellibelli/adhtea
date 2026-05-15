@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(bash scripts/deploy-check.sh*)",
+      "Bash(vercel ls*)",
+      "Bash(vercel inspect*)",
+      "Bash(vercel domains ls)"
+    ]
+  }
+}
