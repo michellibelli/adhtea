@@ -156,11 +156,14 @@ export default function Triage({ onTriageDone }) {
     Promise.all([getToday(), getTodayCapacity()])
       .then(([todayTasks, cap]) => {
         setCapacity(cap)
-        setTotalToday(todayTasks.length)
-        if (todayTasks.length <= TARGET) {
+        // Routines + appointments happen on their own schedule and never enter
+        // the triage cycle. Only true `task`-type items are eligible.
+        const triageable = todayTasks.filter(t => t.task_type === 'task')
+        setTotalToday(triageable.length)
+        if (triageable.length <= TARGET) {
           setPool([])
         } else {
-          setPool(sortByUrgency(todayTasks))
+          setPool(sortByUrgency(triageable))
         }
       })
       .finally(() => setLoading(false))
