@@ -153,6 +153,34 @@ def carry_forward(user: User, db: Session):
 
 
 # ---------------------------------------------------------------------------
+# Demote stale Today tasks whose due_date is in the future.
+# Fixes a class of bug where tasks got status=today (drag, batch, old code paths)
+# but their due_date stayed in the future. They should not appear in Today.
+# ---------------------------------------------------------------------------
+
+def demote_misclassified_today(user: User, db: Session):
+    today_local = _app_today(user)
+    stale = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user.id,
+            Task.status == TaskStatus.today,
+            Task.task_type != TaskType.routine,
+            Task.due_date != None,            # noqa: E711
+            Task.due_date > today_local,
+        )
+        .all()
+    )
+    for task in stale:
+        task.status = TaskStatus.inbox
+        task.scheduled_date = None
+        task.sort_order = None
+    if stale:
+        db.commit()
+    return len(stale)
+
+
+# ---------------------------------------------------------------------------
 # Snooze resolution: move snoozed items back to Inbox when their date arrives
 # ---------------------------------------------------------------------------
 
@@ -494,6 +522,7 @@ def get_today(
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
     promote_due_tasks(current_user, db)
+    demote_misclassified_today(current_user, db)
     _maybe_sync_gcal(current_user.id, db)
 
     tasks = (
