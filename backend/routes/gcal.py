@@ -267,8 +267,8 @@ def sync_today_events(user_id: int, db: Session) -> int:
                 description = event.get("description", "").strip() or None
                 gcal_id = event.get("id", "")
 
-                # Check duplicate: look for a task with same title + due_date
-                # (simple dedup — good enough for daily sync)
+                # Dedup: match on title + due_date. If found, repair scheduled_date
+                # in case it was created with wrong UTC date from old sync bug.
                 existing = db.query(Task).filter(
                     Task.owner_id == user_id,
                     Task.task_type == TaskType.appointment,
@@ -277,7 +277,11 @@ def sync_today_events(user_id: int, db: Session) -> int:
                     Task.status != TaskStatus.deleted,
                 ).first()
 
+                correct_scheduled = datetime(today.year, today.month, today.day)
                 if existing:
+                    if existing.scheduled_date != correct_scheduled:
+                        existing.scheduled_date = correct_scheduled
+                        existing.status = TaskStatus.today
                     continue
 
                 task = Task(
