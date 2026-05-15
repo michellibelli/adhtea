@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,7 +8,8 @@ from sqlalchemy import or_, and_
 from database import get_db
 from models import (
     Task, TaskStatus, TaskType, Priority, ActuatorCategory,
-    Routine, RoutineFrequency, GoogleCalendarToken, utcnow, User
+    Routine, RoutineFrequency, GoogleCalendarToken, utcnow, User,
+    Project, Domain,
 )
 from schemas import (
     TaskCreate, TaskUpdate, TaskResponse,
@@ -15,6 +17,7 @@ from schemas import (
     ActuatorCategoryCreate, ActuatorCategoryResponse,
 )
 from routes.auth import get_current_user
+from routes.domain_utils import next_allowed_date
 
 router = APIRouter()
 
@@ -285,6 +288,14 @@ def create_task(
             .count()
         )
 
+    due_date = body.due_date
+    if due_date and body.project_id:
+        project = db.query(Project).filter(Project.id == body.project_id).first()
+        if project and project.domain_id:
+            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
+            if domain:
+                due_date = next_allowed_date(due_date, json.loads(domain.rules or "[]"))
+
     task = Task(
         owner_id=current_user.id,
         title=body.title.strip(),
@@ -296,7 +307,7 @@ def create_task(
         actuator_category_id=body.actuator_category_id,
         project_id=body.project_id,
         is_critical=body.is_critical,
-        due_date=body.due_date,
+        due_date=due_date,
         due_time=body.due_time,
         location_type=body.location_type,
         location_detail=body.location_detail,
@@ -646,6 +657,16 @@ def update_task(
         setattr(task, field, value)
     task.updated_at = utcnow()
 
+    # Domain snap: if project has a domain, snap the new due_date to next allowed day
+    domain_rules = []
+    if "due_date" in patch and task.due_date is not None and task.project_id:
+        project = db.query(Project).filter(Project.id == task.project_id).first()
+        if project and project.domain_id:
+            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
+            if domain:
+                domain_rules = json.loads(domain.rules or "[]")
+                task.due_date = next_allowed_date(task.due_date, domain_rules)
+
     # Cascade: if a project sub-task's due_date moves, shift later sibling tasks by same delta
     if (
         "due_date" in patch
@@ -668,7 +689,8 @@ def update_task(
                 .all()
             )
             for s in siblings:
-                s.due_date = s.due_date + timedelta(days=delta)
+                raw = s.due_date + timedelta(days=delta)
+                s.due_date = next_allowed_date(raw, domain_rules) if domain_rules else raw
 
     db.commit()
     db.refresh(task)

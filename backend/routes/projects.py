@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Project, Task, TaskStatus, TaskType, TaskWeight, User
+from models import Domain, Project, Task, TaskStatus, TaskType, TaskWeight, User
 from schemas import (
     ProjectCreate, ProjectUpdate, ProjectGenerateRequest,
     ProjectResponse, ProjectDetailResponse, TaskResponse,
 )
 from routes.auth import get_current_user
+from routes.domain_utils import next_allowed_date, domain_days_prompt_hint
 
 router = APIRouter(prefix="/projects")
 
@@ -141,6 +142,15 @@ def generate_tasks(
 
     p = own_project(project_id, current_user, db)
 
+    # Load domain rules for date snapping and prompt hint
+    domain_rules = []
+    days_hint = ""
+    if p.domain_id:
+        domain_obj = db.query(Domain).filter(Domain.id == p.domain_id).first()
+        if domain_obj:
+            domain_rules = json.loads(domain_obj.rules or "[]")
+            days_hint = domain_days_prompt_hint(domain_rules)
+
     import anthropic
     client = anthropic.Anthropic(api_key=key)
 
@@ -156,6 +166,7 @@ def generate_tasks(
         "- Spread tasks realistically; do not pile multiple mediums on one day\n"
         "- Titles must be specific and action-oriented (start with a verb)\n"
         "- Aim for 4–12 tasks total\n"
+        + days_hint + "\n"
         "- Return ONLY a valid JSON array — no markdown, no explanation\n\n"
         f"Project: {body.description}\n\n"
         'Format: [{"title":"...","notes":"...or null","size":"small|medium","day_offset":1},...]'
@@ -183,6 +194,8 @@ def generate_tasks(
     for item in items:
         offset = max(1, int(item.get("day_offset", 1)))
         weight = TaskWeight.light if item.get("size") == "small" else TaskWeight.medium
+        raw_date = today + timedelta(days=offset)
+        due = next_allowed_date(raw_date, domain_rules) if domain_rules else raw_date
         t = Task(
             owner_id=current_user.id,
             project_id=p.id,
@@ -191,7 +204,7 @@ def generate_tasks(
             task_type=TaskType.task,
             status=TaskStatus.inbox,
             weight=weight,
-            due_date=today + timedelta(days=offset),
+            due_date=due,
         )
         db.add(t)
         created.append(t)
