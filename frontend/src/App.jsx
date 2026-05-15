@@ -11,6 +11,7 @@ import Signup from './pages/Signup'
 import AlphaChallenge from './pages/AlphaChallenge'
 import Capture from './pages/Capture'
 import Triage from './pages/Triage'
+import Tournament from './pages/Tournament'
 import Focus from './pages/Focus'
 import Today from './pages/Today'
 import Inbox from './pages/Inbox'
@@ -140,6 +141,7 @@ function AppShell() {
       <main className="pt-[88px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'triage'   && <Triage onTriageDone={handleTriageDone} />}
+        {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('triage')} onNavigate={setScreen} />}
         {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTriage={() => setScreen('triage')} />}
         {screen === 'inbox'    && <Inbox />}

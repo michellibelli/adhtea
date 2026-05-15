@@ -758,6 +758,119 @@ def reorder_tasks(
 
 
 # ---------------------------------------------------------------------------
+# Triage tournament — 3-card pairwise ranking
+# ---------------------------------------------------------------------------
+
+TOURNAMENT_DAILY_CAP = 12
+
+@router.get("/tasks/tournament/state")
+def tournament_state(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return current state: next 3 inbox tasks, today count, cap."""
+    today_count = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.status == TaskStatus.today,
+        )
+        .count()
+    )
+    remaining = max(0, TOURNAMENT_DAILY_CAP - today_count)
+
+    today = date.today()
+    next_three = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.status == TaskStatus.inbox,
+            Task.task_type == TaskType.task,
+            or_(Task.due_date == None, Task.due_date <= today),  # noqa: E711
+        )
+        .order_by(Task.sort_order.asc().nullslast(), Task.created_at.asc())
+        .limit(3)
+        .all()
+    )
+
+    inbox_pending = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == current_user.id,
+            Task.status == TaskStatus.inbox,
+            Task.task_type == TaskType.task,
+            or_(Task.due_date == None, Task.due_date <= today),  # noqa: E711
+        )
+        .count()
+    )
+
+    return {
+        "today_count": today_count,
+        "cap": TOURNAMENT_DAILY_CAP,
+        "remaining_slots": remaining,
+        "inbox_pending": inbox_pending,
+        "next_batch": [TaskResponse.model_validate(t).model_dump(mode="json") for t in next_three],
+    }
+
+
+@router.post("/tasks/tournament/submit")
+def tournament_submit(
+    body: TaskReorderRequest,  # reuse: ordered_ids = [first, second, third]
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Promote the ranked tasks to Today with incrementing sort_order.
+
+    body.ordered_ids must be 1, 2, or 3 task IDs in priority order.
+    Returns fresh tournament state for the next round.
+    """
+    if not body.ordered_ids:
+        raise HTTPException(status_code=400, detail="ordered_ids required")
+    if len(body.ordered_ids) > 3:
+        raise HTTPException(status_code=400, detail="max 3 tasks per round")
+
+    today_count = (
+        db.query(Task)
+        .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
+        .count()
+    )
+    if today_count >= TOURNAMENT_DAILY_CAP:
+        raise HTTPException(status_code=409, detail="Today is full (cap reached)")
+
+    max_sort_row = (
+        db.query(Task.sort_order)
+        .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
+        .order_by(Task.sort_order.desc().nullslast())
+        .first()
+    )
+    max_sort = (max_sort_row[0] if max_sort_row and max_sort_row[0] is not None else 0)
+
+    placed = 0
+    for i, tid in enumerate(body.ordered_ids):
+        if today_count + placed >= TOURNAMENT_DAILY_CAP:
+            break
+        t = (
+            db.query(Task)
+            .filter(
+                Task.id == tid,
+                Task.owner_id == current_user.id,
+                Task.status == TaskStatus.inbox,
+            )
+            .first()
+        )
+        if not t:
+            continue
+        t.status = TaskStatus.today
+        t.scheduled_date = today_start()
+        t.sort_order = float(max_sort + i + 1)
+        placed += 1
+
+    db.commit()
+    # Reuse state endpoint logic
+    return tournament_state(current_user=current_user, db=db)
+
+
+# ---------------------------------------------------------------------------
 # Actuator Categories
 # ---------------------------------------------------------------------------
 

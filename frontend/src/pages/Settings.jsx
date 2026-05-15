@@ -276,6 +276,10 @@ export default function Settings({ onNavigate, user }) {
               <p className="text-sm font-medium text-ui-text">Triage inbox</p>
               <p className="text-xs text-ui-subtext mt-0.5">Review and schedule new items</p>
             </Card>
+            <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('tournament')}>
+              <p className="text-sm font-medium text-ui-text">Triage tournament 🍵</p>
+              <p className="text-xs text-ui-subtext mt-0.5">3-card pairwise ranking — fills up to 12 today slots</p>
+            </Card>
             <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('tasks')}>
               <p className="text-sm font-medium text-ui-text">All tasks</p>
               <p className="text-xs text-ui-subtext mt-0.5">Browse, search, and batch-schedule</p>
