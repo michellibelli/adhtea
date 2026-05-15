@@ -303,7 +303,7 @@ def sync_today_events(user_id: int, db: Session) -> int:
 
     except Exception as e:
         print(f"gcal sync error for user {user_id}: {e}")
-        return 0
+        raise  # re-raise so manual_sync can surface the error
 
 
 @router.post("/gcal/sync")
@@ -311,8 +311,11 @@ def manual_sync(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    n = sync_today_events(current_user.id, db)
-    return {"created": n}
+    try:
+        n = sync_today_events(current_user.id, db)
+        return {"created": n, "error": None}
+    except Exception as e:
+        return {"created": 0, "error": str(e)}
 
 
 @router.get("/gcal/calendars")
