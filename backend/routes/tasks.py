@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
@@ -26,14 +27,26 @@ router = APIRouter()
 # Helpers
 # ---------------------------------------------------------------------------
 
-def today_start() -> datetime:
-    d = date.today()
+def _tz(user: User) -> ZoneInfo:
+    return ZoneInfo(getattr(user, "timezone", None) or "America/Los_Angeles")
+
+def _day_start_hour(user: User) -> int:
+    return getattr(user, "day_start_hour", None) or 6
+
+def _app_today(user: User) -> date:
+    """Current calendar date in the user's timezone, rolling over at day_start_hour."""
+    now = datetime.now(_tz(user))
+    if now.hour < _day_start_hour(user):
+        return now.date() - timedelta(days=1)
+    return now.date()
+
+def _day_start(user: User) -> datetime:
+    """Naive datetime for midnight of user's current app-day (for DB comparisons)."""
+    d = _app_today(user)
     return datetime(d.year, d.month, d.day, 0, 0, 0)
 
-
-def today_end() -> datetime:
-    d = date.today()
-    return datetime(d.year, d.month, d.day, 23, 59, 59)
+def _day_end(user: User) -> datetime:
+    return _day_start(user) + timedelta(days=1) - timedelta(seconds=1)
 
 
 def own_task(task_id: int, user: User, db: Session) -> Task:
@@ -47,9 +60,8 @@ def own_task(task_id: int, user: User, db: Session) -> Task:
 # Routine instance generation — called lazily with carry_forward/resolve_snoozes
 # ---------------------------------------------------------------------------
 
-def _is_routine_due_today(routine: Routine) -> bool:
-    today = date.today()
-    wd = today.weekday()  # 0=Mon, 6=Sun
+def _is_routine_due(routine: Routine, today_local: date) -> bool:
+    wd = today_local.weekday()  # 0=Mon, 6=Sun
     f = routine.frequency
     if f == RoutineFrequency.daily:
         return True
@@ -66,8 +78,13 @@ def _is_routine_due_today(routine: Routine) -> bool:
 
 
 def generate_routine_instances(user: User, db: Session):
-    today = date.today()
-    today_dt = datetime(today.year, today.month, today.day)
+    # Don't generate before the day officially starts
+    now_local = datetime.now(_tz(user))
+    if now_local.hour < _day_start_hour(user):
+        return
+
+    today_local = _app_today(user)
+    today_dt = datetime(today_local.year, today_local.month, today_local.day)
     tomorrow_dt = today_dt + timedelta(days=1)
 
     active = db.query(Routine).filter(
@@ -77,7 +94,7 @@ def generate_routine_instances(user: User, db: Session):
 
     created = 0
     for routine in active:
-        if not _is_routine_due_today(routine):
+        if not _is_routine_due(routine, today_local):
             continue
         exists = db.query(Task).filter(
             Task.routine_id == routine.id,
@@ -109,19 +126,23 @@ def generate_routine_instances(user: User, db: Session):
 # ---------------------------------------------------------------------------
 
 def carry_forward(user: User, db: Session):
-    yesterday_end = today_start() - timedelta(seconds=1)
+    # Don't carry forward before the new day officially starts
+    now_local = datetime.now(_tz(user))
+    if now_local.hour < _day_start_hour(user):
+        return 0
+
+    start = _day_start(user)
     stale = (
         db.query(Task)
         .filter(
             Task.owner_id == user.id,
             Task.status == TaskStatus.today,
-            Task.scheduled_date < today_start(),
+            Task.scheduled_date < start,
         )
         .all()
     )
     for task in stale:
         if task.task_type == TaskType.routine and task.routine_id:
-            # Routine instances don't return to inbox — soft-delete so today gets a fresh instance
             task.status = TaskStatus.deleted
         else:
             task.status = TaskStatus.inbox
@@ -159,7 +180,7 @@ def resolve_snoozes(user: User, db: Session):
 # ---------------------------------------------------------------------------
 
 def promote_due_tasks(user: User, db: Session):
-    today = date.today()
+    today_local = _app_today(user)
     due = (
         db.query(Task)
         .filter(
@@ -167,7 +188,7 @@ def promote_due_tasks(user: User, db: Session):
             Task.status == TaskStatus.inbox,
             Task.task_type != TaskType.routine,
             Task.due_date.isnot(None),
-            Task.due_date <= today,
+            Task.due_date <= today_local,
         )
         .all()
     )
@@ -178,9 +199,10 @@ def promote_due_tasks(user: User, db: Session):
         .filter(Task.owner_id == user.id, Task.status == TaskStatus.today)
         .count()
     )
+    start = _day_start(user)
     for i, task in enumerate(due):
         task.status = TaskStatus.today
-        task.scheduled_date = today_start()
+        task.scheduled_date = start
         task.sort_order = float(existing_count + i)
     db.commit()
 
@@ -215,8 +237,8 @@ def triage_summary(
     today_tasks = db.query(Task).filter(
         Task.owner_id == current_user.id,
         Task.status == TaskStatus.today,
-        Task.scheduled_date >= today_start(),
-        Task.scheduled_date <= today_end(),
+        Task.scheduled_date >= _day_start(current_user),
+        Task.scheduled_date <= _day_end(current_user),
     ).all()
     return {
         "inbox_count": inbox_count,
@@ -238,7 +260,7 @@ def get_critical_list(
     carry_forward(current_user, db)
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
-    today = date.today()
+    today_local = _app_today(current_user)
     active_statuses = [TaskStatus.inbox, TaskStatus.today]
     tasks = (
         db.query(Task)
@@ -246,19 +268,16 @@ def get_critical_list(
             Task.owner_id == current_user.id,
             Task.status.in_(active_statuses),
             or_(
-                # Urgent-priority tasks
                 Task.priority == Priority.urgent,
-                # Today's appointments (by due_date)
                 and_(
                     Task.task_type == TaskType.appointment,
-                    Task.due_date == today,
+                    Task.due_date == today_local,
                 ),
-                # is_critical routine instances generated for today
                 and_(
                     Task.task_type == TaskType.routine,
                     Task.is_critical == True,
-                    Task.scheduled_date >= today_start(),
-                    Task.scheduled_date <= today_end(),
+                    Task.scheduled_date >= _day_start(current_user),
+                    Task.scheduled_date <= _day_end(current_user),
                 ),
             ),
         )
@@ -278,8 +297,8 @@ def create_task(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    today = date.today()
-    due_today = body.due_date is not None and body.due_date <= today
+    today_local = _app_today(current_user)
+    due_today = body.due_date is not None and body.due_date <= today_local
 
     if due_today:
         existing_count = (
@@ -302,7 +321,7 @@ def create_task(
         notes=body.notes,
         task_type=body.task_type,
         status=TaskStatus.today if due_today else TaskStatus.inbox,
-        scheduled_date=today_start() if due_today else None,
+        scheduled_date=_day_start(current_user) if due_today else None,
         sort_order=float(existing_count) if due_today else None,
         actuator_category_id=body.actuator_category_id,
         project_id=body.project_id,
@@ -324,15 +343,16 @@ def create_task(
 # ---------------------------------------------------------------------------
 
 def _maybe_sync_gcal(user_id: int, db: Session):
-    from datetime import date as _date
     token = db.query(GoogleCalendarToken).filter(
         GoogleCalendarToken.user_id == user_id
     ).first()
     if not token:
         return
-    today = _date.today()
-    if token.last_synced and token.last_synced.date() >= today:
-        return
+    # Re-sync at most every 30 minutes so new calendar events appear without manual sync
+    if token.last_synced:
+        elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - token.last_synced).total_seconds()
+        if elapsed < 1800:
+            return
     try:
         from routes.gcal import sync_today_events
         sync_today_events(user_id, db)
@@ -474,6 +494,7 @@ def get_today(
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
     promote_due_tasks(current_user, db)
+    _maybe_sync_gcal(current_user.id, db)
 
     tasks = (
         db.query(Task)
@@ -481,8 +502,8 @@ def get_today(
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.today,
-            Task.scheduled_date >= today_start(),
-            Task.scheduled_date <= today_end(),
+            Task.scheduled_date >= _day_start(current_user),
+            Task.scheduled_date <= _day_end(current_user),
         )
         .order_by(Task.sort_order.asc().nullslast(), Task.created_at.asc())
         .all()
@@ -522,7 +543,7 @@ def get_done_today(
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.done,
-            Task.completed_at >= today_start(),
+            Task.completed_at >= _day_start(current_user),
         )
         .order_by(Task.completed_at.desc())
         .all()
@@ -543,7 +564,7 @@ def schedule_today(
 ):
     task = own_task(task_id, current_user, db)
     task.status = TaskStatus.today
-    task.scheduled_date = today_start()   # local midnight — consistent with carry_forward and get_today
+    task.scheduled_date = _day_start(current_user)
     task.snooze_until = None
     # Apply any priority metadata set during triage
     if body.priority   is not None: task.priority   = body.priority

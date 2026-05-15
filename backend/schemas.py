@@ -70,6 +70,8 @@ class UserSettingsUpdate(BaseModel):
     notification_evening: Optional[str] = None
     triage_start_hour: Optional[int] = None
     triage_end_hour: Optional[int] = None
+    timezone: Optional[str] = None
+    day_start_hour: Optional[int] = None
 
 
 class SignupRequest(BaseModel):
@@ -100,6 +102,8 @@ class UserResponse(BaseModel):
     notification_evening: str
     triage_start_hour: int
     triage_end_hour: int
+    timezone: str
+    day_start_hour: int
     created_at: datetime
     needs_alpha_challenge: bool = False
     is_onboarded: bool = True

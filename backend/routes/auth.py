@@ -195,6 +195,12 @@ def update_settings(
         current_user.triage_start_hour = update.triage_start_hour
     if update.triage_end_hour is not None:
         current_user.triage_end_hour = update.triage_end_hour
+    if update.timezone is not None:
+        current_user.timezone = update.timezone
+    if update.day_start_hour is not None:
+        if not (0 <= update.day_start_hour <= 11):
+            raise HTTPException(status_code=400, detail="day_start_hour must be between 0 and 11")
+        current_user.day_start_hour = update.day_start_hour
     db.commit()
     db.refresh(current_user)
     return current_user

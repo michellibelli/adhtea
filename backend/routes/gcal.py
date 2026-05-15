@@ -22,10 +22,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+from zoneinfo import ZoneInfo
 from database import get_db
-from models import GoogleCalendarToken, Task, TaskStatus, TaskType, utcnow
+from models import GoogleCalendarToken, Task, TaskStatus, TaskType, User, utcnow
 from routes.auth import get_current_user
-from models import User
 
 router = APIRouter()
 
@@ -207,10 +207,15 @@ def sync_today_events(user_id: int, db: Session) -> int:
         return 0
 
     try:
-        service = _get_service(token)
-        today = date.today()
-        time_min = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=timezone.utc).isoformat()
-        time_max = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc).isoformat()
+        from models import User as _User
+        user = db.query(_User).filter(_User.id == user_id).first()
+        tz_name = getattr(user, "timezone", None) or "America/Los_Angeles"
+        tz = ZoneInfo(tz_name)
+        now_local = datetime.now(tz)
+        today = now_local.date()
+        # Sync window: midnight to 23:59:59 in user's local timezone
+        time_min = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=tz).isoformat()
+        time_max = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=tz).isoformat()
 
         # Sync primary calendar + any stored calendar IDs
         cal_ids = ["primary"]

@@ -52,6 +52,12 @@ def _migrate():
             conn.execute(text(
                 "ALTER TABLE projects ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
             ))
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
+            ))
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS day_start_hour INTEGER NOT NULL DEFAULT 6"
+            ))
             conn.commit()
 
 
