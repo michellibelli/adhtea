@@ -293,9 +293,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     if (!task) return
     try {
       await updateTask(task.id, patch)
-      const updater = (prev) => prev.map((t) => t.id === task.id ? { ...t, ...patch } : t)
-      if (isBonusMode) setBonusTasks(updater)
-      else setTasks(updater)
+      // If due_date moved off today, refetch so the task drops out of view
+      // and the next-priority item backfills. Backend demotes status=today→inbox
+      // when due_date > today (demote_misclassified_today).
+      const todayIso = new Date().toISOString().slice(0, 10)
+      const movedOffToday = patch.due_date && patch.due_date > todayIso
+      if (movedOffToday) {
+        await fetchAll()
+      } else {
+        const updater = (prev) => prev.map((t) => t.id === task.id ? { ...t, ...patch } : t)
+        if (isBonusMode) setBonusTasks(updater)
+        else setTasks(updater)
+      }
     } catch (err) { console.error(err) }
   }
 
