@@ -147,7 +147,7 @@ function AppShell() {
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
-        {screen === 'selfcare'  && <SelfCare />}
+        {screen === 'selfcare'  && <SelfCare userId={user?.id} />}
         {screen === 'settings'  && <Settings onNavigate={setScreen} user={user} />}
         {screen === 'tasks'     && <AllTasks />}
         {screen === 'projects'  && <Projects onNavigate={setScreen} />}

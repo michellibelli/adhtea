@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
-import { getMedication, createMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
+import { getMedications, addMedication, logTaken, getTodayLogs } from '../utils/medicationStore'
 import { createTask } from '../api/tasks'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
@@ -46,7 +46,7 @@ const EMPTY_FORM = {
   mood: null,
 }
 
-export default function SelfCare() {
+export default function SelfCare({ userId }) {
   const [log,        setLog]        = useState(null)
   const [capacity,   setCapacity]   = useState(null)
   const [medication, setMedication] = useState([])
@@ -57,17 +57,17 @@ export default function SelfCare() {
   const [form,       setForm]       = useState(EMPTY_FORM)
 
   const [showMedForm,   setShowMedForm]   = useState(false)
-  const [medForm,       setMedForm]       = useState({ name: '', dose: '', reminder_times: '' })
+  const [medForm,       setMedForm]       = useState({ name: '', reminder_times: '' })
   const [checkinText,   setCheckinText]   = useState('')
   const [checkinSaving, setCheckinSaving] = useState(false)
   const [checkinDone,   setCheckinDone]   = useState(false)
 
   useEffect(() => {
-    Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
-      .then(async ([todayLog, cap, meds]) => {
+    async function fetchAll() {
+      try {
+        const [todayLog, cap] = await Promise.all([getTodayLog(), getTodayCapacity()])
         setLog(todayLog)
         setCapacity(cap)
-        setMedication(meds)
         if (todayLog) {
           setForm({
             sleep_hours:      todayLog.sleep_hours,
@@ -78,16 +78,16 @@ export default function SelfCare() {
             mood:             todayLog.mood,
           })
         }
-        const ml = {}
-        await Promise.all(
-          meds.map(m =>
-            getMedicationTodayLog(m.id).then(l => { if (l) ml[m.id] = l })
-          )
-        )
-        setMedLogs(ml)
-      })
-      .finally(() => setLoading(false))
-  }, [])
+        if (userId) {
+          const [meds, ml] = await Promise.all([getMedications(userId), getTodayLogs(userId)])
+          setMedication(meds)
+          setMedLogs(ml)
+        }
+      } catch (err) { console.error(err) }
+      finally { setLoading(false) }
+    }
+    fetchAll()
+  }, [userId])
 
   async function handleSave() {
     setSaving(true)
@@ -103,9 +103,10 @@ export default function SelfCare() {
   }
 
   async function handleLogMed(id) {
+    if (!userId) return
     try {
-      const ml = await logMedicationTaken(id)
-      setMedLogs(prev => ({ ...prev, [id]: ml }))
+      await logTaken(userId, id)
+      setMedLogs(prev => ({ ...prev, [id]: true }))
     } catch (err) { console.error(err) }
   }
 
@@ -122,12 +123,12 @@ export default function SelfCare() {
   }
 
   async function handleAddMed() {
-    if (!medForm.name.trim()) return
+    if (!medForm.name.trim() || !userId) return
     try {
       const times = medForm.reminder_times.trim().replace(/\s+/g, '').replace(/,+/g, ',').replace(/,$/, '') || null
-      const created = await createMedication({ name: medForm.name.trim(), dose: medForm.dose.trim() || null, reminder_times: times })
+      const created = await addMedication(userId, { name: medForm.name.trim(), reminder_times: times })
       setMedication(prev => [...prev, created])
-      setMedForm({ name: '', dose: '', reminder_times: '' })
+      setMedForm({ name: '', reminder_times: '' })
       setShowMedForm(false)
     } catch (err) { console.error(err) }
   }
@@ -292,11 +293,6 @@ export default function SelfCare() {
                 placeholder="Medication name"
               />
               <Input
-                value={medForm.dose}
-                onChange={e => setMedForm(f => ({ ...f, dose: e.target.value }))}
-                placeholder="Dose (optional)"
-              />
-              <Input
                 value={medForm.reminder_times}
                 onChange={e => setMedForm(f => ({ ...f, reminder_times: e.target.value }))}
                 placeholder="Reminder times e.g. 08:00, 14:00 (optional)"
@@ -316,7 +312,6 @@ export default function SelfCare() {
                   <Card key={med.id} className="px-4 py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ui-text">{med.name}</p>
-                      {med.dose && <p className="text-xs text-ui-subtext">{med.dose}</p>}
                       {times.length > 0 && (
                         <p className="text-xs text-ui-subtext mt-0.5">⏰ {times.join(' · ')}</p>
                       )}
