@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-14*
+*Last updated: 2026-05-15*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -41,7 +41,20 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 Everything below is shipped and live on adh-tea.fun.
 
-### Phase 3.9 completed (2026-05-15)
+### Phase 3.9.7–3.9.15 completed (2026-05-15, evening)
+
+Hardening + code-quality + privacy redesign pass. No new user-facing features beyond the medication redesign and tournament daily cap; rest is infrastructure polish for handoff.
+
+- **Google Calendar multi-cal + critical sync bug fix** — `_get_service(token)` was missing inside the calendar loop in `sync_today_events`, causing every iteration to throw a silently-caught NameError → 0 events created. Multi-calendar selector UI added in Settings → Google Calendar; `PATCH /gcal/calendars` stores non-primary IDs as JSON in `token.calendar_ids`. `/gcal/debug` endpoint removed (was leaking partial client ID in production).
+- **Loading + error states** — new `components/PageState.jsx` exports `PageLoading`, `PageError`, `InlineSkeletonCards`. Today/Inbox/Waiting/Projects/AllTasks all use the animated skeleton + retry button pattern instead of plain "Loading…" / silent failures.
+- **Security audit + fixes** — timezone validated through `ZoneInfo()` in `update_settings` (rejects bad values), CSV import capped at 5 MB, password min length 8 enforced on Setup/Register/Signup via `Annotated[str, Field(min_length=8, max_length=128)]` (Login left alone so existing users still work), debug endpoint deleted.
+- **Medication privacy redesign** — `dose` field removed entirely (form, schema-level, display). Server now stores placeholder names ("Medication 1", "Medication 2") in `MedicationSchedule.name`; real names live in `localStorage` keyed by `med_name_{userId}_{serverId}` via `frontend/src/utils/medicationStore.js`. Reminder times and taken-logs stay server-side and survive any device change. UI shows a privacy note explaining the model and falls back to "name not on this device" if the local map is cleared. Frontend keeps using the existing `/medication/*` server API; only the name string is pseudonymous.
+- **Tournament daily 3-pass cap** — `localStorage` tracks `triage_pass_count` per day. Pass 2 shows a refinement banner; pass 3 says "final pass"; pass 4+ shows a friendly gate screen ("Priorities are locked in. Come back tomorrow."). Auto-resets at midnight. Increments only on `Done`, not on abandon.
+- **Code review pass (perf + readability)** — projects.py N+1 fix (single `func.count` + `group_by` instead of one query per project), Today.jsx optimistic updates (tasks disappear instantly), Inbox.jsx `useRef` stabilization for `onCountChange` so parent re-renders don't trigger refetches, Settings.jsx primary-calendar detection no longer matches calendars merely named "Primary X". Named constants for `TOKEN_EXPIRY_DAYS`, `TRIAGE_SHOW_LIMIT`, `EXEC_GOOD/OK/LOW`, `WARMUP_RETRY_DELAY_MS`. Weekend date math in `snooze.js` simplified to single modulo formula. Plain-English explanatory comments added throughout for handoff readability (`domain_utils.py`, `auth.py`, `tasks.py`, `Focus.jsx`, `TaskCard.jsx`, more).
+- **Code review pass (correctness + error handling)** — `auth.py /me` now uses `UserResponse.model_validate()` instead of dumping `__table__.columns` (future sensitive fields like a hypothetical `hashed_password` can't accidentally leak through the dict comprehension). `_maybe_sync_gcal` and `gcal.py /status` JSON-parse exceptions now log to server output instead of `except: pass`. Triage CriticalList complete button wrapped in proper try/catch + refetch fallback.
+- **.gitignore tightened** — `docs/Secret Key.txt` and `docs/Server Stuff.txt` added; confirmed never committed via `git log --all`.
+
+### Phase 3.9.0–3.9.6 completed (2026-05-15, earlier waves)
 
 Tournament-driven Triage at scale.
 
@@ -123,11 +136,12 @@ Tournament-driven Triage at scale.
 
 ## Known issues / small todos
 
-1. **UptimeRobot** — Render sleep workaround not set up yet. Add ping to `https://api.adh-tea.fun/health` every 5 min.
-2. **TriageCard inline edit** — `TriageCard.jsx` lacks pencil edit button (`TaskCard.jsx` has it).
-3. **Google Calendar multi-calendar** — no UI to select which calendars to sync (defaults to primary).
-4. **Loading/error states** — some pages lack skeleton loaders or graceful API failure UI.
-5. **BottomNav crowding** — 8 items tight on mobile; may need redesign before wider rollout.
+1. **#7 Build chip Settings section** — add toggle/customize for the BUILD timestamp chip. Low priority.
+2. **#22 Rate limit `POST /login`** — `slowapi` package, defensive against brute-force. Not urgent for family-only deploy.
+3. **BottomNav crowding** — 8 items tight on mobile; may need redesign before wider rollout.
+4. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
+
+Resolved 2026-05-15: #2 UptimeRobot, #3 TriageCard inline edit (already shipped), #4 GCal multi-cal, #5 loading/error states, #11 security audit, #21 GCal sync bug.
 
 ---
 

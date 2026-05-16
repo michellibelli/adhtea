@@ -1,79 +1,68 @@
 # Session bookmark
-*Last wrap: 2026-05-15 — Claude-assisted session, second wrap of the day*
+*Last wrap: 2026-05-15 — third wrap of the day, code-quality + security pass*
 
 ## State
 
-Live commit: `5f5b069` (tournament snooze sheet). BUILD chip on prod
-should read `3.9.6` once Vercel deploys this `[wrap]` commit (no version
-bump on the wrap itself unless code follows).
+Live commit: `9fcd472` (correctness fixes from second review). BUILD chip on prod
+should read `3.9.15` once Vercel deploys.
 
-Vercel + Render both deploying from `master` on push. `gh` and `vercel`
-CLIs linked. `~/.aria-token` good for ~29 more days.
+Vercel + Render both deploying from `master` on push. `gh` CLI works from
+PowerShell via full path `C:\Program Files\GitHub CLI\gh.exe` (not on PATH
+in Bash). `~/.aria-token` good for ~29 more days.
 
-## What shipped this session (second half of the day)
+## What shipped this session (third wrap)
 
-PR | What
----|---
-**#9**  `aaae7dd` | tournament blank screen — useEffect after early return (rules-of-hooks)
-**#10** `9ccc501` | regular Triage skips routines and appointments
-**#12** `40abe2a` | demote status=today tasks whose due_date is in the future (one-time sweep + on every GET /tasks/today)
-**#13** `3d4a81a` | tournament includes all inbox tasks (drop the due_date filter that was hiding the demoted backlog)
-**#14** `99764b0` | triage campaign — full re-rank with user-configurable daily caps. New `User.max_tasks_per_day` (5–15, default 10) + `User.max_total_per_day` (10–20, default 15) columns. `POST /tasks/tournament/start` resets placements. Settings → Daily limits sliders.
-**#15** `90a517e` | Focus refetches Today after pushing edited task to future day
-**#16** `635265c` | `ConfirmModal` (tea-themed, no more browser confirm()) + `ProjectBadge` (🌱 amber pill) rendered everywhere a task appears (TaskCard, TournamentCard in Triage, Tournament TaskTile, AllTasks row). Delete button + ConfirmModal added to AllTasks rows.
-**#17** `37c8baf` | tournament submit 500 fix (`today_start()` → `_day_start(user)`) + drag-to-reorder (replaces tap-to-rank). Whole-card drag target. Explicit "Confirm this round" button.
-**#18** `9416cbf` | drop the ⋮⋮ drag-handle glyph (visual was misleading — drag worked everywhere)
-**#19** `59afd43` | tournament card ✓ "already done" button — completes a task mid-triage so it lands in the Done-today list
-**#20** `5f5b069` | tournament 🌙 snooze opens SnoozeSheet picker (tomorrow / EOW / next week / pick date) instead of hard-coded 1-month
+| Commit | What |
+|---|---|
+| **#21+#4** | Google Calendar multi-cal selector + critical sync bug fix. `_get_service(token)` was missing inside the `for cal_id` loop in `sync_today_events`, causing every iteration to throw NameError, silently caught → always 0 created. Added `PATCH /gcal/calendars` endpoint + Settings UI with per-calendar checkboxes. Removed `/gcal/debug` endpoint (leaked partial client ID in production). |
+| **#3** | TriageCard pencil edit issue — turned out already shipped in #16; closed. Old `TriageCard.jsx` was orphaned (nothing imported it); deleted clean. |
+| **#5** | Loading + error states. New `components/PageState.jsx` with `PageLoading`, `PageError`, `InlineSkeletonCards`. Applied to Today, Inbox, Waiting, Projects, AllTasks. Replaces plain "Loading…" with animated skeleton cards and "Try again" buttons. |
+| **#2** | UptimeRobot ping configured external to repo. |
+| **#11** | Security audit pass. Fixed: timezone validation gap in `update_settings`, unbounded CSV upload (5 MB cap), debug endpoint removed, password minimum length (8 chars via `Annotated[str, Field(min_length=8, max_length=128)]`) applied to Setup/Register/Signup/UserCreate (NOT Login — would break existing users). |
+| **3.9.11** | Medication redesign — phase 1: removed dose field from add form and storage (privacy-first). |
+| **3.9.13** | Medication redesign — phase 2: pseudonymization model. Server now stores placeholders ("Medication 1", "Medication 2"). Device-only localStorage map holds the real medication names. Reminder times + taken logs stay server-side. UI note explains the tradeoff. New `frontend/src/utils/medicationStore.js` with `getMedName`/`setMedName`. Old AES-GCM encrypted local storage approach abandoned in favor of this simpler pseudonymization. |
+| **3.9.12** | Tournament: 3-pass-per-day cap with localStorage tracking. Pass 2 shows refinement banner; pass 3 shows "final pass"; pass 4 hits gate screen ("Priorities are locked in. Come back tomorrow."). Resets next day automatically. Tracks `triage_pass_date` + `triage_pass_count` keys. |
+| **3.9.14** | First code review pass — perf fixes, named constants, comments throughout. 16 files. Highlights: projects.py N+1 fix (10 projects = 2 queries instead of 11 via `func.count` + `group_by`), Today.jsx optimistic updates (tasks disappear instantly, no full refetch), Inbox.jsx useRef stabilization for `onCountChange`, Settings.jsx primary calendar detection (removed fragile name-string check), named threshold constants in CapacityBar, simplified weekend date math in snooze.js, plus plain-English comments aimed at a mid-level developer handoff. |
+| **3.9.15** | Second independent code review pass — correctness/error-handling fixes. `auth.py /me` now builds response via `UserResponse.model_validate()` instead of dumping `__table__.columns` (future sensitive fields can't leak). `_maybe_sync_gcal` and `gcal.py /status` JSON parse now log exceptions instead of `except: pass`. Triage CriticalList completeTask wrapped in try/catch with refetch fallback. |
 
-BUILD: `3.8.5 → 3.8.6 → 3.8.7 → 3.8.8 → 3.9.0 → 3.9.1 → 3.9.2 → 3.9.3 → 3.9.4 → 3.9.5 → 3.9.6`
+BUILD: `3.9.6 → 3.9.7 → 3.9.8 → 3.9.9 → 3.9.10 → 3.9.11 → 3.9.12 → 3.9.13 → 3.9.14 → 3.9.15`
 
 ## Bigger-picture state changes
 
-- **Tournament is the primary triage flow for overflow days.** Classic Triage still exists for daily decisions on a manageable-size today list (≤7 items by default), but when today is overloaded the user runs "Triage all" from Today's header or Settings → "Triage tournament 🍵". Both entry points show a tea-themed ConfirmModal before resetting.
-- **Reset-on-start semantics.** Campaign mode clears `status=today/snoozed`, `scheduled_date`, `sort_order`, `snooze_until`, and `due_date` for all incomplete user tasks (task_type=task). Routines + appointments are never touched. User then re-ranks from scratch.
-- **Both caps are user-controlled in Settings.** Slider auto-saves on pointerup via `PATCH /me/settings`.
+- **Medication privacy model is now pseudonymization, not E2E encryption.** Server sees "Medication 1, 2, 3" + reminder times + taken history. Device alone holds the name mapping. If the user clears browser data, names show as placeholders with "name not on this device" note; logs/reminders survive untouched. This is simpler than full PBKDF2+AES-GCM and recovers gracefully from device changes.
+- **Tournament is now self-limiting** to 3 passes per day. Prevents the user from grinding the same list endlessly. Refinement banner makes it explicit when they're re-triaging.
+- **Code quality is now mid-level-developer-handoff ready** in the changed files. Two independent AI code reviews (one perf-focused, one correctness-focused) ran across the codebase; legitimate findings from both were addressed. Comments throughout explain the *why* of non-obvious decisions for someone with ~1 year coding experience to follow.
 
-## Open issues (6)
+## Open issues
 
 ```
-#2  enhancement   UptimeRobot ping not set up
-#3  bug           TriageCard lacks inline edit (pencil)
-#4  enhancement   Google Calendar: multi-calendar selection UI
-#5  enhancement   Loading / error skeleton states
 #7  enhancement   Build chip: add Settings section to toggle/customize
-#11 enhancement   Data security audit — medicine and other PII
-#21 bug           Google Calendar sync misses appointments on non-primary calendars
+#22 enhancement   Rate limiting on POST /login (slowapi)
 ```
 
-Closed this session: #1 (E2E verify — exercised), #6 (snooze date picker — shipped), #8 (workflow docs — shipped), #9, #10, #12, #13, #14, #15, #16, #17, #18, #19, #20.
+Closed this session: #2, #3, #4, #5, #11, #21.
+
+## Lingering style/correctness items intentionally NOT fixed
+
+From the two review passes, these were flagged but skipped with reasoning:
+
+- `auth.py:46` `_make_session` no commit — standard SQLAlchemy "helper stages, caller commits" pattern, not a bug.
+- `auth.py:72` token expiry `>` vs `>=` — 1-second edge case, no observable impact.
+- `main.py:41` `is_owner` migration `MIN(id)` — runs once on existing DB; doesn't affect new installs.
+- `tasks.py:194` snooze `<=` race — sub-second window, no observable impact.
+- `tasks.py:752` cascade date shift — reviewer was wrong about cross-domain risk; siblings share `project_id` therefore share domain.
+- `domains.py:42` + `tasks.py:517` `== True/None` style — already `noqa`'d intentionally. SQLAlchemy translates `== None` into SQL `IS NULL`; changing to `.is_()` is cleaner but not required.
+- `Today.jsx:144` optimistic update — reviewer wanted explicit `setTasks(prev => [...prev, task])` revert pattern. Current code uses `fetchTasks()` fallback on error which is more robust against server-side state drift.
 
 ## Where to resume
 
 Suggested order of value:
-1. **#21 + #4 together** — multi-cal picker would land us a UX win and a debug surface that resolves the missing-appointment bug. Probably one branch.
-2. **#3** — small, quick parity fix (TriageCard pencil edit).
-3. **#5** — broader UX win (skeleton loaders + error UI). Can be partial.
-4. **#2** — UptimeRobot — 5-minute external setup, not code.
-5. **#7** — Build chip Settings section — defer until you actually want to fiddle with it.
-6. **#11** — data security audit — sizable. Schedule a dedicated session.
 
-## Notes for next session
+1. **Real device testing** — verify the medication pseudonymization flow end-to-end on the user's phone. Browser clear + re-entry should show placeholders. Logs/reminders should persist.
+2. **#7** — Build chip Settings section. Low priority; defer until you want it.
+3. **#22** — Rate limit `POST /login` with slowapi. Defensive; not urgent for family-only deploy.
+4. **Real human code review** — both AI reviews together still missed things a human would catch. If you find someone, the codebase is in much better shape than this morning for it.
 
-- **Tournament flow is sensitive to backend caps**. If you adjust `_find_target` behavior, also check that targets advance correctly mid-round in `tournament_submit` (it re-evaluates per task — see commit body of #14).
-- **`_day_start(user)` not `today_start()`** is the correct helper. Latter doesn't exist; will 500 the route. PR #17 fixed two call sites.
-- **All "are you sure?" prompts should use `ConfirmModal`** going forward. `confirm()` calls remaining: none in current source (grep clean).
-- **ProjectBadge usage**: pass `task.project_name`; renders nothing when null. Use `size="xs"` in dense lists, default `sm` on cards.
-- **Drag-to-rank in Tournament**: dnd-kit `SmartPointerSensor` blocks drag activation on inputs/textareas/buttons/labels. Drag is whole-card. Corner buttons stop propagation so taps work.
-- **GCal sync was clean (no errors) but produced 0 events** — likely calendar selection (see #21 + #4).
+## Local-only files NOT in repo
 
-## Async-team workflow (recap)
-
-Each work session:
-1. `git fetch && git log --oneline HEAD..origin/master` (see other-session pushes)
-2. `gh pr list` (in-progress branches)
-3. `gh issue list --state open` (queue)
-4. `bash scripts/deploy-check.sh` (live state)
-5. `cat SESSION.md` (this file)
-
-Each commit on master also bumps the `BUILD` file. Branch + draft PR per non-trivial change. Squash-merge to master.
+`docs/Secret Key.txt` and `docs/Server Stuff.txt` were added to `.gitignore` this session — never committed, confirmed by `git log --all -- "docs/..."` returning empty. Keep them out of git permanently; move them out of the project folder if they hold long-term secrets you might mix up.
