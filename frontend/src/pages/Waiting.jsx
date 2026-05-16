@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getBacklog, completeTask, unsnoozeTask, deleteTask } from '../api/tasks'
 import Card from '../components/Card'
+import { PageLoading, PageError } from '../components/PageState'
 
 const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 
@@ -116,10 +117,13 @@ function BacklogRow({ task, onComplete, onUnsnooze, onDelete }) {
 export default function Waiting() {
   const [tasks,   setTasks]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState(null)
 
   const fetchTasks = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try { setTasks(await getBacklog()) }
-    catch (err) { console.error(err) }
+    catch (err) { console.error(err); setError(true) }
     finally { setLoading(false) }
   }, [])
 
@@ -129,9 +133,8 @@ export default function Waiting() {
   async function handleUnsnooze(id)  { await unsnoozeTask(id);  fetchTasks() }
   async function handleDelete(id)    { await deleteTask(id);    fetchTasks() }
 
-  if (loading) {
-    return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">…</p></div>
-  }
+  if (loading) return <PageLoading />
+  if (error)   return <PageError onRetry={fetchTasks} />
 
   const groups = groupTasks(tasks)
 

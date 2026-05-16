@@ -21,6 +21,7 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ConfirmModal from '../components/ConfirmModal'
+import { PageLoading, PageError } from '../components/PageState'
 
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 
@@ -92,6 +93,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   const [doneTasks, setDone]    = useState([])
   const [capacity, setCapacity] = useState(null)
   const [loading, setLoading]   = useState(true)
+  const [error,   setError]     = useState(null)
   const [showDone, setShowDone] = useState(false)
   const [expandedDoneId, setExpandedDoneId] = useState(null)
   const [sortBy, setSortBy]     = useState('manual')
@@ -104,12 +106,14 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   )
 
   const fetchTasks = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const [todayList, doneList, cap] = await Promise.all([getToday(), getDoneToday(), getTodayCapacity()])
       setTasks(todayList)
       setDone(doneList)
       setCapacity(cap)
-    } catch (err) { console.error(err) }
+    } catch (err) { console.error(err); setError(true) }
     finally { setLoading(false) }
   }, [])
 
@@ -147,7 +151,8 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
     await reorderTasks(reordered.map(t => t.id))
   }
 
-  if (loading) return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
+  if (loading) return <PageLoading />
+  if (error)   return <PageError onRetry={fetchTasks} />
 
   return (
     <div className="aria-page">

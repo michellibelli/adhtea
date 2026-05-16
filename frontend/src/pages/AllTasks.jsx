@@ -5,6 +5,7 @@ import Card from '../components/Card'
 import { Input } from '../components/Input'
 import ProjectBadge from '../components/ProjectBadge'
 import ConfirmModal from '../components/ConfirmModal'
+import { InlineSkeletonCards, PageError } from '../components/PageState'
 
 const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 
@@ -179,6 +180,7 @@ export default function AllTasks() {
   const [tasks,            setTasks]            = useState([])
   const [projects,         setProjects]         = useState([])
   const [loading,          setLoading]          = useState(true)
+  const [error,            setError]            = useState(null)
   const [query,            setQuery]            = useState('')
   const [selected,         setSelected]         = useState(new Set())
   const [editingId,        setEditingId]        = useState(null)
@@ -187,12 +189,16 @@ export default function AllTasks() {
   const [batchDate,        setBatchDate]        = useState('')
   const [askDelete,        setAskDelete]        = useState(null)  // task object or null
 
-  useEffect(() => {
+  function fetchAll() {
+    setLoading(true)
+    setError(null)
     Promise.all([getBacklog(), listProjects()])
       .then(([t, p]) => { setTasks(t); setProjects(p.filter(p => p.status === 'active')) })
-      .catch(console.error)
+      .catch(err => { console.error(err); setError(true) })
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { fetchAll() }, [])
 
   const filtered = query.trim()
     ? tasks.filter((t) =>
@@ -382,7 +388,9 @@ export default function AllTasks() {
 
         {/* Task list */}
         {loading ? (
-          <p className="text-sm text-ui-subtext px-1">…</p>
+          <InlineSkeletonCards />
+        ) : error ? (
+          <PageError onRetry={fetchAll} />
         ) : filtered.length === 0 ? (
           <p className="text-sm text-ui-subtext px-1">
             {query ? `No results for "${query}"` : 'No active tasks'}

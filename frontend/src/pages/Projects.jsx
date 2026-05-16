@@ -23,6 +23,7 @@ function fmtDate(iso) {
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
+import { PageLoading, PageError } from '../components/PageState'
 
 function ProgressBar({ done, total }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -228,6 +229,7 @@ function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, o
 export default function Projects({ onNavigate }) {
   const [projects,  setProjects]  = useState([])
   const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState(null)
   const [expanded,  setExpanded]  = useState(null)
   const [detail,    setDetail]    = useState({})
 
@@ -256,11 +258,17 @@ export default function Projects({ onNavigate }) {
   const [domains,      setDomains]      = useState([])
   const [newDomainId,  setNewDomainId]  = useState(null)
 
-  useEffect(() => {
+  function fetchProjects() {
+    setLoading(true)
+    setError(null)
     listProjects()
       .then(setProjects)
-      .catch(console.error)
+      .catch(err => { console.error(err); setError(true) })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchProjects()
     listDomains().then(setDomains).catch(console.error)
   }, [])
 
@@ -465,13 +473,8 @@ export default function Projects({ onNavigate }) {
     } catch (err) { console.error(err) }
   }
 
-  if (loading) {
-    return (
-      <div className="aria-page flex items-center justify-center">
-        <p className="text-sm text-ui-subtext">Loading…</p>
-      </div>
-    )
-  }
+  if (loading) return <PageLoading />
+  if (error)   return <PageError onRetry={fetchProjects} />
 
   return (
     <div className="aria-page">

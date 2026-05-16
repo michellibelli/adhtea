@@ -2,17 +2,21 @@ import { useState, useEffect, useCallback } from 'react'
 import { getInbox, scheduleToday, snoozeTask, deleteTask } from '../api/tasks'
 import TaskCard from '../components/TaskCard'
 import Card from '../components/Card'
+import { PageLoading, PageError } from '../components/PageState'
 
 export default function Inbox({ onCountChange }) {
-  const [tasks, setTasks] = useState([])
+  const [tasks,   setTasks]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState(null)
 
   const fetchTasks = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const list = await getInbox()
       setTasks(list)
       onCountChange?.(list.length)
-    } catch (err) { console.error(err) }
+    } catch (err) { console.error(err); setError(true) }
     finally { setLoading(false) }
   }, [onCountChange])
 
@@ -22,7 +26,8 @@ export default function Inbox({ onCountChange }) {
   async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
   async function handleDelete(id) { await deleteTask(id); fetchTasks() }
 
-  if (loading) return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
+  if (loading) return <PageLoading />
+  if (error)   return <PageError onRetry={fetchTasks} />
 
   return (
     <div className="aria-page">
