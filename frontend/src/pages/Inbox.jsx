@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getInbox, scheduleToday, snoozeTask, deleteTask } from '../api/tasks'
 import TaskCard from '../components/TaskCard'
 import Card from '../components/Card'
@@ -9,16 +9,22 @@ export default function Inbox({ onCountChange }) {
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
 
+  // Store onCountChange in a ref so fetchTasks doesn't need it as a dependency.
+  // Without this, every time the parent re-renders (creating a new function reference),
+  // fetchTasks would recreate and the useEffect would fire, causing unnecessary re-fetches.
+  const onCountChangeRef = useRef(onCountChange)
+  useEffect(() => { onCountChangeRef.current = onCountChange }, [onCountChange])
+
   const fetchTasks = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const list = await getInbox()
       setTasks(list)
-      onCountChange?.(list.length)
+      onCountChangeRef.current?.(list.length)
     } catch (err) { console.error(err); setError(true) }
     finally { setLoading(false) }
-  }, [onCountChange])
+  }, [])  // stable — doesn't recreate when parent re-renders with a new callback ref
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 

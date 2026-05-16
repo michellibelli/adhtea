@@ -121,7 +121,9 @@ function GoogleCalendarCard() {
           ) : (
             <div className="space-y-1">
               {calendars.map(cal => {
-                const isPrimary = cal.id === 'primary' || cal.name?.toLowerCase().includes('primary')
+                // Only the literal Google API id 'primary' is the user's main calendar.
+                // Don't check the display name — a calendar called "Primary Work" would match falsely.
+                const isPrimary = cal.id === 'primary'
                 const isSelected = cal.id === 'primary' || selectedIds.includes(cal.id)
                 return (
                   <label key={cal.id} className={`flex items-center gap-2 cursor-pointer ${isPrimary ? 'opacity-60 cursor-default' : ''}`}>

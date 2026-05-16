@@ -19,8 +19,12 @@ from schemas import (
 router = APIRouter()
 security = HTTPBearer()
 
+# How long a login session stays valid before the user must log in again
+TOKEN_EXPIRY_DAYS = 30
+
 
 def _get_or_init_config(db: Session) -> SiteConfig:
+    """Fetch the single site-wide config row, creating it if it doesn't exist yet."""
     config = db.query(SiteConfig).first()
     if not config:
         config = SiteConfig()
@@ -31,12 +35,16 @@ def _get_or_init_config(db: Session) -> SiteConfig:
 
 
 def _make_session(user_id: int, db: Session) -> str:
+    """Create a new auth token for user_id, store it in the DB, and return the token string.
+
+    The token is a 64-character random hex string (32 bytes of entropy).
+    It expires after TOKEN_EXPIRY_DAYS days. The frontend stores it in localStorage
+    and sends it as a Bearer token on every API request.
+    """
     token_str = secrets.token_hex(32)
     expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
     db.add(SessionToken(user_id=user_id, token=token_str, expires_at=expires))
     return token_str
-
-TOKEN_EXPIRY_DAYS = 30
 
 PRESET_ACTUATORS = [
     {"name": "Engineering", "description": "Technical problem solving, building, and systems thinking."},

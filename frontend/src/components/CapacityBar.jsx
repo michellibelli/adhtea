@@ -1,3 +1,5 @@
+// The five inputs that feed into the capacity score.
+// Each key matches a field in the CapacitySnapshot returned by the API.
 const SOURCES = [
   { key: 'sleep_battery',       label: 'Sleep', color: 'bg-indigo-400' },
   { key: 'nutrition_battery',   label: 'Food',  color: 'bg-amber-400'  },
@@ -6,10 +8,17 @@ const SOURCES = [
   { key: 'executive_capacitor', label: 'Focus', color: 'bg-violet-400' },
 ]
 
+// Thresholds for the executive function (focus) score, 0–100.
+// Below EXEC_OK the app surfaces a coaching note encouraging lighter work.
+const EXEC_GOOD = 70  // above this → no note shown
+const EXEC_OK   = 50  // above this → mild note
+const EXEC_LOW  = 30  // above this → moderate note; below → heavy note
+
 function execNote(val) {
-  if (val >= 70) return null
-  if (val >= 50) return 'Focus may be a bit harder today'
-  if (val >= 30) return 'Executive tasks will take more effort — lean on your routines'
+  // Returns a coaching message when focus capacity is reduced, or null when it's fine.
+  if (val >= EXEC_GOOD) return null
+  if (val >= EXEC_OK)   return 'Focus may be a bit harder today'
+  if (val >= EXEC_LOW)  return 'Executive tasks will take more effort — lean on your routines'
   return 'Focus is low today — lean into light tasks and self-care'
 }
 

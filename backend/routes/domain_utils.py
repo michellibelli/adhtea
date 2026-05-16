@@ -1,49 +1,75 @@
-"""Domain date enforcement helpers."""
+"""Domain date enforcement helpers.
+
+A "domain" is a life area (e.g. Work, Family) that can have scheduling rules
+like "only allow tasks on weekdays" or "only mornings." These helpers check
+and enforce those rules when placing tasks on the calendar.
+"""
 
 from datetime import date, timedelta
 
+# Full weekday names indexed 0=Monday … 6=Sunday (matches Python's date.weekday())
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 def _date_allowed(d: date, rules: list) -> bool:
-    """True if d matches at least one rule's allowed days. Empty rules = no restriction."""
+    """Return True if date d is permitted by at least one rule in the list.
+
+    Rules use OR logic — if ANY rule permits the day, the date is allowed.
+    A rule with days=None has no day restriction (any day is fine).
+    Empty rules list means no restrictions at all.
+    """
     if not rules:
         return True
     wd = d.weekday()  # 0=Mon, 6=Sun
     for rule in rules:
         days = rule.get("days")
+        # If this rule restricts days and today isn't one of them, try the next rule
         if days is not None and wd not in days:
             continue
+        # Either no day restriction or the day matched — this rule permits the date
         return True
-    return False
+    return False  # no rule permitted this day
 
 
 def next_allowed_date(d: date, rules: list, max_days: int = 365) -> date:
-    """Snap d forward to the nearest day allowed by domain rules."""
+    """Walk forward from d until we find a day the domain rules permit.
+
+    Used when AI generates tasks with due dates — we snap any restricted date
+    to the next valid one (e.g. if a Work domain only allows weekdays and the
+    AI picked Saturday, this returns the following Monday).
+    """
     if not rules:
         return d
     for i in range(max_days):
         candidate = d + timedelta(days=i)
         if _date_allowed(candidate, rules):
             return candidate
-    return d  # fallback — should never happen with reasonable rules
+    return d  # safety fallback — shouldn't happen with reasonable rules
 
 
 def allowed_days_set(rules: list) -> set[int]:
-    """Return set of weekday ints (0=Mon) allowed by any rule. Empty = all days."""
+    """Return the set of weekday numbers (0=Mon … 6=Sun) allowed by any rule.
+
+    If a rule has no day restriction (days=None) that means ALL days are allowed,
+    so we immediately return the full set. Empty rules also returns all days.
+    """
     if not rules:
         return set(range(7))
     days = set()
     for rule in rules:
         rule_days = rule.get("days")
         if rule_days is None:
-            return set(range(7))  # at least one rule has no day restriction
+            return set(range(7))  # one unrestricted rule = all days are fair game
         days.update(rule_days)
     return days
 
 
 def domain_days_prompt_hint(rules: list) -> str:
-    """Short string for injecting allowed days into an AI prompt."""
+    """Build a short constraint string to inject into the AI task-generation prompt.
+
+    Tells Claude which days of the week tasks for this domain may be scheduled on.
+    Returns empty string when there are no day restrictions.
+    """
     days = allowed_days_set(rules)
     if not days or days == set(range(7)):
         return ""

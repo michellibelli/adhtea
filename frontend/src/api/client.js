@@ -35,8 +35,14 @@ export function likelySleeping() {
   return Date.now() - last >= SLEEP_THRESHOLD_MS
 }
 
+// How long to wait between each retry when waking the server (milliseconds).
+// Render.com free tier spins down after 15 minutes of inactivity; spin-up
+// typically takes 30-45 seconds, so 8 retries × 5s = 40s total wait time.
+const WARMUP_RETRY_DELAY_MS = 5000
+
 // Proactive wake — call before app init if likelySleeping().
 // onLog(msg) fires for each status update. Resolves when server responds or gives up.
+// The _warmUpPromise guard prevents multiple simultaneous wake attempts.
 let _warmUpPromise = null
 
 export async function warmUp(onLog) {
@@ -46,7 +52,7 @@ export async function warmUp(onLog) {
 }
 
 async function _doWarmUp(onLog) {
-  const delays = [5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000]
+  const delays = Array(8).fill(WARMUP_RETRY_DELAY_MS)
   onLog('Checking server...')
   for (let i = 0; i <= delays.length; i++) {
     try {

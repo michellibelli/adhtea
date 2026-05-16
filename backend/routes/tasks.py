@@ -240,9 +240,22 @@ def promote_due_tasks(user: User, db: Session):
 # to show a live load indicator as items are scheduled)
 # ---------------------------------------------------------------------------
 
+# Task weight as a number: light=1, medium=2, heavy=3.
+# Sum these across all today's tasks to get a "load score" for the day.
 WEIGHT_VALUES = {"light": 1, "medium": 2, "heavy": 3}
 
 def load_level(tasks):
+    """Classify the day's workload as a string label based on total task weight.
+
+    Thresholds (sum of all task weights):
+      ≤ 6  → "light"      (≈ up to 3 light tasks or 2 mediums)
+      ≤ 12 → "manageable" (≈ a typical full day)
+      ≤ 18 → "heavy"      (≈ packed day)
+      > 18 → "overloaded" (more than a realistic day)
+
+    Note: the frontend has a parallel computeLoad() that uses the same thresholds
+    but returns richer UI data (color, percent bar). Keep both in sync if thresholds change.
+    """
     if not tasks: return "clear"
     s = sum(WEIGHT_VALUES.get(str(t.weight.value if hasattr(t.weight, 'value') else t.weight), 2) for t in tasks)
     if s <= 6:  return "light"
@@ -371,12 +384,18 @@ def create_task(
 # ---------------------------------------------------------------------------
 
 def _maybe_sync_gcal(user_id: int, db: Session):
+    """Pull today's Google Calendar events and create appointment Tasks — at most once every 30 minutes.
+
+    Called automatically when the user loads their Today or Inbox list so new calendar
+    events appear without the user having to manually press "Sync." The 30-minute throttle
+    prevents hammering the Google API on every page load.
+    """
     token = db.query(GoogleCalendarToken).filter(
         GoogleCalendarToken.user_id == user_id
     ).first()
     if not token:
-        return
-    # Re-sync at most every 30 minutes so new calendar events appear without manual sync
+        return  # user hasn't connected Google Calendar
+    # Skip if synced recently — 1800 seconds = 30 minutes
     if token.last_synced:
         elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - token.last_synced).total_seconds()
         if elapsed < 1800:
@@ -385,7 +404,7 @@ def _maybe_sync_gcal(user_id: int, db: Session):
         from routes.gcal import sync_today_events
         sync_today_events(user_id, db)
     except Exception:
-        pass
+        pass  # never let a GCal failure break the task list
 
 
 # ---------------------------------------------------------------------------
@@ -811,7 +830,18 @@ TOURNAMENT_HORIZON_DAYS = 30
 
 
 def _count_for_day(db, user_id: int, target: date, today_d: date):
-    """Return (task_count, total_count) for the given day."""
+    """Return (task_count, total_count) for the given target day.
+
+    task_count  = only task_type=task items (excludes routines and appointments)
+    total_count = everything scheduled that day
+
+    Today's tasks have status=today. Future tasks are still status=inbox but
+    have due_date set to their target day. Routines for future days aren't in
+    the DB yet (generated lazily on that morning), so they aren't counted here.
+
+    Used by _find_target() to check whether a day has room for more tasks
+    before the tournament places new ones there.
+    """
     if target == today_d:
         rows = (
             db.query(Task)
@@ -819,8 +849,6 @@ def _count_for_day(db, user_id: int, target: date, today_d: date):
             .all()
         )
     else:
-        # Tasks/appointments scheduled for a future day live in inbox with due_date set.
-        # Routines on future days are generated lazily, so they aren't in DB yet — count 0.
         rows = (
             db.query(Task)
             .filter(

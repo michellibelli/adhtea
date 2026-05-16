@@ -15,7 +15,18 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",
 
 
 def _migrate():
-    """Add new columns to existing tables without dropping data."""
+    """Add new columns to existing tables without dropping data.
+
+    This is a hand-rolled migration system — it checks whether each column
+    already exists before trying to add it, so it's safe to run on every startup.
+
+    SQLite (local dev) and PostgreSQL (production on Supabase/Render) have
+    slightly different ALTER TABLE syntax, so there are two branches.
+
+    If this project ever grows large, consider migrating to Alembic, which is
+    the standard Python tool for managing database schema changes with version
+    history and rollback support.
+    """
     with engine.connect() as conn:
         is_sqlite = str(engine.url).startswith("sqlite")
         if is_sqlite:

@@ -40,14 +40,16 @@ function EditForm({ task, onSave, onCancel }) {
     if (!form.title.trim()) return
     setSaving(true)
     try {
+      // Build the patch object: empty strings become null so the API clears the field.
+      // .trim() removes accidental leading/trailing spaces before saving.
       const patch = {
         title:           form.title.trim(),
         notes:           form.notes.trim() || null,
-        due_date:        form.due_date   || null,
-        due_time:        form.due_time   || null,
+        due_date:        form.due_date        || null,
+        due_time:        form.due_time        || null,
         location_type:   form.location_type   || null,
         location_detail: form.location_detail.trim() || null,
-        tags:            form.tags.trim() || null,
+        tags:            form.tags.trim()     || null,
       }
       const updated = await updateTask(task.id, patch)
       onSave(updated)

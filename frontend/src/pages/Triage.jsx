@@ -39,7 +39,9 @@ function sortByUrgency(tasks) {
 
 const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 
-const TARGET = 7
+// How many tasks triage tries to surface at once in the "critical" low-focus mode.
+// Kept small so it doesn't feel overwhelming on bad executive-function days.
+const TRIAGE_SHOW_LIMIT = 7
 
 // ── Critical list (low-focus mode) ────────────────────────────────────────────
 
@@ -164,7 +166,7 @@ export default function Triage({ onTriageDone }) {
         // the triage cycle. Only true `task`-type items are eligible.
         const triageable = todayTasks.filter(t => t.task_type === 'task')
         setTotalToday(triageable.length)
-        if (triageable.length <= TARGET) {
+        if (triageable.length <= TRIAGE_SHOW_LIMIT) {
           setPool([])
         } else {
           setPool(sortByUrgency(triageable))
@@ -197,7 +199,7 @@ export default function Triage({ onTriageDone }) {
   if (showCritical) return <CriticalList onDone={handleDone} />
 
   // Already manageable — nothing to trim
-  if (totalToday <= TARGET && snoozedCount === 0) {
+  if (totalToday <= TRIAGE_SHOW_LIMIT && snoozedCount === 0) {
     return (
       <div className="aria-page">
         <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
@@ -218,8 +220,8 @@ export default function Triage({ onTriageDone }) {
   }
 
   // Tournament done — trimmed to target
-  if (pool.length === 0 || remaining <= TARGET) {
-    const finalCount = remaining <= TARGET ? remaining : keepCount
+  if (pool.length === 0 || remaining <= TRIAGE_SHOW_LIMIT) {
+    const finalCount = remaining <= TRIAGE_SHOW_LIMIT ? remaining : keepCount
     return (
       <div className="aria-page">
         <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
@@ -261,7 +263,7 @@ export default function Triage({ onTriageDone }) {
           <div className="flex items-center justify-between text-xs mb-1.5 px-0.5">
             <span className="text-ui-subtext">
               Keeping today: <span className="font-medium text-ui-text">{remaining}</span>
-              <span className="text-ui-subtext/60"> / target {TARGET}</span>
+              <span className="text-ui-subtext/60"> / target {TRIAGE_SHOW_LIMIT}</span>
             </span>
             {snoozedCount > 0 && (
               <span className="text-amber-400 font-medium">{snoozedCount} → tomorrow</span>
@@ -270,7 +272,7 @@ export default function Triage({ onTriageDone }) {
           <div className="h-1.5 rounded-full bg-ui-border overflow-hidden">
             <div
               className="h-full rounded-full bg-ui-accent transition-all duration-500"
-              style={{ width: `${Math.min((progress / Math.max(totalToday - TARGET, 1)) * 100, 100)}%` }}
+              style={{ width: `${Math.min((progress / Math.max(totalToday - TRIAGE_SHOW_LIMIT, 1)) * 100, 100)}%` }}
             />
           </div>
         </div>

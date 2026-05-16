@@ -81,16 +81,22 @@ function isImminent(task) {
 }
 
 function pickNext(tasks) {
-  // Timed routines visible only between (due_time - any) and (due_time + 60 min):
-  //   - Surface starting 5 min before so user can pre-empt
-  //   - Drop out 60 min after due_time so an overdue routine doesn't block bonus mode
+  // Choose which single task to show as the "focus now" card.
+  //
+  // Step 1 — filter: timed routines only appear in a window around their due time.
+  //   - Show starting 5 min before (≤ 5) so the user can prepare
+  //   - Hide 60 min after (≥ -60) so an overdue routine doesn't permanently block the queue
+  //   - Non-routine tasks are always visible
   const visible = tasks.filter(t => {
     if (t.task_type === 'routine' && t.due_time) {
-      const m = minutesUntil(t.due_time)
+      const m = minutesUntil(t.due_time)  // positive = future, negative = overdue
       return m <= 5 && m >= -60
     }
     return true
   })
+
+  // Step 2 — sort: imminent timed items (≤ 5 min away) bubble to the top,
+  // then fall back to sort_order (the user's manual priority ranking from triage).
   const copy = [...visible]
   copy.sort((a, b) => {
     const aImm = isImminent(a)
@@ -99,7 +105,8 @@ function pickNext(tasks) {
     if (bImm && !aImm) return 1
     return (a.sort_order ?? 999) - (b.sort_order ?? 999)
   })
-  return copy[0] ?? null
+
+  return copy[0] ?? null  // null means the list is empty → show "all done" celebration
 }
 
 function TeaCupBack() {

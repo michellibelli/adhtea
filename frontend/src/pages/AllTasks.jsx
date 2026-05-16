@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getBacklog, updateTask, snoozeTask, unsnoozeTask, deleteTask } from '../api/tasks'
 import { listProjects, addTaskToProject } from '../api/projects'
 import Card from '../components/Card'
@@ -11,12 +11,9 @@ const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈
 
 function fmtDate(iso) {
   if (!iso) return null
+  // Add T00:00:00 for date-only strings so the browser doesn't interpret them as UTC midnight
   const d = new Date(iso.includes('T') ? iso : iso + 'T00:00:00')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function oneMonthFromNow() {
-  const d = new Date(); d.setMonth(d.getMonth() + 1); d.setHours(0, 0, 0, 0); return d.toISOString()
 }
 
 const STATUS_STYLE = {
@@ -251,7 +248,9 @@ export default function AllTasks() {
         await unsnoozeTask(task.id)
         setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, snooze_until: null, status: 'inbox' } : t))
       } else {
-        const snooze_until = oneMonthFromNow()
+        // Snooze "long-term": push 30 days out so it leaves the active list
+        const d = new Date(); d.setMonth(d.getMonth() + 1); d.setHours(0, 0, 0, 0)
+        const snooze_until = d.toISOString()
         await snoozeTask(task.id, snooze_until)
         setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, snooze_until, status: 'snoozed' } : t))
       }
@@ -275,7 +274,9 @@ export default function AllTasks() {
         await Promise.all(ids.map((id) => unsnoozeTask(id)))
         setTasks((prev) => prev.map((t) => selected.has(t.id) ? { ...t, snooze_until: null, status: 'inbox' } : t))
       } else {
-        const snooze_until = oneMonthFromNow()
+        // Snooze "long-term": push 30 days out so it leaves the active list
+        const d = new Date(); d.setMonth(d.getMonth() + 1); d.setHours(0, 0, 0, 0)
+        const snooze_until = d.toISOString()
         await Promise.all(ids.map((id) => snoozeTask(id, snooze_until)))
         setTasks((prev) => prev.map((t) => selected.has(t.id) ? { ...t, snooze_until, status: 'snoozed' } : t))
       }

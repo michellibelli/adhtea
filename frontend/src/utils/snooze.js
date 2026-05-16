@@ -30,12 +30,14 @@ export function resolveSnoozeDate(optionId, customDate = null) {
       return d
     }
     case 'weekend': {
+      // Target: the coming Friday (treated as start-of-weekend in this app).
+      // If it's already Friday, Saturday, or Sunday → jump to NEXT Friday instead.
       const d = new Date(today)
-      const day = d.getDay() // 0=Sun, 6=Sat
-      // If already weekend, next weekend
-      const daysUntilFriday = day <= 5 ? 5 - day : 7 - day + 5
-      const daysUntil = (day === 0 || day === 6) ? 7 - day + 5 : daysUntilFriday
-      d.setDate(d.getDate() + (daysUntil === 0 ? 7 : daysUntil))
+      const day = d.getDay()  // 0=Sun, 1=Mon, … 5=Fri, 6=Sat
+      // Days until Friday: Mon→4, Tue→3, Wed→2, Thu→1, Fri→0 (already here, skip to next)
+      const rawDays = (5 - day + 7) % 7      // 0 on Friday, 1 on Saturday, … 6 on Thursday
+      const daysUntil = rawDays === 0 ? 7 : rawDays  // Fri/Sat/Sun all push to next Friday
+      d.setDate(d.getDate() + daysUntil)
       d.setHours(8, 0, 0, 0)
       return d
     }

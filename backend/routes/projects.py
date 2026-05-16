@@ -2,6 +2,7 @@ import os
 import json
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -23,7 +24,12 @@ def own_project(project_id: int, user: User, db: Session) -> Project:
     return p
 
 
-def _summary(p: Project, db: Session) -> dict:
+def _project_summary(p: Project, db: Session) -> dict:
+    """Build the response dict for a single project (used after create/update).
+
+    For listing many projects at once, use _batch_project_summaries() instead
+    to avoid one DB query per project.
+    """
     tasks = db.query(Task).filter(
         Task.project_id == p.id,
         Task.status != TaskStatus.deleted,
@@ -37,6 +43,50 @@ def _summary(p: Project, db: Session) -> dict:
     }
 
 
+def _batch_project_summaries(projects: list[Project], db: Session) -> list[dict]:
+    """Build response dicts for many projects in a SINGLE database query.
+
+    Without this, listing 10 projects would hit the database 11 times:
+    once for the project list, then once per project to count its tasks.
+    This fetches all task counts in one GROUP BY query and assembles the results.
+    """
+    if not projects:
+        return []
+    proj_ids = [p.id for p in projects]
+
+    # One query: count tasks grouped by (project_id, status)
+    rows = (
+        db.query(Task.project_id, Task.status, func.count(Task.id).label("cnt"))
+        .filter(
+            Task.project_id.in_(proj_ids),
+            Task.status != TaskStatus.deleted,
+        )
+        .group_by(Task.project_id, Task.status)
+        .all()
+    )
+
+    # Roll counts up into {project_id: {total, done}}
+    counts: dict[int, dict] = {}
+    for proj_id, status, cnt in rows:
+        if proj_id not in counts:
+            counts[proj_id] = {"total": 0, "done": 0}
+        counts[proj_id]["total"] += cnt
+        if status == TaskStatus.done:
+            counts[proj_id]["done"] += cnt
+
+    return [
+        {
+            "id": p.id, "user_id": p.user_id, "title": p.title,
+            "description": p.description, "status": p.status,
+            "domain_id": p.domain_id, "domain_name": p.domain_name,
+            "created_at": p.created_at,
+            "task_count": counts.get(p.id, {}).get("total", 0),
+            "done_count":  counts.get(p.id, {}).get("done", 0),
+        }
+        for p in projects
+    ]
+
+
 @router.get("", response_model=list[ProjectResponse])
 def list_projects(
     current_user: User = Depends(get_current_user),
@@ -48,7 +98,7 @@ def list_projects(
         .order_by(Project.created_at.desc())
         .all()
     )
-    return [_summary(p, db) for p in projects]
+    return _batch_project_summaries(projects, db)
 
 
 @router.post("", response_model=ProjectResponse)
@@ -66,7 +116,7 @@ def create_project(
     db.add(p)
     db.commit()
     db.refresh(p)
-    return _summary(p, db)
+    return _project_summary(p, db)
 
 
 @router.get("/{project_id}", response_model=ProjectDetailResponse)
@@ -111,7 +161,7 @@ def update_project(
         p.domain_id = patch["domain_id"]
     db.commit()
     db.refresh(p)
-    return _summary(p, db)
+    return _project_summary(p, db)
 
 
 @router.delete("/{project_id}", status_code=204)

@@ -136,10 +136,37 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
   const queued  = regular.slice(visibleLimit)
   const load    = computeLoad(tasks)
 
-  async function handleComplete(id) { await completeTask(id); fetchTasks() }
-  async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
-  async function handleDefer(id) { await deferTask(id); fetchTasks() }
-  async function handleDelete(id) { await deleteTask(id); fetchTasks() }
+  // Optimistic update helpers: remove the task from state immediately so the UI
+  // responds instantly, then call the server in the background. If the server call
+  // fails, fall back to a full refresh to restore accurate state.
+
+  async function handleComplete(id) {
+    setTasks(prev => prev.filter(t => t.id !== id))  // disappears right away
+    try {
+      await completeTask(id)
+      // Refresh the completed list and capacity score without touching the main list
+      getDoneToday().then(setDone).catch(() => {})
+      getTodayCapacity().then(setCapacity).catch(() => {})
+    } catch (err) { console.error(err); fetchTasks() }
+  }
+
+  async function handleSnooze(id, until) {
+    setTasks(prev => prev.filter(t => t.id !== id))
+    try { await snoozeTask(id, until) }
+    catch (err) { console.error(err); fetchTasks() }
+  }
+
+  async function handleDefer(id) {
+    setTasks(prev => prev.filter(t => t.id !== id))
+    try { await deferTask(id) }
+    catch (err) { console.error(err); fetchTasks() }
+  }
+
+  async function handleDelete(id) {
+    setTasks(prev => prev.filter(t => t.id !== id))
+    try { await deleteTask(id) }
+    catch (err) { console.error(err); fetchTasks() }
+  }
 
   async function handleDragEnd(event) {
     const { active, over } = event
