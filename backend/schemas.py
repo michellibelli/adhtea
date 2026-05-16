@@ -1,6 +1,8 @@
 from datetime import datetime, date
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, Annotated
+from pydantic import BaseModel, Field
+
+Password = Annotated[str, Field(min_length=8, max_length=128)]
 from models import (
     UserRole, TaskType, TaskStatus, Priority,
     Importance, Desire, TaskWeight, RoutineFrequency, TimeOfDay, LocationType
@@ -27,7 +29,7 @@ class LoginResponse(BaseModel):
 class SetupRequest(BaseModel):
     name: str
     username: str
-    password: str
+    password: Password
 
 
 # ---------------------------------------------------------------------------
@@ -37,14 +39,14 @@ class SetupRequest(BaseModel):
 class UserCreate(BaseModel):
     name: str
     username: str
-    password: str
+    password: Password
 
 
 class RegisterRequest(BaseModel):
     invite_token: str
     name: str
     username: str
-    password: str
+    password: Password
 
 
 class InviteResponse(BaseModel):
@@ -80,7 +82,7 @@ class SignupRequest(BaseModel):
     name: str
     username: str
     email: Optional[str] = None
-    password: str
+    password: Password
     alpha_code: Optional[str] = None
 
 

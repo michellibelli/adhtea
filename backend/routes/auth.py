@@ -196,6 +196,11 @@ def update_settings(
     if update.triage_end_hour is not None:
         current_user.triage_end_hour = update.triage_end_hour
     if update.timezone is not None:
+        try:
+            from zoneinfo import ZoneInfo as _ZI
+            _ZI(update.timezone)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid timezone")
         current_user.timezone = update.timezone
     if update.day_start_hour is not None:
         if not (0 <= update.day_start_hour <= 11):

@@ -62,6 +62,8 @@ async def import_csv(
         raise HTTPException(status_code=400, detail="File must be a .csv")
 
     content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (5 MB max)")
     try:
         text = content.decode("utf-8-sig")  # handle BOM from Excel/Notion exports
     except UnicodeDecodeError:
