@@ -106,10 +106,17 @@ def gcal_status(
     token = db.query(GoogleCalendarToken).filter(
         GoogleCalendarToken.user_id == current_user.id
     ).first()
+    selected_ids = []
+    if token and token.calendar_ids:
+        try:
+            selected_ids = json.loads(token.calendar_ids)
+        except Exception:
+            pass
     return {
-        "connected":   token is not None,
-        "configured":  True,
-        "last_synced": token.last_synced.isoformat() if token and token.last_synced else None,
+        "connected":           token is not None,
+        "configured":          True,
+        "last_synced":         token.last_synced.isoformat() if token and token.last_synced else None,
+        "selected_calendar_ids": selected_ids,
     }
 
 
@@ -197,14 +204,14 @@ def gcal_disconnect(
 
 # ── Calendar sync ─────────────────────────────────────────────────────────────
 
-def sync_today_events(user_id: int, db: Session) -> int:
+def sync_today_events(user_id: int, db: Session) -> dict:
     """Pull today's Google Calendar events and create appointment Tasks.
-    Returns number of new tasks created. Idempotent — skips duplicates."""
+    Returns dict: {created, calendars_queried, events_found}. Idempotent — skips duplicates."""
     token = db.query(GoogleCalendarToken).filter(
         GoogleCalendarToken.user_id == user_id
     ).first()
     if not token:
-        return 0
+        return {"created": 0, "calendars_queried": [], "events_found": 0}
 
     try:
         from models import User as _User
@@ -226,7 +233,10 @@ def sync_today_events(user_id: int, db: Session) -> int:
             except Exception:
                 pass
 
+        service = _get_service(token)
         created = 0
+        events_found = 0
+        calendars_queried = []
         for cal_id in cal_ids:
             try:
                 result = service.events().list(
@@ -236,6 +246,8 @@ def sync_today_events(user_id: int, db: Session) -> int:
                     singleEvents=True,
                     orderBy="startTime",
                 ).execute()
+                calendars_queried.append(cal_id)
+                events_found += len(result.get("items", []))
             except Exception:
                 continue
 
@@ -303,7 +315,7 @@ def sync_today_events(user_id: int, db: Session) -> int:
 
         token.last_synced = utcnow()
         db.commit()
-        return created
+        return {"created": created, "calendars_queried": calendars_queried, "events_found": events_found}
 
     except Exception as e:
         print(f"gcal sync error for user {user_id}: {e}")
@@ -316,10 +328,10 @@ def manual_sync(
     db: Session = Depends(get_db),
 ):
     try:
-        n = sync_today_events(current_user.id, db)
-        return {"created": n, "error": None}
+        result = sync_today_events(current_user.id, db)
+        return {**result, "error": None}
     except Exception as e:
-        return {"created": 0, "error": str(e)}
+        return {"created": 0, "calendars_queried": [], "events_found": 0, "error": str(e)}
 
 
 @router.get("/gcal/calendars")
@@ -341,3 +353,26 @@ def list_calendars(
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+from pydantic import BaseModel as _BM
+
+class CalendarSelection(_BM):
+    calendar_ids: list[str]
+
+@router.patch("/gcal/calendars")
+def update_calendars(
+    body: CalendarSelection,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    token = db.query(GoogleCalendarToken).filter(
+        GoogleCalendarToken.user_id == current_user.id
+    ).first()
+    if not token:
+        raise HTTPException(status_code=404, detail="Not connected")
+    # Store non-primary IDs; primary is always synced implicitly
+    ids = [i for i in body.calendar_ids if i != "primary"]
+    token.calendar_ids = json.dumps(ids)
+    db.commit()
+    return {"ok": True, "calendar_ids": ids}

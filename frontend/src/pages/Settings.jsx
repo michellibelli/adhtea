@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal } from '../api/gcal'
+import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal, listCalendars, updateCalendars } from '../api/gcal'
 import { listUsers, createUser, deleteUser, createInvite, listInvites, revokeInvite, logout, getAlphaCode, setAlphaCode } from '../api/auth'
 import { listDomains, updateDomain, deleteDomain } from '../api/domains'
 import { startTournament } from '../api/tasks'
@@ -11,13 +11,20 @@ import ConfirmModal from '../components/ConfirmModal'
 import { Input } from '../components/Input'
 
 function GoogleCalendarCard() {
-  const [status,   setStatus]   = useState(null)
-  const [syncing,  setSyncing]  = useState(false)
-  const [loading,  setLoading]  = useState(true)
+  const [status,      setStatus]      = useState(null)
+  const [syncing,     setSyncing]     = useState(false)
+  const [syncResult,  setSyncResult]  = useState(null)
+  const [loading,     setLoading]     = useState(true)
+  const [calendars,   setCalendars]   = useState([])
+  const [selectedIds, setSelectedIds] = useState([])
+  const [calLoading,  setCalLoading]  = useState(false)
 
   useEffect(() => {
     getGcalStatus()
-      .then(setStatus)
+      .then(s => {
+        setStatus(s)
+        setSelectedIds(s.selected_calendar_ids || [])
+      })
       .catch(() => setStatus({ connected: false, configured: false }))
       .finally(() => setLoading(false))
   }, [])
@@ -27,9 +34,22 @@ function GoogleCalendarCard() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('gcal') === 'connected') {
       window.history.replaceState({}, '', window.location.pathname)
-      getGcalStatus().then(setStatus)
+      getGcalStatus().then(s => {
+        setStatus(s)
+        setSelectedIds(s.selected_calendar_ids || [])
+      })
     }
   }, [])
+
+  // Load calendar list once connected
+  useEffect(() => {
+    if (!status?.connected) return
+    setCalLoading(true)
+    listCalendars()
+      .then(setCalendars)
+      .catch(() => {})
+      .finally(() => setCalLoading(false))
+  }, [status?.connected])
 
   async function handleConnect() {
     try {
@@ -42,17 +62,34 @@ function GoogleCalendarCard() {
 
   async function handleDisconnect() {
     await disconnectGcal()
-    setStatus((s) => ({ ...s, connected: false, last_synced: null }))
+    setStatus(s => ({ ...s, connected: false, last_synced: null }))
+    setCalendars([])
+    setSelectedIds([])
+    setSyncResult(null)
   }
 
   async function handleSync() {
     setSyncing(true)
+    setSyncResult(null)
     try {
-      const { created } = await syncGcal()
-      alert(`Synced — ${created} new appointment${created !== 1 ? 's' : ''} added to Today.`)
-      getGcalStatus().then(setStatus)
+      const res = await syncGcal()
+      setSyncResult(res)
+      getGcalStatus().then(s => { setStatus(s); setSelectedIds(s.selected_calendar_ids || []) })
     } finally {
       setSyncing(false)
+    }
+  }
+
+  async function toggleCalendar(id) {
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter(x => x !== id)
+      : [...selectedIds, id]
+    setSelectedIds(next)
+    try {
+      await updateCalendars(next)
+    } catch (e) {
+      // revert on failure
+      setSelectedIds(selectedIds)
     }
   }
 
@@ -60,23 +97,59 @@ function GoogleCalendarCard() {
 
   return (
     <Card className="px-5 py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-ui-text">Google Calendar</span>
-            {status?.connected && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">Connected</span>
-            )}
-          </div>
-          <p className="text-xs text-ui-subtext leading-relaxed">
-            {status?.connected
-              ? `Today's events sync automatically each morning.${status.last_synced ? ` Last synced: ${new Date(status.last_synced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : ''}`
-              : status?.configured
-              ? 'Connect your Google Calendar to pull today\'s events into appointments automatically.'
-              : 'Google Calendar not yet configured on the server. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI to .env.'}
-          </p>
-        </div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-sm font-medium text-ui-text">Google Calendar</span>
+        {status?.connected && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">Connected</span>
+        )}
       </div>
+      <p className="text-xs text-ui-subtext leading-relaxed">
+        {status?.connected
+          ? `Today's events sync automatically each morning.${status.last_synced ? ` Last synced: ${new Date(status.last_synced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : ''}`
+          : status?.configured
+          ? "Connect your Google Calendar to pull today's events into appointments automatically."
+          : 'Google Calendar not yet configured on the server. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI to .env.'}
+      </p>
+
+      {status?.connected && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold text-ui-subtext uppercase tracking-wide mb-1.5">Calendars to sync</p>
+          {calLoading ? (
+            <p className="text-xs text-ui-subtext">Loading calendars…</p>
+          ) : calendars.length === 0 ? (
+            <p className="text-xs text-ui-subtext italic">No calendars found</p>
+          ) : (
+            <div className="space-y-1">
+              {calendars.map(cal => {
+                const isPrimary = cal.id === 'primary' || cal.name?.toLowerCase().includes('primary')
+                const isSelected = cal.id === 'primary' || selectedIds.includes(cal.id)
+                return (
+                  <label key={cal.id} className={`flex items-center gap-2 cursor-pointer ${isPrimary ? 'opacity-60 cursor-default' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={isPrimary}
+                      onChange={() => !isPrimary && toggleCalendar(cal.id)}
+                      className="accent-ui-accent"
+                    />
+                    <span className="text-xs text-ui-text">{cal.name}</span>
+                    {isPrimary && <span className="text-[9px] text-ui-subtext">(always synced)</span>}
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {syncResult && (
+        <div className="mt-2 text-[10px] text-ui-subtext space-y-0.5">
+          <p className="text-emerald-400 font-medium">{syncResult.created} new appointment{syncResult.created !== 1 ? 's' : ''} added</p>
+          <p>Calendars queried: {syncResult.calendars_queried?.join(', ') || 'none'}</p>
+          <p>Raw events found: {syncResult.events_found ?? '?'}</p>
+          {syncResult.error && <p className="text-red-400">{syncResult.error}</p>}
+        </div>
+      )}
 
       <div className="flex gap-2 mt-4">
         {!status?.connected ? (
