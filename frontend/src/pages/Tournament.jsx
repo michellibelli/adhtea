@@ -10,6 +10,20 @@ import ProjectBadge from '../components/ProjectBadge'
 import SnoozeSheet from '../components/SnoozeSheet'
 import { markTriageDone } from './Triage'
 
+const MAX_PASSES_PER_DAY = 3
+
+function todayKey() { return new Date().toISOString().slice(0, 10) }
+
+function getTodayPassCount() {
+  if (localStorage.getItem('triage_pass_date') !== todayKey()) return 0
+  return parseInt(localStorage.getItem('triage_pass_count') || '0', 10)
+}
+
+function recordPassComplete() {
+  localStorage.setItem('triage_pass_date', todayKey())
+  localStorage.setItem('triage_pass_count', String(getTodayPassCount() + 1))
+}
+
 // Random tea-pun pool reused for the 20% surprise reward
 const TEA_PUNS = [
   'Steeped in success!',
@@ -169,6 +183,7 @@ export default function Tournament({ onDone }) {
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState(null)
   const [snoozeTarget, setSnoozeTarget] = useState(null)  // task id currently picking snooze date
+  const [passCount,  setPassCount]  = useState(() => getTodayPassCount())
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
@@ -219,6 +234,8 @@ export default function Tournament({ onDone }) {
 
   function handleFinish() {
     markTriageDone()
+    recordPassComplete()
+    setPassCount(p => p + 1)
     onDone?.()
   }
 
@@ -262,6 +279,25 @@ export default function Tournament({ onDone }) {
     return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
   }
 
+  // Hard cap — triaged 3 times today already
+  if (passCount >= MAX_PASSES_PER_DAY) {
+    return (
+      <div className="aria-page">
+        <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-md mx-auto w-full">
+          <Card className="px-5 py-6 text-center">
+            <div className="text-3xl mb-2">🍵</div>
+            <p className="text-base font-semibold text-ui-text mb-2">Priorities are locked in</p>
+            <p className="text-sm text-ui-subtext mb-1">
+              You've refined your list {MAX_PASSES_PER_DAY} times today — that's the daily limit.
+            </p>
+            <p className="text-xs text-ui-subtext/70 mb-5">Come back tomorrow to triage fresh tasks.</p>
+            <Button onClick={() => onDone?.()}>Go to Today</Button>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   const batch = state?.next_batch || []
   const horizonFull = state?.horizon_full
   const inboxEmpty = state?.inbox_pending === 0 || batch.length === 0
@@ -284,6 +320,17 @@ export default function Tournament({ onDone }) {
 
         {/* Header */}
         <div className="mb-5">
+          {/* Pass context banner — only shown on repeat visits today */}
+          {passCount > 0 && (
+            <div className="mb-3 rounded-xl border border-ui-accent/30 bg-ui-accent/8 px-3 py-2">
+              <p className="text-xs text-ui-accent font-medium">
+                {passCount + 1 < MAX_PASSES_PER_DAY
+                  ? `Refinement pass ${passCount + 1} of ${MAX_PASSES_PER_DAY} — you've already triaged today. Each pass sharpens your priorities.`
+                  : `Final pass for today (${MAX_PASSES_PER_DAY} of ${MAX_PASSES_PER_DAY}) — make it count.`}
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-[10px] text-ui-subtext uppercase tracking-wider mb-0.5">
