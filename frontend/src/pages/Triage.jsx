@@ -85,7 +85,16 @@ function CriticalList({ onDone }) {
                     {task.due_time && <p className="text-xs text-ui-subtext mt-0.5">{task.due_time}</p>}
                   </div>
                   <button
-                    onClick={() => completeTask(task.id).then(() => setItems(prev => prev.filter(t => t.id !== task.id)))}
+                    onClick={async () => {
+                      // Optimistic remove: drop the task from the list first, then call the API.
+                      // If the API fails we re-fetch so the UI doesn't lie about server state.
+                      setItems(prev => prev.filter(t => t.id !== task.id))
+                      try { await completeTask(task.id) }
+                      catch (err) {
+                        console.error(err)
+                        getCriticalList().then(setItems).catch(() => {})
+                      }
+                    }}
                     className="flex-shrink-0 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">

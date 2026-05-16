@@ -403,8 +403,10 @@ def _maybe_sync_gcal(user_id: int, db: Session):
     try:
         from routes.gcal import sync_today_events
         sync_today_events(user_id, db)
-    except Exception:
-        pass  # never let a GCal failure break the task list
+    except Exception as e:
+        # Never let a GCal failure break the task list, but log it so issues
+        # like expired tokens or API outages are visible in the server logs
+        print(f"gcal auto-sync failed for user {user_id}: {e}")
 
 
 # ---------------------------------------------------------------------------

@@ -93,8 +93,9 @@ def gcal_status(
     if token and token.calendar_ids:
         try:
             selected_ids = json.loads(token.calendar_ids)
-        except Exception:
-            pass
+        except Exception as e:
+            # Log so a corrupted JSON blob is visible instead of silently empty
+            print(f"gcal calendar_ids JSON parse failed for user {current_user.id}: {e}")
     return {
         "connected":           token is not None,
         "configured":          True,

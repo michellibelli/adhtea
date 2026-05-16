@@ -180,9 +180,13 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
         and not current_user.is_owner
         and current_user.alpha_code_version != config.alpha_code_version
     )
-    data = {c.name: getattr(current_user, c.name) for c in current_user.__table__.columns}
-    data["needs_alpha_challenge"] = needs_challenge
-    return data
+    # Build response through the UserResponse schema instead of dumping every ORM
+    # column. If a sensitive field like hashed_password is ever added to the User
+    # model, this approach guarantees it can't accidentally leak to the client —
+    # only fields explicitly declared in UserResponse are returned.
+    response = UserResponse.model_validate(current_user).model_dump()
+    response["needs_alpha_challenge"] = needs_challenge
+    return response
 
 
 @router.patch("/me/settings", response_model=UserResponse)
