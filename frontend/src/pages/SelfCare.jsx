@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
-import { getMedications, addMedication, logTaken, getTodayLogs } from '../utils/medicationStore'
+import { getMedication, createMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
+import { getMedName, setMedName } from '../utils/medicationStore'
 import { createTask } from '../api/tasks'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
@@ -65,9 +66,10 @@ export default function SelfCare({ userId }) {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const [todayLog, cap] = await Promise.all([getTodayLog(), getTodayCapacity()])
+        const [todayLog, cap, meds] = await Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
         setLog(todayLog)
         setCapacity(cap)
+        setMedication(meds)
         if (todayLog) {
           setForm({
             sleep_hours:      todayLog.sleep_hours,
@@ -78,16 +80,16 @@ export default function SelfCare({ userId }) {
             mood:             todayLog.mood,
           })
         }
-        if (userId) {
-          const [meds, ml] = await Promise.all([getMedications(userId), getTodayLogs(userId)])
-          setMedication(meds)
-          setMedLogs(ml)
-        }
+        const ml = {}
+        await Promise.all(
+          meds.map(m => getMedicationTodayLog(m.id).then(l => { if (l) ml[m.id] = l }))
+        )
+        setMedLogs(ml)
       } catch (err) { console.error(err) }
       finally { setLoading(false) }
     }
     fetchAll()
-  }, [userId])
+  }, [])
 
   async function handleSave() {
     setSaving(true)
@@ -103,10 +105,9 @@ export default function SelfCare({ userId }) {
   }
 
   async function handleLogMed(id) {
-    if (!userId) return
     try {
-      await logTaken(userId, id)
-      setMedLogs(prev => ({ ...prev, [id]: true }))
+      const ml = await logMedicationTaken(id)
+      setMedLogs(prev => ({ ...prev, [id]: ml }))
     } catch (err) { console.error(err) }
   }
 
@@ -123,10 +124,13 @@ export default function SelfCare({ userId }) {
   }
 
   async function handleAddMed() {
-    if (!medForm.name.trim() || !userId) return
+    if (!medForm.name.trim()) return
     try {
       const times = medForm.reminder_times.trim().replace(/\s+/g, '').replace(/,+/g, ',').replace(/,$/, '') || null
-      const created = await addMedication(userId, { name: medForm.name.trim(), reminder_times: times })
+      // Server gets a placeholder — it never sees the actual medication name
+      const placeholder = `Medication ${medication.length + 1}`
+      const created = await createMedication({ name: placeholder, reminder_times: times })
+      if (userId) setMedName(userId, created.id, medForm.name.trim())
       setMedication(prev => [...prev, created])
       setMedForm({ name: '', reminder_times: '' })
       setShowMedForm(false)
@@ -278,12 +282,17 @@ export default function SelfCare({ userId }) {
 
         {/* Medication */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-ui-subtext uppercase tracking-wider">Medication</p>
             <Button size="sm" variant="secondary" onClick={() => setShowMedForm(!showMedForm)}>
               {showMedForm ? 'Cancel' : '+ Add'}
             </Button>
           </div>
+          <p className="text-[11px] text-ui-subtext/60 mb-3 leading-snug">
+            Names stored on this device only — the server only knows "Medication 1", "Medication 2", etc.
+            If you clear browser data or switch devices, names will show as placeholders until re-entered.
+            Your logs and reminders are always safe on the server.
+          </p>
 
           {showMedForm && (
             <Card className="px-4 py-3 mb-3 space-y-2">
@@ -307,11 +316,16 @@ export default function SelfCare({ userId }) {
             <div className="space-y-2">
               {medication.map(med => {
                 const taken = !!medLogs[med.id]
+                const displayName = getMedName(userId, med.id, med.name)
+                const nameIsLocal = displayName !== med.name
                 const times = med.reminder_times ? med.reminder_times.split(',').map(t => t.trim()) : []
                 return (
                   <Card key={med.id} className="px-4 py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-ui-text">{med.name}</p>
+                      <p className="text-sm font-medium text-ui-text">{displayName}</p>
+                      {!nameIsLocal && (
+                        <p className="text-[10px] text-ui-subtext/50 italic">name not on this device</p>
+                      )}
                       {times.length > 0 && (
                         <p className="text-xs text-ui-subtext mt-0.5">⏰ {times.join(' · ')}</p>
                       )}
