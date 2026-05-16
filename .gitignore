@@ -18,6 +18,10 @@ backend/aria.db
 backend/.env
 frontend/.env.local
 
+# Sensitive docs — never commit these
+docs/Secret Key.txt
+docs/Server Stuff.txt
+
 # Node
 frontend/node_modules/
 frontend/dist/
