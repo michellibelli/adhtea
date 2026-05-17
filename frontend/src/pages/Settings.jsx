@@ -9,6 +9,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import ConfirmModal from '../components/ConfirmModal'
 import { Input } from '../components/Input'
+import { useTheme } from '../hooks/useTheme'
 
 function GoogleCalendarCard() {
   const [status,      setStatus]      = useState(null)
@@ -415,7 +416,10 @@ export default function Settings({ onNavigate, user }) {
 
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Display</h2>
-          <BuildChipToggle />
+          <ThemePicker />
+          <div className="mt-3">
+            <BuildChipToggle />
+          </div>
         </section>
 
         <section>
@@ -431,6 +435,38 @@ export default function Settings({ onNavigate, user }) {
 
       </div>
     </div>
+  )
+}
+
+
+function ThemePicker() {
+  const { theme, setTheme, themes } = useTheme()
+  return (
+    <Card className="px-5 py-4">
+      <p className="text-sm font-medium text-ui-text mb-1">Theme</p>
+      <p className="text-xs text-ui-subtext mb-3">Tap to preview. Persists across sessions.</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {themes.map(t => {
+          const active = t.id === theme
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTheme(t.id)}
+              className={`flex flex-col items-stretch gap-1.5 p-2 rounded-xl border-2 transition-all text-left ${
+                active ? 'border-ui-accent' : 'border-ui-border hover:border-ui-accent/60'
+              }`}
+            >
+              <div className="flex h-6 rounded overflow-hidden">
+                {t.swatch.map((c, i) => (
+                  <div key={i} className="flex-1" style={{ background: c }} />
+                ))}
+              </div>
+              <span className="text-xs font-medium text-ui-text">{t.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </Card>
   )
 }
 

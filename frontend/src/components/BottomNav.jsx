@@ -1,4 +1,5 @@
-const S = '#4A3FA8'  // deep periwinkle — icon stroke color
+// Icon stroke color reads from the active theme so nav icons recolor with the palette.
+const S = 'var(--aria-primary-text)'
 
 const anim = (name, dur, delay = '0s', extra = '') =>
   `${name} ${dur} ease-in-out infinite ${delay} ${extra}`.trim()
@@ -112,8 +113,8 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
     <>
       {/* Mobile bottom nav bar */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch"
-        style={{ background: '#2A0E58', borderTop: '4px solid #6A3090', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch bg-ui-nav border-t-4 border-ui-nav-border"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {MOBILE_BOTTOM_ITEMS.map(({ id, label, Icon }) => {
           const isActive = active === id
@@ -127,7 +128,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               <span style={{ display: 'flex', transform: 'scale(0.78)', transformOrigin: 'center' }}>
                 <Icon active={isActive} />
               </span>
-              <span className="text-[10px] font-bold" style={{ color: isActive ? '#fff' : '#C8AAEE' }}>{label}</span>
+              <span className={`text-[10px] font-bold ${isActive ? 'text-ui-surface' : 'text-ui-subtext'}`}>{label}</span>
             </button>
           )
         })}
@@ -136,8 +137,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
       {/* Mobile FAB — capture, floats above bottom nav */}
       <button
         onClick={onCapture}
-        className="fixed bottom-[86px] right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-[#2A0F40] active:scale-95 transition-transform md:hidden pixel-btn"
-        style={{ background: 'linear-gradient(135deg, #C490D1, #B4A8E0)' }}
+        className="fixed bottom-[86px] right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-ui-primary-text active:scale-95 transition-transform md:hidden pixel-btn bg-ui-primary"
         aria-label="Capture"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
@@ -150,7 +150,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
       </button>
 
       {/* Desktop sidebar */}
-      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-[#B05CC0] bg-[#CC7FDF] pt-6 pb-6 gap-1">
+      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-ui-accent bg-ui-primary pt-6 pb-6 gap-1">
 
         {/* Pride stripe top */}
         <div className="pride-stripe absolute top-0 left-0 right-0" style={{height:'4px'}} />
@@ -171,7 +171,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               <span style={{ opacity: isActive ? 1 : 0.5, transition: 'opacity 150ms' }}>
                 <Icon active={isActive} />
               </span>
-              <span className="text-[11px]" style={{color:'#FFFFFF', fontWeight: isActive ? 700 : 600, textShadow: '0 1px 3px rgba(0,0,0,0.3)'}}>
+              <span className="text-[11px] text-ui-primary-text" style={{fontWeight: isActive ? 700 : 600, textShadow: '0 1px 3px rgba(0,0,0,0.3)'}}>
                 {label}
               </span>
             </button>
@@ -180,7 +180,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
 
         {/* Sparkle footer */}
         <div className="mt-auto flex flex-col items-center gap-1">
-          <span className="sparkle text-xs" style={{color:'#4A3FA8', animationDelay:'1.4s'}}>✧</span>
+          <span className="sparkle text-xs text-ui-primary-text" style={{animationDelay:'1.4s'}}>✧</span>
         </div>
       </nav>
     </>

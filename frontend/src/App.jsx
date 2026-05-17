@@ -129,7 +129,7 @@ function AppShell() {
     <div className="min-h-screen">
       <PageProgress trigger={screen} />
       {/* Mobile top bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden" style={{background:'#2A0E58', borderBottom:'4px solid #6A3090'}}>
+      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden bg-ui-nav border-b-4 border-ui-nav-border">
         <div className="pride-stripe" />
         <div className="flex items-center gap-3 px-4 h-[84px]">
           <button

@@ -52,6 +52,154 @@
   --aria-input-focus:   #C490D1;
   --aria-badge:         #F7A165;
   --aria-badge-text:    #2A0F40;
+  --aria-shadow:        #7A5090;
+  --aria-body-bg:       #DFC8FF;
+}
+
+/* =============================================================================
+   Picker themes — manual selection via Settings → Display → Theme
+   D=surface, A=text, B=primary, Ac=accent. Derived: subtext, border,
+   primary-hover, primary-text, nav, nav-border, input-border, badge-text.
+   ============================================================================= */
+
+[data-theme="aria-coffee"] {
+  --aria-surface:       #F9B282;
+  --aria-text:          #8F4426;
+  --aria-subtext:       color-mix(in srgb, #8F4426 60%, #F9B282);
+  --aria-border:        color-mix(in srgb, #8F4426 25%, #F9B282);
+  --aria-accent:        #64CCDA;
+  --aria-primary:       #DE6B35;
+  --aria-primary-hover: color-mix(in srgb, #DE6B35 80%, #8F4426);
+  --aria-primary-text:  #FFFBF0;
+  --aria-nav:           #8F4426;
+  --aria-nav-border:    color-mix(in srgb, #DE6B35 50%, #8F4426);
+  --aria-input:         color-mix(in srgb, #F9B282 75%, #FFFBF0);
+  --aria-input-border:  color-mix(in srgb, #8F4426 30%, #F9B282);
+  --aria-input-focus:   #64CCDA;
+  --aria-badge:         #64CCDA;
+  --aria-badge-text:    #8F4426;
+  --aria-shadow:        #8F4426;
+  --aria-body-bg:       color-mix(in srgb, #F9B282 70%, #DE6B35);
+}
+
+[data-theme="aria-tea"] {
+  --aria-surface:       #FFCF71;
+  --aria-text:          #7B542F;
+  --aria-subtext:       color-mix(in srgb, #7B542F 60%, #FFCF71);
+  --aria-border:        color-mix(in srgb, #7B542F 25%, #FFCF71);
+  --aria-accent:        #FF9D00;
+  --aria-primary:       #B6771D;
+  --aria-primary-hover: color-mix(in srgb, #B6771D 80%, #7B542F);
+  --aria-primary-text:  #FFFBF0;
+  --aria-nav:           #7B542F;
+  --aria-nav-border:    color-mix(in srgb, #B6771D 50%, #7B542F);
+  --aria-input:         color-mix(in srgb, #FFCF71 75%, #FFFBF0);
+  --aria-input-border:  color-mix(in srgb, #7B542F 30%, #FFCF71);
+  --aria-input-focus:   #FF9D00;
+  --aria-badge:         #FF9D00;
+  --aria-badge-text:    #7B542F;
+  --aria-shadow:        #7B542F;
+  --aria-body-bg:       color-mix(in srgb, #FFCF71 65%, #B6771D);
+}
+
+[data-theme="aria-berries"] {
+  --aria-surface:       #FFF1CB;
+  --aria-text:          #4A2D5C;
+  --aria-subtext:       color-mix(in srgb, #4A2D5C 60%, #FFF1CB);
+  --aria-border:        color-mix(in srgb, #4A2D5C 25%, #FFF1CB);
+  --aria-accent:        #FF8F8F;
+  --aria-primary:       #B7A3E3;
+  --aria-primary-hover: color-mix(in srgb, #B7A3E3 80%, #4A2D5C);
+  --aria-primary-text:  #4A2D5C;
+  --aria-nav:           #4A2D5C;
+  --aria-nav-border:    color-mix(in srgb, #B7A3E3 50%, #4A2D5C);
+  --aria-input:         color-mix(in srgb, #FFF1CB 80%, #FFFBF0);
+  --aria-input-border:  color-mix(in srgb, #4A2D5C 30%, #FFF1CB);
+  --aria-input-focus:   #FF8F8F;
+  --aria-badge:         #C2E2FA;
+  --aria-badge-text:    #4A2D5C;
+  --aria-shadow:        #4A2D5C;
+  --aria-body-bg:       color-mix(in srgb, #FFF1CB 70%, #B7A3E3);
+}
+
+[data-theme="aria-omelette"] {
+  --aria-surface:       #FEEE91;
+  --aria-text:          #6B1A1A;
+  --aria-subtext:       color-mix(in srgb, #6B1A1A 60%, #FEEE91);
+  --aria-border:        color-mix(in srgb, #6B1A1A 25%, #FEEE91);
+  --aria-accent:        #FF5656;
+  --aria-primary:       #FFA239;
+  --aria-primary-hover: color-mix(in srgb, #FFA239 80%, #6B1A1A);
+  --aria-primary-text:  #6B1A1A;
+  --aria-nav:           #6B1A1A;
+  --aria-nav-border:    color-mix(in srgb, #FFA239 50%, #6B1A1A);
+  --aria-input:         color-mix(in srgb, #FEEE91 80%, #FFFBF0);
+  --aria-input-border:  color-mix(in srgb, #6B1A1A 30%, #FEEE91);
+  --aria-input-focus:   #FF5656;
+  --aria-badge:         #8CE4FF;
+  --aria-badge-text:    #6B1A1A;
+  --aria-shadow:        #6B1A1A;
+  --aria-body-bg:       color-mix(in srgb, #FEEE91 65%, #FFA239);
+}
+
+[data-theme="aria-americano"] {
+  --aria-surface:       #F3F3E0;
+  --aria-text:          #183B4E;
+  --aria-subtext:       color-mix(in srgb, #183B4E 60%, #F3F3E0);
+  --aria-border:        color-mix(in srgb, #183B4E 22%, #F3F3E0);
+  --aria-accent:        #DDA853;
+  --aria-primary:       #27548A;
+  --aria-primary-hover: color-mix(in srgb, #27548A 80%, #183B4E);
+  --aria-primary-text:  #F3F3E0;
+  --aria-nav:           #183B4E;
+  --aria-nav-border:    color-mix(in srgb, #27548A 50%, #183B4E);
+  --aria-input:         #F3F3E0;
+  --aria-input-border:  color-mix(in srgb, #183B4E 28%, #F3F3E0);
+  --aria-input-focus:   #DDA853;
+  --aria-badge:         #DDA853;
+  --aria-badge-text:    #183B4E;
+  --aria-shadow:        #183B4E;
+  --aria-body-bg:       color-mix(in srgb, #F3F3E0 70%, #27548A);
+}
+
+[data-theme="aria-chai"] {
+  --aria-surface:       #FFF0DD;
+  --aria-text:          #4A2D1A;
+  --aria-subtext:       color-mix(in srgb, #4A2D1A 60%, #FFF0DD);
+  --aria-border:        color-mix(in srgb, #4A2D1A 25%, #FFF0DD);
+  --aria-accent:        #86B0BD;
+  --aria-primary:       #E2A16F;
+  --aria-primary-hover: color-mix(in srgb, #E2A16F 80%, #4A2D1A);
+  --aria-primary-text:  #4A2D1A;
+  --aria-nav:           #4A2D1A;
+  --aria-nav-border:    color-mix(in srgb, #E2A16F 50%, #4A2D1A);
+  --aria-input:         color-mix(in srgb, #FFF0DD 85%, #E2A16F);
+  --aria-input-border:  color-mix(in srgb, #4A2D1A 30%, #FFF0DD);
+  --aria-input-focus:   #86B0BD;
+  --aria-badge:         #D1D3D4;
+  --aria-badge-text:    #4A2D1A;
+  --aria-shadow:        #4A2D1A;
+  --aria-body-bg:       color-mix(in srgb, #FFF0DD 65%, #E2A16F);
+}
+
+[data-theme="aria-mint"] {
+  --aria-surface:       #364F6B;
+  --aria-text:          #F5F5F5;
+  --aria-subtext:       color-mix(in srgb, #F5F5F5 70%, #364F6B);
+  --aria-border:        color-mix(in srgb, #F5F5F5 22%, #364F6B);
+  --aria-accent:        #FC5185;
+  --aria-primary:       #3FC1C9;
+  --aria-primary-hover: color-mix(in srgb, #3FC1C9 80%, #F5F5F5);
+  --aria-primary-text:  #364F6B;
+  --aria-nav:           color-mix(in srgb, #364F6B 70%, #000);
+  --aria-nav-border:    color-mix(in srgb, #3FC1C9 40%, #364F6B);
+  --aria-input:         color-mix(in srgb, #364F6B 85%, #000);
+  --aria-input-border:  color-mix(in srgb, #F5F5F5 30%, #364F6B);
+  --aria-input-focus:   #FC5185;
+  --aria-badge:         #FC5185;
+  --aria-badge-text:    #F5F5F5;
+  --aria-shadow:        color-mix(in srgb, #364F6B 60%, #000);
+  --aria-body-bg:       color-mix(in srgb, #364F6B 75%, #000);
 }
 
 /* =============================================================================
@@ -66,18 +214,28 @@
 .aria-page {
   min-height: 100dvh;
   animation: page-in 300ms ease-out both;
+  background: var(--aria-page-bg, var(--aria-surface));
+  background-size: var(--aria-page-bg-size, 100%);
 }
 
-[data-theme="adhtea"] .aria-page {
-  background:
+body {
+  background: var(--aria-body-bg, var(--aria-surface));
+}
+
+[data-theme="adhtea"] {
+  --aria-page-bg:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='14' y='7' width='2' height='6' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='12' y='9' width='6' height='2' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='84' y='25' width='2' height='10' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='80' y='29' width='10' height='2' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='39' y='62' width='2' height='6' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='37' y='64' width='6' height='2' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='99' y='86' width='2' height='4' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='98' y='87' width='4' height='2' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='19' y='96' width='2' height='8' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='16' y='99' width='8' height='2' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='59' y='38' width='2' height='4' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='58' y='39' width='4' height='2' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='109' y='52' width='2' height='6' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='107' y='54' width='6' height='2' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='50' y='19' width='12' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='53' y='16' width='6' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='55' y='20' width='4' height='2' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='2' y='74' width='10' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='4' y='72' width='5' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='75' y='10' width='2' height='2' fill='rgba(247,161,101,0.32)'/%3E%3Crect x='30' y='42' width='2' height='2' fill='rgba(196,144,209,0.32)'/%3E%3Crect x='65' y='88' width='2' height='2' fill='rgba(240,107,154,0.28)'/%3E%3Crect x='110' y='15' width='2' height='2' fill='rgba(109,200,204,0.3)'/%3E%3C/svg%3E"),
     linear-gradient(160deg, #DFC8FF 0%, #F5C0F2 22%, #FFD0C0 50%, #FFE8C0 72%, #FFFBF0 100%);
-  background-size: 120px 120px, 100%;
+  --aria-page-bg-size: 120px 120px, 100%;
 }
 
-[data-theme="adhtea"] body {
-  background: #DFC8FF;
-}
+[data-theme="aria-coffee"]   { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #F9B282 65%, #DE6B35) 0%, #F9B282 100%); }
+[data-theme="aria-tea"]      { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFCF71 60%, #B6771D) 0%, #FFCF71 100%); }
+[data-theme="aria-berries"]  { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
+[data-theme="aria-omelette"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FEEE91 60%, #FFA239) 0%, #FEEE91 100%); }
+[data-theme="aria-americano"]{ --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #F3F3E0 70%, #27548A) 0%, #F3F3E0 100%); }
+[data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
+[data-theme="aria-mint"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #364F6B 60%, #000) 0%, #364F6B 100%); }
 
 /* =============================================================================
    Pixel UI utilities — Stardew-style offset borders (doubled)
@@ -133,10 +291,10 @@
   position: relative;
   overflow: hidden;
   border: 4px solid var(--aria-border);
-  box-shadow: 4px 4px 0 0 #7A5090, inset 0 0 0 2px rgba(196,144,209,0.25);
+  box-shadow: 4px 4px 0 0 var(--aria-shadow), inset 0 0 0 2px color-mix(in srgb, var(--aria-border) 50%, transparent);
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
-    #F0EAFF !important;
+    var(--aria-surface) !important;
   background-size: 200px 200px, 100% !important;
 }
 
@@ -166,11 +324,11 @@
 
 .pixel-btn {
   border: 4px solid var(--aria-border) !important;
-  box-shadow: 3px 3px 0 0 #7A5090;
+  box-shadow: 3px 3px 0 0 var(--aria-shadow);
   transition: box-shadow 80ms, transform 80ms !important;
 }
 .pixel-btn:hover {
-  box-shadow: 1px 1px 0 0 #7A5090;
+  box-shadow: 1px 1px 0 0 var(--aria-shadow);
   transform: translate(2px, 2px);
 }
 .pixel-btn:active {

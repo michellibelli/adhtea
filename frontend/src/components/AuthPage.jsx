@@ -28,8 +28,7 @@ const FLOAT_ART = [
 export default function AuthPage({ children }) {
   return (
     <div
-      className="min-h-dvh flex flex-col items-center relative overflow-hidden"
-      style={{ background: '#7B72CC' }}
+      className="min-h-dvh flex flex-col items-center relative overflow-hidden bg-ui-primary"
     >
       {/* Floating background art */}
       {FLOAT_ART.map((art, i) => (
