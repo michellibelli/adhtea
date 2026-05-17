@@ -32,6 +32,12 @@ def _migrate():
         if is_sqlite:
             tasks_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(tasks)")).fetchall()}
             users_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
+            med_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(medication_schedules)")).fetchall()}
+            if "dose" in med_cols:
+                # Privacy: drop dose column. Pre-3.9.11 rows held real dose strings
+                # ("10 mg", etc.) which are identifying. SQLite supports DROP COLUMN
+                # since 3.35.0 (2021); Render/Supabase Postgres handles it too.
+                conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN dose"))
             if "project_id" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
             if "email" not in users_cols:
@@ -79,6 +85,8 @@ def _migrate():
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_total_per_day INTEGER NOT NULL DEFAULT 15"
             ))
+            # Privacy: drop dose column. Pre-3.9.11 rows held real dose strings.
+            conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN IF EXISTS dose"))
             conn.commit()
 
 

@@ -306,13 +306,11 @@ class SelfCareLogResponse(BaseModel):
 
 class MedicationScheduleCreate(BaseModel):
     name: str
-    dose: Optional[str] = None
     reminder_times: Optional[str] = None   # "08:00,14:00"
 
 
 class MedicationScheduleUpdate(BaseModel):
     name: Optional[str] = None
-    dose: Optional[str] = None
     reminder_times: Optional[str] = None
     active: Optional[bool] = None
 
@@ -321,7 +319,6 @@ class MedicationScheduleResponse(BaseModel):
     id: int
     user_id: int
     name: str
-    dose: Optional[str]
     reminder_times: Optional[str]
     active: bool
     created_at: datetime

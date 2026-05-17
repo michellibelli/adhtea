@@ -314,7 +314,6 @@ class MedicationSchedule(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(200), nullable=False)
-    dose = Column(String(100), nullable=True)
     reminder_times = Column(String(100), nullable=True)  # "08:00,14:00" CSV
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=utcnow)

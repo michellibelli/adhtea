@@ -39,7 +39,6 @@ def create_schedule(
     schedule = MedicationSchedule(
         user_id=current_user.id,
         name=body.name.strip(),
-        dose=body.dose,
         reminder_times=body.reminder_times,
     )
     db.add(schedule)
