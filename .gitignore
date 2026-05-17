@@ -10,6 +10,7 @@ build/
 .venv/
 venv/
 env/
+.pytest_cache/
 
 # Database (local only — prod uses PostgreSQL)
 backend/aria.db

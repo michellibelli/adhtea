@@ -14,7 +14,7 @@ load_dotenv()
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
 
-def _migrate():
+def _migrate(target_engine=None):
     """Add new columns to existing tables without dropping data.
 
     This is a hand-rolled migration system — it checks whether each column
@@ -27,8 +27,9 @@ def _migrate():
     the standard Python tool for managing database schema changes with version
     history and rollback support.
     """
-    with engine.connect() as conn:
-        is_sqlite = str(engine.url).startswith("sqlite")
+    eng = target_engine if target_engine is not None else engine
+    with eng.connect() as conn:
+        is_sqlite = str(eng.url).startswith("sqlite")
         if is_sqlite:
             tasks_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(tasks)")).fetchall()}
             users_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
