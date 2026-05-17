@@ -1,68 +1,75 @@
 # Session bookmark
-*Last wrap: 2026-05-15 — third wrap of the day, code-quality + security pass*
+*Last wrap: 2026-05-17 — Phase 3 closed; test infra + CI + theme system shipped*
 
 ## State
 
-Live commit: `9fcd472` (correctness fixes from second review). BUILD chip on prod
-should read `3.9.15` once Vercel deploys.
+Live commit: `ec05f63` (paper teabag texture). BUILD chip on prod reads `3.9.22` once Vercel finishes.
 
-Vercel + Render both deploying from `master` on push. `gh` CLI works from
-PowerShell via full path `C:\Program Files\GitHub CLI\gh.exe` (not on PATH
-in Bash). `~/.aria-token` good for ~29 more days.
+Vercel + Render auto-deploy from `master`. CI added: `.github/workflows/test.yml` runs 86 pytest tests on every push + PR.
 
-## What shipped this session (third wrap)
+`~/.aria-token` rotating soon — re-grab from localStorage on adh-tea.fun if API helper fails.
 
-| Commit | What |
+
+## What shipped this session
+
+| BUILD | What |
 |---|---|
-| **#21+#4** | Google Calendar multi-cal selector + critical sync bug fix. `_get_service(token)` was missing inside the `for cal_id` loop in `sync_today_events`, causing every iteration to throw NameError, silently caught → always 0 created. Added `PATCH /gcal/calendars` endpoint + Settings UI with per-calendar checkboxes. Removed `/gcal/debug` endpoint (leaked partial client ID in production). |
-| **#3** | TriageCard pencil edit issue — turned out already shipped in #16; closed. Old `TriageCard.jsx` was orphaned (nothing imported it); deleted clean. |
-| **#5** | Loading + error states. New `components/PageState.jsx` with `PageLoading`, `PageError`, `InlineSkeletonCards`. Applied to Today, Inbox, Waiting, Projects, AllTasks. Replaces plain "Loading…" with animated skeleton cards and "Try again" buttons. |
-| **#2** | UptimeRobot ping configured external to repo. |
-| **#11** | Security audit pass. Fixed: timezone validation gap in `update_settings`, unbounded CSV upload (5 MB cap), debug endpoint removed, password minimum length (8 chars via `Annotated[str, Field(min_length=8, max_length=128)]`) applied to Setup/Register/Signup/UserCreate (NOT Login — would break existing users). |
-| **3.9.11** | Medication redesign — phase 1: removed dose field from add form and storage (privacy-first). |
-| **3.9.13** | Medication redesign — phase 2: pseudonymization model. Server now stores placeholders ("Medication 1", "Medication 2"). Device-only localStorage map holds the real medication names. Reminder times + taken logs stay server-side. UI note explains the tradeoff. New `frontend/src/utils/medicationStore.js` with `getMedName`/`setMedName`. Old AES-GCM encrypted local storage approach abandoned in favor of this simpler pseudonymization. |
-| **3.9.12** | Tournament: 3-pass-per-day cap with localStorage tracking. Pass 2 shows refinement banner; pass 3 shows "final pass"; pass 4 hits gate screen ("Priorities are locked in. Come back tomorrow."). Resets next day automatically. Tracks `triage_pass_date` + `triage_pass_count` keys. |
-| **3.9.14** | First code review pass — perf fixes, named constants, comments throughout. 16 files. Highlights: projects.py N+1 fix (10 projects = 2 queries instead of 11 via `func.count` + `group_by`), Today.jsx optimistic updates (tasks disappear instantly, no full refetch), Inbox.jsx useRef stabilization for `onCountChange`, Settings.jsx primary calendar detection (removed fragile name-string check), named threshold constants in CapacityBar, simplified weekend date math in snooze.js, plus plain-English comments aimed at a mid-level developer handoff. |
-| **3.9.15** | Second independent code review pass — correctness/error-handling fixes. `auth.py /me` now builds response via `UserResponse.model_validate()` instead of dumping `__table__.columns` (future sensitive fields can't leak). `_maybe_sync_gcal` and `gcal.py /status` JSON parse now log exceptions instead of `except: pass`. Triage CriticalList completeTask wrapped in try/catch with refetch fallback. |
-
-BUILD: `3.9.6 → 3.9.7 → 3.9.8 → 3.9.9 → 3.9.10 → 3.9.11 → 3.9.12 → 3.9.13 → 3.9.14 → 3.9.15`
+| **3.9.16** | Console-warning fixes: `autoComplete` attrs on Login/Register/Signup (`current-password` for login, `new-password` for setup/signup/register), `<meta name="mobile-web-app-capable">` added alongside deprecated apple variant. SelfCare runs one-time pseudonymization migration on legacy med rows — copies real name to localStorage, renames server row to `Medication N`, idempotent. |
+| **3.9.17** | Dropped `dose` column entirely from `medication_schedules`. Pre-3.9.11 rows still held real dose strings ("10 mg" etc.) — privacy risk. Removed from ORM model, Pydantic schemas, route. `_migrate` does `ALTER TABLE … DROP COLUMN` for both SQLite + Postgres branches; refactored to accept `target_engine` kwarg for testability. |
+| **3.9.18** | Phase 3.8 Part 2 finisher: inline domain-rule warning on Projects.jsx date pickers. `frontend/src/utils/domain.js` mirrors backend `next_allowed_date`; `<DomainDateWarning>` component shows amber "Saturday not allowed — will move to Monday" below 3 date inputs. Backend already snapped; this surfaces the snap. |
+| **3.9.19** | `slowapi` rate limit on `POST /login` → 10/minute per IP. Shared `Limiter` in `backend/rate_limit.py`. Closes #22. |
+| **3.9.20** | Settings → Display → "Show build chip" toggle. localStorage-backed + live update via `aria:build-chip-changed` custom window event. Closes #7. |
+| **3.9.21** | Manual theme picker (8 initial themes). Each `[data-theme="aria-*"]` block defines 14 `--aria-*` vars + page-bg gradient + body bg. `color-mix()` derives subtext/border/primary-hover. Settings → Display → Theme: swatch grid, tap to swap. ThemeContext now manual — reads `aria_theme` localStorage, no twilight auto-switching. BottomNav + App.jsx mobile header + AuthPage + pixel-card + pixel-btn shadows all use `ui-*` utilities so they retheme. |
+| **3.9.22** | Teabag-card paper texture rework: 4-layer background (2.5px fiber dots + 5px offset pass + SVG fractalNoise grain + vertical depth gradient) plus inset shadows for roundness. Bonus-mode variant in deeper amber/gold. **Note:** bonus mode didn't translate well — needs another pass tomorrow. |
+| **3.9.23** | Trimmed picker themes from 8 to 4 after user palette review: kept Original, Berries, Americano, Chai. Removed Coffee, Tea, Omelette, Mint. Hex values preserved in commit history if any are revived. |
 
 ## Bigger-picture state changes
 
-- **Medication privacy model is now pseudonymization, not E2E encryption.** Server sees "Medication 1, 2, 3" + reminder times + taken history. Device alone holds the name mapping. If the user clears browser data, names show as placeholders with "name not on this device" note; logs/reminders survive untouched. This is simpler than full PBKDF2+AES-GCM and recovers gracefully from device changes.
-- **Tournament is now self-limiting** to 3 passes per day. Prevents the user from grinding the same list endlessly. Refinement banner makes it explicit when they're re-triaging.
-- **Code quality is now mid-level-developer-handoff ready** in the changed files. Two independent AI code reviews (one perf-focused, one correctness-focused) ran across the codebase; legitimate findings from both were addressed. Comments throughout explain the *why* of non-obvious decisions for someone with ~1 year coding experience to follow.
+- **86 pytest tests + CI** — every backend route now has at least basic coverage. `conftest.py` uses in-memory SQLite via `StaticPool`. Tests run on push/PR via GitHub Actions. Means we can change backend code confidently without breaking deployed flows.
+- **Theme system is manual + user-controlled.** ThemeContext used to auto-switch via twilight (`utils/twilight.js`); that's gone. User picks one of 8 in Settings → Display → Theme. Future-friendly for user-defined custom palettes (current themes are a registry pattern).
+- **Medication is fully pseudonymized server-side.** Dose column dropped (3.9.17); legacy real-name rows migrated via frontend on first SelfCare load (3.9.16). Server now genuinely knows only `Medication N` placeholders + reminder times + taken history.
 
-## Open issues
+## Open issues / tomorrow
 
-```
-#7  enhancement   Build chip: add Settings section to toggle/customize
-#22 enhancement   Rate limiting on POST /login (slowapi)
-```
+1. **Bonus mode teabag** — paper texture redo translated poorly to bonus variant. Needs another pass with deeper gold tones / different layering.
+2. **Real device test** medication pseudonymization on the user's phone — already 1 of 2 places this needs to pass.
+3. **Real human code review** — outstanding from last session.
 
-Closed this session: #2, #3, #4, #5, #11, #21.
+## Lingering style/correctness items still NOT fixed (carried forward)
 
-## Lingering style/correctness items intentionally NOT fixed
+From the May 15 review passes, these are intentionally skipped:
 
-From the two review passes, these were flagged but skipped with reasoning:
-
-- `auth.py:46` `_make_session` no commit — standard SQLAlchemy "helper stages, caller commits" pattern, not a bug.
-- `auth.py:72` token expiry `>` vs `>=` — 1-second edge case, no observable impact.
-- `main.py:41` `is_owner` migration `MIN(id)` — runs once on existing DB; doesn't affect new installs.
-- `tasks.py:194` snooze `<=` race — sub-second window, no observable impact.
-- `tasks.py:752` cascade date shift — reviewer was wrong about cross-domain risk; siblings share `project_id` therefore share domain.
-- `domains.py:42` + `tasks.py:517` `== True/None` style — already `noqa`'d intentionally. SQLAlchemy translates `== None` into SQL `IS NULL`; changing to `.is_()` is cleaner but not required.
-- `Today.jsx:144` optimistic update — reviewer wanted explicit `setTasks(prev => [...prev, task])` revert pattern. Current code uses `fetchTasks()` fallback on error which is more robust against server-side state drift.
+- `auth.py:46` `_make_session` no commit — caller-commits SQLAlchemy pattern.
+- `auth.py:72` token expiry `>` vs `>=` — 1-second edge case.
+- `main.py:41` `is_owner` migration `MIN(id)` — one-time existing-DB only.
+- `tasks.py:194` snooze `<=` race — sub-second window.
+- `tasks.py:752` cascade date shift — siblings share `project_id` therefore share domain.
+- `domains.py:42` + `tasks.py:517` `== True/None` — `noqa`'d, SQLAlchemy translates to SQL `IS NULL`.
+- `Today.jsx:144` optimistic update — `fetchTasks()` fallback is more robust than explicit revert.
 
 ## Where to resume
 
-Suggested order of value:
-
-1. **Real device testing** — verify the medication pseudonymization flow end-to-end on the user's phone. Browser clear + re-entry should show placeholders. Logs/reminders should persist.
-2. **#7** — Build chip Settings section. Low priority; defer until you want it.
-3. **#22** — Rate limit `POST /login` with slowapi. Defensive; not urgent for family-only deploy.
-4. **Real human code review** — both AI reviews together still missed things a human would catch. If you find someone, the codebase is in much better shape than this morning for it.
+1. **Bonus mode teabag visual fix** — open Focus, trigger bonus mode (load with no normal task showing — e.g., all done), inspect, iterate on `.teabag-bonus` CSS in `frontend/src/index.css` around line ~285.
+2. **Real device test** medication pseudonymization on the user's phone.
+3. **Mint dark theme polish** (if user picks Mint daily) — pride stripe, teabag, AuthPage, Focus inline hex.
+4. **Optional hex sweep** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex (sparkles, gradients, pixel art). Cosmetic — affects only those specific surfaces.
 
 ## Local-only files NOT in repo
 
-`docs/Secret Key.txt` and `docs/Server Stuff.txt` were added to `.gitignore` this session — never committed, confirmed by `git log --all -- "docs/..."` returning empty. Keep them out of git permanently; move them out of the project folder if they hold long-term secrets you might mix up.
+`docs/Secret Key.txt` and `docs/Server Stuff.txt` — gitignored. Keep out permanently.
+
+## Commits this session (latest first)
+
+```
+ec05f63 style(teabag): paper texture with fiber grain + roundness     [3.9.22]
+03bcab1 feat(theme): manual picker with 7 new palettes + Original     [3.9.21]
+b2209cc feat(settings): toggle build chip visibility (closes #7)       [3.9.20]
+7d31b32 feat(auth): rate-limit POST /login to 10/min per IP (closes #22) [3.9.19]
+5cdc8aa feat(domain): inline warning when picked date is disallowed   [3.9.18]
+9323849 ci: run pytest on push + PR to master
+647a55c test: third batch — routines, selfcare, gcal, lifecycle, CSV (39 tests)
+5e41660 test: add second batch — tasks, medication, projects (20 tests)
+a6fda70 test: add pytest scaffolding + first batch (27 tests)
+32cd791 feat(medication): drop dose column entirely                   [3.9.17]
+9a16380 fix(frontend): autocomplete attrs, mobile-web-app-capable, legacy med name migration [3.9.16]
+```

@@ -62,46 +62,6 @@
    primary-hover, primary-text, nav, nav-border, input-border, badge-text.
    ============================================================================= */
 
-[data-theme="aria-coffee"] {
-  --aria-surface:       #F9B282;
-  --aria-text:          #8F4426;
-  --aria-subtext:       color-mix(in srgb, #8F4426 60%, #F9B282);
-  --aria-border:        color-mix(in srgb, #8F4426 25%, #F9B282);
-  --aria-accent:        #64CCDA;
-  --aria-primary:       #DE6B35;
-  --aria-primary-hover: color-mix(in srgb, #DE6B35 80%, #8F4426);
-  --aria-primary-text:  #FFFBF0;
-  --aria-nav:           #8F4426;
-  --aria-nav-border:    color-mix(in srgb, #DE6B35 50%, #8F4426);
-  --aria-input:         color-mix(in srgb, #F9B282 75%, #FFFBF0);
-  --aria-input-border:  color-mix(in srgb, #8F4426 30%, #F9B282);
-  --aria-input-focus:   #64CCDA;
-  --aria-badge:         #64CCDA;
-  --aria-badge-text:    #8F4426;
-  --aria-shadow:        #8F4426;
-  --aria-body-bg:       color-mix(in srgb, #F9B282 70%, #DE6B35);
-}
-
-[data-theme="aria-tea"] {
-  --aria-surface:       #FFCF71;
-  --aria-text:          #7B542F;
-  --aria-subtext:       color-mix(in srgb, #7B542F 60%, #FFCF71);
-  --aria-border:        color-mix(in srgb, #7B542F 25%, #FFCF71);
-  --aria-accent:        #FF9D00;
-  --aria-primary:       #B6771D;
-  --aria-primary-hover: color-mix(in srgb, #B6771D 80%, #7B542F);
-  --aria-primary-text:  #FFFBF0;
-  --aria-nav:           #7B542F;
-  --aria-nav-border:    color-mix(in srgb, #B6771D 50%, #7B542F);
-  --aria-input:         color-mix(in srgb, #FFCF71 75%, #FFFBF0);
-  --aria-input-border:  color-mix(in srgb, #7B542F 30%, #FFCF71);
-  --aria-input-focus:   #FF9D00;
-  --aria-badge:         #FF9D00;
-  --aria-badge-text:    #7B542F;
-  --aria-shadow:        #7B542F;
-  --aria-body-bg:       color-mix(in srgb, #FFCF71 65%, #B6771D);
-}
-
 [data-theme="aria-berries"] {
   --aria-surface:       #FFF1CB;
   --aria-text:          #4A2D5C;
@@ -120,26 +80,6 @@
   --aria-badge-text:    #4A2D5C;
   --aria-shadow:        #4A2D5C;
   --aria-body-bg:       color-mix(in srgb, #FFF1CB 70%, #B7A3E3);
-}
-
-[data-theme="aria-omelette"] {
-  --aria-surface:       #FEEE91;
-  --aria-text:          #6B1A1A;
-  --aria-subtext:       color-mix(in srgb, #6B1A1A 60%, #FEEE91);
-  --aria-border:        color-mix(in srgb, #6B1A1A 25%, #FEEE91);
-  --aria-accent:        #FF5656;
-  --aria-primary:       #FFA239;
-  --aria-primary-hover: color-mix(in srgb, #FFA239 80%, #6B1A1A);
-  --aria-primary-text:  #6B1A1A;
-  --aria-nav:           #6B1A1A;
-  --aria-nav-border:    color-mix(in srgb, #FFA239 50%, #6B1A1A);
-  --aria-input:         color-mix(in srgb, #FEEE91 80%, #FFFBF0);
-  --aria-input-border:  color-mix(in srgb, #6B1A1A 30%, #FEEE91);
-  --aria-input-focus:   #FF5656;
-  --aria-badge:         #8CE4FF;
-  --aria-badge-text:    #6B1A1A;
-  --aria-shadow:        #6B1A1A;
-  --aria-body-bg:       color-mix(in srgb, #FEEE91 65%, #FFA239);
 }
 
 [data-theme="aria-americano"] {
@@ -182,25 +122,6 @@
   --aria-body-bg:       color-mix(in srgb, #FFF0DD 65%, #E2A16F);
 }
 
-[data-theme="aria-mint"] {
-  --aria-surface:       #364F6B;
-  --aria-text:          #F5F5F5;
-  --aria-subtext:       color-mix(in srgb, #F5F5F5 70%, #364F6B);
-  --aria-border:        color-mix(in srgb, #F5F5F5 22%, #364F6B);
-  --aria-accent:        #FC5185;
-  --aria-primary:       #3FC1C9;
-  --aria-primary-hover: color-mix(in srgb, #3FC1C9 80%, #F5F5F5);
-  --aria-primary-text:  #364F6B;
-  --aria-nav:           color-mix(in srgb, #364F6B 70%, #000);
-  --aria-nav-border:    color-mix(in srgb, #3FC1C9 40%, #364F6B);
-  --aria-input:         color-mix(in srgb, #364F6B 85%, #000);
-  --aria-input-border:  color-mix(in srgb, #F5F5F5 30%, #364F6B);
-  --aria-input-focus:   #FC5185;
-  --aria-badge:         #FC5185;
-  --aria-badge-text:    #F5F5F5;
-  --aria-shadow:        color-mix(in srgb, #364F6B 60%, #000);
-  --aria-body-bg:       color-mix(in srgb, #364F6B 75%, #000);
-}
 
 /* =============================================================================
    Page background — pixel dawn sky + tiled star/cloud texture
@@ -229,13 +150,9 @@ body {
   --aria-page-bg-size: 120px 120px, 100%;
 }
 
-[data-theme="aria-coffee"]   { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #F9B282 65%, #DE6B35) 0%, #F9B282 100%); }
-[data-theme="aria-tea"]      { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFCF71 60%, #B6771D) 0%, #FFCF71 100%); }
 [data-theme="aria-berries"]  { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
-[data-theme="aria-omelette"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FEEE91 60%, #FFA239) 0%, #FEEE91 100%); }
 [data-theme="aria-americano"]{ --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #F3F3E0 70%, #27548A) 0%, #F3F3E0 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
-[data-theme="aria-mint"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #364F6B 60%, #000) 0%, #364F6B 100%); }
 
 /* =============================================================================
    Pixel UI utilities — Stardew-style offset borders (doubled)

@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-15*
+*Last updated: 2026-05-17 (BUILD 3.9.22)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -37,9 +37,22 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
-## Current status — Phases 1–3.9 complete ✅
+## Current status — Phases 1–3 complete ✅
 
 Everything below is shipped and live on adh-tea.fun.
+
+### Phase 3.9.16–3.9.22 completed (2026-05-17)
+
+
+- **3.9.16** — `autoComplete` attrs on Login/Register/Signup; `mobile-web-app-capable` meta added alongside deprecated apple variant; SelfCare runs a one-time pseudonymization migration for pre-3.9.13 med rows (copies real name to localStorage, renames server row to `Medication N` placeholder, idempotent via regex).
+- **3.9.17** — `dose` column dropped from `medication_schedules` table (ALTER TABLE DROP COLUMN in `_migrate`, both SQLite and Postgres branches). Pre-3.9.11 rows held real dose strings; this removes them server-side. Schema + route + ORM model all stripped.
+- **3.9.18** — Phase 3.8 Part 2 finisher: `frontend/src/utils/domain.js` mirrors `next_allowed_date()`; `<DomainDateWarning>` component shows amber inline warning below 3 date inputs in `Projects.jsx` (SortableTaskRow inline edit, batch-date bar, add-task form). Backend already snaps via `next_allowed_date`; this just surfaces the snap to the user.
+- **3.9.19** — `slowapi` rate limit on `POST /login` at 10/minute per IP. Shared `Limiter` in `backend/rate_limit.py`; other auth endpoints can opt in later. Closes #22.
+- **3.9.20** — Settings → Display → "Show build chip" toggle. localStorage-backed (`show_build_chip` key); live update via `aria:build-chip-changed` custom window event. Closes #7.
+- **3.9.21** — Manual theme picker (initially 8 themes; trimmed to 4 in 3.9.23). Each `[data-theme="aria-*"]` block defines 14 standard `--aria-*` vars + page-bg gradient + body bg. `color-mix()` derives subtext/border/primary-hover. `ThemeContext` now manual (reads `aria_theme` from localStorage, default `adhtea`, no twilight auto-switching). Settings → Display → Theme: swatch grid, tap to swap. BottomNav, mobile header, AuthPage, pixel-card + pixel-btn shadows all use `ui-*` utilities now so they retheme.
+- **3.9.22** — Teabag card paper texture: 4 layered backgrounds (2.5px fiber dots + 5px offset dots + SVG fractalNoise grain + vertical depth gradient) plus inset shadows for roundness. Bonus-mode variant in deeper amber/gold.
+- **3.9.23** — Trimmed picker themes: removed Coffee, Tea, Omelette, Mint after user palette review. Final set: Original, Berries, Americano, Chai.
+- **Test infrastructure** — `backend/tests/` 86 tests across 11 files; `requirements-dev.txt` pinned (pytest, httpx, tzdata). GitHub Actions workflow `.github/workflows/test.yml` runs full suite on every push + PR to master, Python 3.12 on ubuntu-latest. Run locally: `cd backend && python -m pytest tests/ -v`.
 
 ### Phase 3.9.7–3.9.15 completed (2026-05-15, evening)
 
@@ -136,23 +149,27 @@ Tournament-driven Triage at scale.
 
 ## Known issues / small todos
 
-1. **#7 Build chip Settings section** — add toggle/customize for the BUILD timestamp chip. Low priority.
-2. **#22 Rate limit `POST /login`** — `slowapi` package, defensive against brute-force. Not urgent for family-only deploy.
-3. **BottomNav crowding** — 8 items tight on mobile; may need redesign before wider rollout.
-4. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
+1. **Bonus mode teabag** — paper texture redo in 3.9.22 didn't translate well to bonus variant; needs another pass. Picked up tomorrow.
+2. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
+3. **Real human code review** — both AI passes still missed things a human would catch.
+4. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic; affects only those specific surfaces, not main theming.
 
-Resolved 2026-05-15: #2 UptimeRobot, #3 TriageCard inline edit (already shipped), #4 GCal multi-cal, #5 loading/error states, #11 security audit, #21 GCal sync bug.
+Resolved 2026-05-15: #2 UptimeRobot, #3 TriageCard inline edit, #4 GCal multi-cal, #5 loading/error states, #11 security audit, #21 GCal sync bug.
+Resolved 2026-05-17: #7 Build chip Settings toggle (3.9.20), #22 Login rate limit (3.9.19), BottomNav crowding (already at 4 items + FAB), Phase 3.8 Part 2 domain enforcement (3.9.18).
 
 ---
 
-## Next: Phase 3.8 Part 2 — Domain enforcement
+## Next: Polish + live-use (current phase)
 
-Phase 3.8 Part 1 (data + UI for domains) is shipped. Still TODO:
-- Validate sub-task `due_date` against domain rules on create/PATCH (reject or snap to next allowed day)
-- AI breakdown: pass domain rules into the Claude prompt so generated dates fall on allowed days
-- Cascade shift: when shifting later siblings, skip-and-snap forward past disallowed days
-- Frontend: show inline warning if a date picker selects a disallowed day for the project's domain
+Phase 3 closed. Phase 4 deferred until the user has experience with the app in daily use. Focus until then:
+- Bug fixes from live use
+- Theme polish (especially Mint dark theme — pride stripe, teabag, AuthPage need dark-theme overrides if Mint becomes the daily)
+- Bonus mode teabag pass (see Known Issues #1)
+- Real-device testing
+- Any palette swaps / customization the user requests
 
+
+**Status:** Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight.
 
 
 **Groundwork already in place:**
@@ -161,7 +178,7 @@ Phase 3.8 Part 1 (data + UI for domains) is shipped. Still TODO:
 - Invite token flow exists in `backend/routes/auth.py`
 - `AlphaChallenge.jsx` + `OnboardingWelcome.jsx` pages exist
 
-**What needs building:**
+**What needs building when unblocked:**
 1. **Backend** — filter delegated tasks for child users, delegation endpoint (`POST /tasks/{id}/delegate`)
 2. **Frontend** — child home view (simplified: just his routines + delegated tasks, big checkboxes)
 3. **the user's view** — delegation UI on triage/today cards, completion status visible
@@ -178,16 +195,19 @@ backend/
   database.py         SQLAlchemy engine + session
   models.py           all ORM models
   schemas.py          Pydantic schemas
+  rate_limit.py       shared slowapi Limiter (keyed on client IP)
   routes/
-    auth.py           login, session tokens (TOKEN_EXPIRY_DAYS=30), invite codes
+    auth.py           login (10/min rate limit), session tokens (TOKEN_EXPIRY_DAYS=30), invite codes
     tasks.py          CRUD + today/inbox/bonus/search/backlog/critical-list endpoints
     routines.py       routine CRUD + lazy daily instance generation
     selfcare.py       SelfCareLog + CapacitySnapshot
-    medication.py     MedicationSchedule + MedicationLog
+    medication.py     MedicationSchedule + MedicationLog (no dose field as of 3.9.17)
     gcal.py           Google Calendar OAuth 2.0 + lazy sync
     projects.py       Project CRUD + Claude Haiku AI breakdown + sub-task date cascade
     domains.py        Project Domain CRUD; lazy-seeds Work/Home defaults per user
     import_csv.py     Notion CSV import
+  tests/              86 pytest tests (conftest + 10 test files); see Test infra section
+  requirements-dev.txt  pytest + httpx + tzdata
 ```
 
 ```
@@ -215,17 +235,66 @@ frontend/src/
     Settings.jsx              integrations, CSV import, nav links
   components/
     TaskCard.jsx              inline edit (pencil), done/snooze actions
-    TriageCard.jsx            triage item (needs pencil edit — see known issues)
     CapacityBar.jsx           compact (Focus/Triage) + full (Foundation)
-    BottomNav.jsx             mobile: Routines | Log | ☰ + FAB
+    BottomNav.jsx             mobile + desktop nav; uses ui-nav / ui-primary utilities
     HamburgerMenu.jsx         slide-out nav
     WakeScreen.jsx            5s splash → 60s diary + countdown + health check
     SnoozeSheet.jsx           snooze date picker
     DomainPicker.jsx          pills + slide-down rule editor for project domains
+    DomainDateWarning.jsx     amber warning when picked date hits disallowed domain day
+    PageState.jsx             PageLoading / PageError / InlineSkeletonCards
     Card.jsx / Button.jsx / Input.jsx
+  context/
+    ThemeContext.jsx          manual theme picker; reads aria_theme localStorage; 8 themes registered
   utils/
     dnd.js                    SmartPointerSensor — blocks drag start on inputs/textareas/buttons
+    domain.js                 frontend mirror of next_allowed_date (for warning UI)
+    medicationStore.js        localStorage med name pseudonymization (server stores placeholders)
+    snooze.js                 weekend-aware snooze date math
 ```
+
+## Test infrastructure (added 2026-05-17)
+
+86 pytest tests covering every backend route. Runs locally + on CI.
+
+```bash
+cd backend
+python -m pip install -r requirements-dev.txt   # pytest + httpx + tzdata
+python -m pytest tests/ -v
+```
+
+| File | Tests | Covers |
+|------|-------|--------|
+| test_auth.py            | 10 | setup/login/me, password min, expired token, no hashed_password leak |
+| test_domain_utils.py    | 13 | `next_allowed_date` snap, OR rule logic, prompt hint |
+| test_gcal.py            |  7 | sync_today_events, multi-cal loop (regression guard #21), dedup |
+| test_import_csv.py      |  6 | non-csv ext, 5MB cap, title-column required, BOM, date formats |
+| test_medication.py      |  7 | name verbatim, no dose accepted, log idempotency per day |
+| test_migrate.py         |  4 | idempotent re-runs, dose column drop, no-op when absent |
+| test_projects.py        |  5 | AI breakdown (mocked Anthropic), N+1 absence (sqlalchemy event listener) |
+| test_routines.py        | 10 | CRUD, `_is_routine_due` dispatch, lazy instance generation |
+| test_selfcare.py        |  7 | `_compute_capacity`, log upsert, snapshot recompute, daily summary |
+| test_tasks.py           |  8 | cascade date shift, `_find_target` daily caps |
+| test_tasks_lifecycle.py |  9 | `_app_today` tz, carry-forward, snoozes, demote, promote |
+
+CI: `.github/workflows/test.yml` runs full suite on every push + PR to master (Python 3.12, ubuntu-latest, pip cache keyed off requirements-dev.txt).
+
+`conftest.py` provides `db_engine` (in-memory SQLite via `StaticPool`), `db_session`, `client` (FastAPI TestClient with `get_db` override), `primary_user_token`, `auth_headers`. Per-module autouse `_seed_user` fixture for tests that need the primary user without hitting HTTP.
+
+## Theme system (added 2026-05-17, 3.9.21; trimmed 3.9.23)
+
+Manual user-selected themes, 4 registered. Each `[data-theme="..."]` block in `index.css` defines 14 `--aria-*` vars + page-bg gradient + body bg. `color-mix()` derives subtext / border / primary-hover from the palette inputs.
+
+| Theme id          | Label     | Notes |
+|-------------------|-----------|-------|
+| `adhtea`          | Original  | Pixel pride / queer cozy. Has unique SVG starfield page-bg. |
+| `aria-berries`    | Berries   | Cream/plum pastel; 5-color (sky blue badge) |
+| `aria-americano`  | Americano | Cream + navy; cleanest contrast (AAA) |
+| `aria-chai`       | Chai      | Cream + cinnamon brown; 5-color (gray badge) |
+
+`ThemeContext` reads `aria_theme` from localStorage, defaults to `adhtea`, persists on every set, applies `data-theme` to `<html>`. Settings → Display → Theme provides 4-swatch grid; tap = instant swap. Unknown stored ids fall back to `adhtea` automatically.
+
+**Trimmed from initial 8:** Coffee, Tea, Omelette, Mint — user vetoed during palette review. If revived, palette hexes are preserved in commit history.
 
 ## Diagnostic workflow (since 2026-05-14)
 
