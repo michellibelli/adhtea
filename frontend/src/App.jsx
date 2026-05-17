@@ -1,4 +1,10 @@
 import { useState, useEffect } from 'react'
+
+const BUILD_CHIP_KEY = 'show_build_chip'
+function readShowBuildChip() {
+  const v = localStorage.getItem(BUILD_CHIP_KEY)
+  return v === null ? true : v === 'true'
+}
 import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn, likelySleeping } from './api/client'
 import WakeScreen from './components/WakeScreen'
@@ -173,7 +179,14 @@ export default function App() {
   const [preAuthScreen, setPreAuthScreen] = useState(
     () => window.location.pathname === '/signup' ? 'signup' : 'login'
   )
+  const [showChip, setShowChip] = useState(readShowBuildChip)
   const inviteToken = new URLSearchParams(window.location.search).get('invite')
+
+  useEffect(() => {
+    const handler = () => setShowChip(readShowBuildChip())
+    window.addEventListener('aria:build-chip-changed', handler)
+    return () => window.removeEventListener('aria:build-chip-changed', handler)
+  }, [])
 
   function handleAuthed() {
     window.history.replaceState({}, '', '/')
@@ -210,16 +223,18 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <div style={{
-        position: 'fixed', top: 4, right: 4, zIndex: 9999,
-        background: 'rgba(74,50,96,0.85)', color: '#F5E6D3', fontWeight: 600,
-        padding: '2px 7px', fontSize: 10, fontFamily: 'monospace',
-        borderRadius: 4, pointerEvents: 'none', textAlign: 'right', lineHeight: '1.5',
-        border: '1px solid rgba(245,230,211,0.25)',
-      }}>
-        <div>build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
-        <div style={{fontWeight:400, opacity:0.75}}>{new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit'})}</div>
-      </div>
+      {showChip && (
+        <div style={{
+          position: 'fixed', top: 4, right: 4, zIndex: 9999,
+          background: 'rgba(74,50,96,0.85)', color: '#F5E6D3', fontWeight: 600,
+          padding: '2px 7px', fontSize: 10, fontFamily: 'monospace',
+          borderRadius: 4, pointerEvents: 'none', textAlign: 'right', lineHeight: '1.5',
+          border: '1px solid rgba(245,230,211,0.25)',
+        }}>
+          <div>build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
+          <div style={{fontWeight:400, opacity:0.75}}>{new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit'})}</div>
+        </div>
+      )}
       {authed
         ? <AppShell />
         : <Login onLogin={() => setAuthed(true)} onGoSignup={() => { window.history.replaceState({}, '', '/signup'); setPreAuthScreen('signup') }} />

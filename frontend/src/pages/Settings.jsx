@@ -413,6 +413,11 @@ export default function Settings({ onNavigate, user }) {
           </Card>
         </section>
 
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Display</h2>
+          <BuildChipToggle />
+        </section>
+
         <section>
           <Card className="px-5 py-4">
             <button
@@ -426,6 +431,41 @@ export default function Settings({ onNavigate, user }) {
 
       </div>
     </div>
+  )
+}
+
+
+const BUILD_CHIP_KEY = 'show_build_chip'
+
+function BuildChipToggle() {
+  const [show, setShow] = useState(() => {
+    const v = localStorage.getItem(BUILD_CHIP_KEY)
+    return v === null ? true : v === 'true'
+  })
+
+  function toggle() {
+    const next = !show
+    setShow(next)
+    localStorage.setItem(BUILD_CHIP_KEY, String(next))
+    window.dispatchEvent(new Event('aria:build-chip-changed'))
+  }
+
+  return (
+    <Card className="px-5 py-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-ui-text">Show build chip</p>
+          <p className="text-xs text-ui-subtext mt-0.5">Tiny top-right tag showing the deployed build number.</p>
+        </div>
+        <button
+          onClick={toggle}
+          aria-pressed={show}
+          className={`relative w-11 h-6 rounded-full transition-colors ${show ? 'bg-ui-accent' : 'bg-ui-border'}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${show ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
+    </Card>
   )
 }
 
