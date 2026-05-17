@@ -14,6 +14,7 @@ import {
 import { createTask, completeTask, reorderTasks, updateTask } from '../api/tasks'
 import { listDomains, createDomain } from '../api/domains'
 import DomainPicker from '../components/DomainPicker'
+import DomainDateWarning from '../components/DomainDateWarning'
 
 function fmtDate(iso) {
   if (!iso) return null
@@ -112,7 +113,7 @@ function LongPressCircle({ task, selected, onComplete, onToggleSelect }) {
   )
 }
 
-function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, selected, onToggleSelect }) {
+function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, selected, onToggleSelect, domainRules }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const [editing, setEditing]     = useState(false)
   const [localTitle, setLocalTitle] = useState(task.title)
@@ -150,6 +151,7 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, sele
             <button onClick={saveEdit} className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity">Save</button>
             <button onClick={cancelEdit} className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity">Cancel</button>
           </div>
+          <DomainDateWarning date={localDate} rules={domainRules} />
         </div>
       ) : (
         <div className={`flex items-center gap-3 px-4 py-2.5 ${selected ? 'bg-ui-accent/10' : ''}`}>
@@ -190,7 +192,7 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, sele
   )
 }
 
-function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate, selected, onToggleSelect }) {
+function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate, selected, onToggleSelect, domainRules }) {
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,        { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -219,6 +221,7 @@ function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, o
             onUpdate={onUpdate}
             selected={selected.has(task.id)}
             onToggleSelect={onToggleSelect}
+            domainRules={domainRules}
           />
         ))}
       </SortableContext>
@@ -535,6 +538,7 @@ export default function Projects({ onNavigate }) {
           {projects.map(project => {
             const isExpanded = expanded === project.id
             const d = detail[project.id]
+            const domainRules = domains.find(dd => dd.id === project.domain_id)?.rules || []
 
             return (
               <Card key={project.id} className="overflow-hidden">
@@ -645,27 +649,30 @@ export default function Projects({ onNavigate }) {
                               </button>
                             </div>
                             {batchDateMode && (
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="date"
-                                  value={batchDate}
-                                  onChange={e => setBatchDate(e.target.value)}
-                                  className="text-xs bg-ui-surface border border-ui-border rounded-lg px-2 py-1 text-ui-text focus:outline-none focus:border-ui-accent"
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={handleBatchDate}
-                                  disabled={!batchDate}
-                                  className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity disabled:opacity-40"
-                                >
-                                  Set
-                                </button>
-                                <button
-                                  onClick={() => { setBatchDateMode(false); setBatchDate('') }}
-                                  className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity"
-                                >
-                                  ✕
-                                </button>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={batchDate}
+                                    onChange={e => setBatchDate(e.target.value)}
+                                    className="text-xs bg-ui-surface border border-ui-border rounded-lg px-2 py-1 text-ui-text focus:outline-none focus:border-ui-accent"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={handleBatchDate}
+                                    disabled={!batchDate}
+                                    className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity disabled:opacity-40"
+                                  >
+                                    Set
+                                  </button>
+                                  <button
+                                    onClick={() => { setBatchDateMode(false); setBatchDate('') }}
+                                    className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                                <DomainDateWarning date={batchDate} rules={domainRules} />
                               </div>
                             )}
                           </div>
@@ -682,6 +689,7 @@ export default function Projects({ onNavigate }) {
                             onUpdate={handleUpdateProjectTask}
                             selected={selected}
                             onToggleSelect={toggleSelect}
+                            domainRules={domainRules}
                           />
                         )}
 
@@ -696,12 +704,14 @@ export default function Projects({ onNavigate }) {
                               autoFocus
                             />
                             <div className="flex gap-2">
-                              <Input
-                                type="date"
-                                value={newTaskDue}
-                                onChange={e => setNewTaskDue(e.target.value)}
-                                className="flex-1"
-                              />
+                              <div className="flex-1 space-y-1">
+                                <Input
+                                  type="date"
+                                  value={newTaskDue}
+                                  onChange={e => setNewTaskDue(e.target.value)}
+                                />
+                                <DomainDateWarning date={newTaskDue} rules={domainRules} />
+                              </div>
                               <div className="flex gap-1">
                                 {[['small','Light'],['medium','Med'],['large','Heavy']].map(([val, lbl]) => (
                                   <button
