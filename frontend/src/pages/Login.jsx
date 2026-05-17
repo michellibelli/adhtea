@@ -42,15 +42,16 @@ export default function Login({ onLogin, onGoSignup }) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === 'setup' && (
-          <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
+          <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required autoComplete="name" />
         )}
         <Input
           placeholder="Username" value={username} onChange={e => setUsername(e.target.value)}
-          required autoCapitalize="none" autoCorrect="off"
+          required autoCapitalize="none" autoCorrect="off" autoComplete="username"
         />
         <Input
           type="password" placeholder="Password" value={password}
           onChange={e => setPassword(e.target.value)} required
+          autoComplete={mode === 'setup' ? 'new-password' : 'current-password'}
         />
 
         {error && (

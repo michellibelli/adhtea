@@ -38,12 +38,14 @@ export default function Register({ inviteToken, onRegister }) {
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             required
             autoFocus
+            autoComplete="name"
           />
           <Input
             placeholder="Choose a username"
             value={form.username}
             onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase() }))}
             required
+            autoComplete="username"
           />
           <Input
             type="password"
@@ -51,6 +53,7 @@ export default function Register({ inviteToken, onRegister }) {
             value={form.password}
             onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
             required
+            autoComplete="new-password"
           />
           {error && <p className="text-xs text-red-400">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
-import { getMedication, createMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
+import { getMedication, createMedication, updateMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
 import { getMedName, setMedName } from '../utils/medicationStore'
 import { createTask } from '../api/tasks'
 import CapacityBar from '../components/CapacityBar'
@@ -31,6 +31,40 @@ function TapRow({ options, labels, value, onChange }) {
       ))}
     </div>
   )
+}
+
+
+// ---------------------------------------------------------------------------
+// One-time migration: pre-3.9.13 meds were stored with real names server-side.
+// On first load after deploy, copy the real name into localStorage and rename
+// the server row to "Medication N" so the server only ever holds placeholders.
+// Idempotent — once renamed, the regex match skips the row.
+// ---------------------------------------------------------------------------
+const PLACEHOLDER_RE = /^Medication \d+$/
+
+async function migrateLegacyMedNames(meds, userId) {
+  if (!userId) return meds
+  const sorted = [...meds].sort((a, b) => a.id - b.id)
+  let counter = 1
+  const out = []
+  for (const m of sorted) {
+    if (PLACEHOLDER_RE.test(m.name)) {
+      out.push(m)
+      const n = parseInt(m.name.slice('Medication '.length), 10)
+      if (n >= counter) counter = n + 1
+      continue
+    }
+    setMedName(userId, m.id, m.name)
+    const placeholder = `Medication ${counter++}`
+    try {
+      const updated = await updateMedication(m.id, { name: placeholder })
+      out.push(updated)
+    } catch (err) {
+      console.error('med pseudonym migration failed for', m.id, err)
+      out.push(m)
+    }
+  }
+  return out
 }
 
 
@@ -66,7 +100,8 @@ export default function SelfCare({ userId }) {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const [todayLog, cap, meds] = await Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
+        const [todayLog, cap, rawMeds] = await Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
+        const meds = await migrateLegacyMedNames(rawMeds, userId)
         setLog(todayLog)
         setCapacity(cap)
         setMedication(meds)

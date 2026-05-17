@@ -39,18 +39,18 @@ export default function Signup({ onLogin, onGoLogin }) {
       <p className="text-sm text-center text-white/80 mb-6">Create your account</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
+        <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required autoComplete="name" />
         <Input
           placeholder="Username" value={username} onChange={e => setUsername(e.target.value)}
-          required autoCapitalize="none" autoCorrect="off"
+          required autoCapitalize="none" autoCorrect="off" autoComplete="username"
         />
         <Input
           type="email" placeholder="Email (optional)" value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)} autoComplete="email"
         />
         <Input
           type="password" placeholder="Password" value={password}
-          onChange={e => setPassword(e.target.value)} required
+          onChange={e => setPassword(e.target.value)} required autoComplete="new-password"
         />
         {alphaRequired && (
           <Input
