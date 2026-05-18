@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-17 (BUILD 3.9.22)*
+*Last updated: 2026-05-17 evening (BUILD 3.9.33)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -40,6 +40,58 @@ Primary user (prod): username=`demo_user`, user_id=2.
 ## Current status — Phases 1–3 complete ✅
 
 Everything below is shipped and live on adh-tea.fun.
+
+### Phase 3.9.24–3.9.33 completed (2026-05-17 evening)
+
+Aesthetic + UX cohesion pass, plus a domain enforcement bug-fix. No new
+feature scope; this was polish, visual rework, and one systemic bug.
+
+- **3.9.24** — On every new build, `main.jsx` compares stored `aria_build`
+  to current `__BUILD_TIME__` and wipes localStorage on mismatch.
+  **Preserved keys**: `aria_token` (session), `aria_theme` (user pick),
+  `med_name_*` (real medication names — server has placeholders only,
+  wipe would be permanent data loss). Ensures bug fixes that depend on
+  clean local state reach users who haven't manually cleared.
+- **3.9.27** — Theme registry trimmed: dropped Original (`adhtea`) and
+  dead `utils/twilight.js`. Default theme now `aria-americano`. Users
+  with the old id in localStorage fall back to the default automatically.
+- **3.9.28** — Realistic teabag on Focus: tag stays fixed, string + bag
+  swing as a pendulum (`.teabag-sway` CSS animation, transform-origin
+  top center), stitched bottom seam (.teabag-stitches).
+- **3.9.30** — Static tiled tea-leaves on the page background replaced
+  with a `.falling-leaves` fixed overlay (six leaf SVGs, varied widths
+  + durations + negative animation-delays, each in their own column).
+- **3.9.31** — Persistent steeping cup removed (cup back to dunk-only).
+  Page bg extracted to `.aria-page-bg` fixed layer at z-index -1 — the
+  `.aria-page` element's `animation: page-in` was creating a stacking
+  context that painted the bg over the fixed `.falling-leaves`. Bag
+  sway slowed from 5s to 10s. Americano gradient swapped from blue
+  twilight to warm amber sunrise.
+- **3.9.32** — Teabag border removed (4px solid border was leaving
+  rectangular ghost outlines at the clip-path's chamfered corners —
+  CSS border ignores clip-path). Woven mesh texture added: thin
+  horizontal threads + thin vertical threads on a 3.5px grid layered
+  above the existing paper grain.
+- **3.9.33** — Cohesion pass toward "calm rustic cafe": `.pixel-btn-rainbow`
+  repurposed to a honey→amber→oak gradient with dusty-rose hover glow;
+  `.pride-stripe` swapped 4px saturated rainbow for a 1.5px dusty-rose
+  hairline; display font Press Start 2P → Lora serif (`--font-pixel`
+  var stable); `.pixel-card` softened (1px subtle border, 10px rounded
+  corners, soft warm wood shadow); pride-rainbow `::before/::after`
+  strips on `.pixel-card` removed; bonus-mode bag sparkles removed;
+  falling-leaves keyframe given wider lateral swings (±50px peaks) on
+  ease-in-out timing for autumn-drift feel.
+- **fix(domain) 17be0ed** — Three domain-enforcement bugs in
+  `backend/routes/tasks.py` and a new sweep. (1) `create_task` was
+  computing `due_today` from the pre-snap `body.due_date`, so a Sunday
+  pick on a weekday-only Work project still landed status=today after
+  the snap moved due_date to Monday. (2) `update_task` ran the
+  demote-on-future check before snapping. (3) `promote_due_tasks`
+  promoted any inbox task with `due_date <= today` regardless of the
+  task's domain. New `demote_domain_violations` sweep wired into
+  `/tasks/today` to clean up historical drift. `_date_allowed` →
+  `date_allowed` (public). +5 tests in `test_tasks.py`. Full suite
+  **91 passed**.
 
 ### Phase 3.9.16–3.9.22 completed (2026-05-17)
 
@@ -149,24 +201,35 @@ Tournament-driven Triage at scale.
 
 ## Known issues / small todos
 
-1. **Bonus mode teabag** — paper texture redo in 3.9.22 didn't translate well to bonus variant; needs another pass. Picked up tomorrow.
-2. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
-3. **Real human code review** — both AI passes still missed things a human would catch.
-4. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic; affects only those specific surfaces, not main theming.
+1. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
+2. **Real human code review** — both AI passes still missed things a human would catch.
+3. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
+4. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone. Pre-existing; not in scope for this session's domain fix.
 
 Resolved 2026-05-15: #2 UptimeRobot, #3 TriageCard inline edit, #4 GCal multi-cal, #5 loading/error states, #11 security audit, #21 GCal sync bug.
-Resolved 2026-05-17: #7 Build chip Settings toggle (3.9.20), #22 Login rate limit (3.9.19), BottomNav crowding (already at 4 items + FAB), Phase 3.8 Part 2 domain enforcement (3.9.18).
+Resolved 2026-05-17 (morning): #7 Build chip Settings toggle (3.9.20), #22 Login rate limit (3.9.19), Phase 3.8 Part 2 domain enforcement (3.9.18).
+Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement bypass on create/update/promote, aesthetic cohesion across nav + buttons + font + cards.
 
 ---
 
-## Next: Polish + live-use (current phase)
+## Next: Focus-page tea-box redesign + new logo (planned for next session)
 
-Phase 3 closed. Phase 4 deferred until the user has experience with the app in daily use. Focus until then:
-- Bug fixes from live use
-- Theme polish (especially Mint dark theme — pride stripe, teabag, AuthPage need dark-theme overrides if Mint becomes the daily)
-- Bonus mode teabag pass (see Known Issues #1)
-- Real-device testing
-- Any palette swaps / customization the user requests
+Phase 3 closed; Phase 4 still deferred. User has lined up the next visual
+overhaul, scope-locked to the Focus page + branding:
+
+- **Tea-box on Focus** — visual tea box that bags emerge from. Bag count
+  in the box = uncompleted tasks today (live). The persistent cup was
+  removed in 3.9.31 so there's room to introduce this without colliding
+  with anything currently on the page.
+- **Bag colors per task type** — each bag tinted by its `task_type` (the
+  existing tag-color map already provides this palette).
+- **Bag order = day plan** — emergence order matches the prioritized
+  task order from triage.
+- **Bottom-nav cafe typography** — re-skin nav buttons to read like the
+  letterpress wordmark + simple flat icons + rule lines you see on real
+  tea boxes (Bigelow, Yogi, Harney). `frontend/src/components/BottomNav.jsx`.
+- **New logo + iconography for adhTea** — full brand pass. Current logo
+  file: `public/adhTeaLogo.png` (consumers grepped on 2026-05-17).
 
 
 **Status:** Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight.
