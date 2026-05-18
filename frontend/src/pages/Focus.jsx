@@ -132,49 +132,6 @@ function TeaCupFront() {
   )
 }
 
-// Persistent steeping cup — always renders below the bag, fills + darkens
-// with each completed task, steams continuously. fillCount = totalDone today,
-// maxFill is the count at which the cup is considered full (≈8 tasks).
-function SteepingCup({ fillCount = 0, maxFill = 8 }) {
-  const fill = Math.min(Math.max(fillCount, 0) / maxFill, 1)
-  // Cream (#E6D4A0) → deep brewed brown (#6B4A2C) interpolated by fill ratio
-  const r = Math.round(230 - fill * 119)
-  const g = Math.round(212 - fill * 138)
-  const b = Math.round(160 - fill * 116)
-  const teaColor = `rgb(${r}, ${g}, ${b})`
-  // Tea pool depth maps fill → ellipse ry (1px empty, 6.5px full)
-  const teaRy = 1 + fill * 5.5
-  const teaOpacity = 0.55 + fill * 0.40
-
-  return (
-    <svg width="150" height="100" viewBox="0 0 110 80" fill="none" style={{ display: 'block' }}>
-      {/* Steam wisps — rise + fade with staggered keyframes */}
-      <g className="cup-steam" stroke="rgba(243,243,224,0.85)" strokeWidth="1.6" fill="none" strokeLinecap="round">
-        <path d="M 40 17 q 3 -5 0 -10 q -3 -5 0 -10" />
-        <path d="M 52 14 q 4 -6 0 -12 q -4 -6 0 -12" />
-        <path d="M 65 17 q 3 -5 0 -10 q -3 -5 0 -10" />
-      </g>
-
-      {/* Back arc of rim — drawn before tea so tea pool sits in front */}
-      <path d="M 14 30 A 38 6.5 0 0 0 90 30" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
-
-      {/* Tea pool — dynamic depth + color based on completed count */}
-      <ellipse cx="52" cy="30" rx="34" ry={teaRy} fill={teaColor} opacity={teaOpacity}/>
-
-      {/* Cup body (front wall) */}
-      <path d="M 14 30 L 90 30 L 80 70 L 24 70 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
-
-      {/* Cup base ellipse */}
-      <ellipse cx="52" cy="76" rx="46" ry="4" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
-
-      {/* Front arc of rim — caps the tea, drawn after pool */}
-      <path d="M 14 30 A 38 6.5 0 0 1 90 30" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
-
-      {/* Handle */}
-      <path d="M 90 38 Q 108 38 108 54 Q 108 68 90 64" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
-    </svg>
-  )
-}
 
 function EditTaskSheet({ task, onSave, onClose }) {
   const [title,   setTitle]   = useState(task.title)
@@ -589,7 +546,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               style={{
                 marginTop: -1, position: 'relative', zIndex: 1,
                 transformOrigin: 'top center',
-                animation: celebrate === 'dunk' ? 'none' : 'teabag-sway 5s ease-in-out infinite',
+                animation: celebrate === 'dunk' ? 'none' : 'teabag-sway 10s ease-in-out infinite',
               }}
             >
               <div style={{
@@ -641,18 +598,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             </div>{/* end sway wrapper */}
             </div>{/* end teabag unit */}
 
-            {/* Persistent steeping cup — fills + darkens with totalDone, steams.
-                In flow with negative margin so the bag bottom dips into the cup.
-                Hidden during dunk animation (which renders its own cup). */}
-            {celebrate !== 'dunk' && (
-              <div style={{
-                display: 'flex', justifyContent: 'center',
-                marginTop: -42, position: 'relative', zIndex: 2,
-                pointerEvents: 'none',
-              }}>
-                <SteepingCup fillCount={totalDone} />
-              </div>
-            )}
 
             {/* Teacup back — behind bag (back rim arc + tea pool) */}
             {celebrate === 'dunk' && (

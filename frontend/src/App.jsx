@@ -240,6 +240,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <div className="aria-page-bg" aria-hidden="true" />
       <FallingLeaves />
       {showChip && (
         <div style={{
