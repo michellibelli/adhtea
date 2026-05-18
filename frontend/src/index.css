@@ -183,17 +183,27 @@ body {
 
 /* .teabag-card.pixel-card double-class beats .pixel-card single-class specificity.
    Required because both rules use !important and .pixel-card is defined later. */
-/* Paper teabag — 4-layer stack for fibrous depth:
-   1. tiny fiber dots (~2.5px lattice, sub-pixel) — weave texture
-   2. offset fiber dots (~5px) — second weave pass for variation
-   3. SVG fractal noise — paper grain
-   4. vertical gradient — lighter top, soft shadow bottom = roundness
-   + inset shadows — top highlight, bottom curl, faint edge ring
-*/
+/* Tea-mesh teabag — 6-layer stack giving real teabag fabric feel:
+   1. horizontal weave threads (thin lines via repeating-linear-gradient)
+   2. vertical weave threads (crossed with above → woven grid)
+   3. fine fiber dots (~2.5px lattice) — sub-pixel paper specks behind weave
+   4. larger fiber dots (~5px) — secondary specks for variation
+   5. SVG fractal noise — paper/cotton grain
+   6. vertical body gradient — lighter top, soft shadow bottom = roundness
+   + inset shadows — top highlight, bottom curl
+   Border removed so the bag's clip-path polygon reads as the actual edge
+   (4px solid rectangle border was leaking past the chamfered corners). */
 .teabag-card.pixel-card,
 .teabag-card {
+  border: none !important;
   background-color: #FBF6E5 !important;
   background-image:
+    repeating-linear-gradient(0deg,
+      rgba(105, 75, 40, 0.18) 0 0.7px,
+      transparent 0.7px 3.5px),
+    repeating-linear-gradient(90deg,
+      rgba(105, 75, 40, 0.16) 0 0.7px,
+      transparent 0.7px 3.5px),
     radial-gradient(circle at 50% 50%, rgba(150, 110, 60, 0.22) 0.35px, transparent 0.5px),
     radial-gradient(circle at 50% 50%, rgba(120, 80, 40, 0.12) 0.35px, transparent 0.5px),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0 0.2 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23p)'/%3E%3C/svg%3E"),
@@ -202,11 +212,15 @@ body {
       rgba(251, 246, 229, 0) 35%,
       rgba(180, 140, 70, 0.10) 100%) !important;
   background-size:
+    100% 3.5px,
+    3.5px 100%,
     2.5px 2.5px,
     5px 5px,
     180px 180px,
     100% 100% !important;
   background-position:
+    0 0,
+    0 0,
     0 0,
     1.25px 1.25px,
     0 0,
