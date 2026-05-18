@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createTask } from '../api/tasks'
 import { createRoutine } from '../api/routines'
 import { createProject, generateProjectTasks } from '../api/projects'
+import { listDomains } from '../api/domains'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
 
@@ -115,6 +116,7 @@ const BLANK = {
   time_of_day: 'anytime',
   days_of_week: '',
   exact_time: '',
+  domain_id: null,   // orphan-task domain. Set to Work id after domains load.
 }
 
 function isValid(taskType, form) {
@@ -134,9 +136,21 @@ export default function Capture({ onNavigate }) {
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(null)
   const [error, setError]       = useState(null)
+  const [domains, setDomains]   = useState([])
   const titleRef = useRef(null)
 
   useEffect(() => { titleRef.current?.focus() }, [])
+
+  // Fetch domain list + default the picker to the user's Work domain so
+  // orphan tasks land in the Work bucket unless the user explicitly picks
+  // a different one. Falls back to whatever the first returned domain is.
+  useEffect(() => {
+    listDomains().then(list => {
+      setDomains(list)
+      const work = list.find(d => d.name === 'Work') || list[0]
+      if (work) setForm(f => f.domain_id ? f : { ...f, domain_id: work.id })
+    }).catch(console.error)
+  }, [])
 
   function set(field, val) { setForm((f) => ({ ...f, [field]: val })) }
 
@@ -182,6 +196,7 @@ export default function Capture({ onNavigate }) {
           location_type: form.location_type || undefined,
           location_detail: form.location_detail.trim() || undefined,
           tags: form.tags.trim() || undefined,
+          domain_id: form.domain_id ?? undefined,
         }
         await createTask(payload)
         setSaved(dueToday ? 'today' : taskType)
@@ -369,6 +384,19 @@ export default function Capture({ onNavigate }) {
                 placeholder="Any extra context…"
               />
             </FieldRow>
+          )}
+
+          {/* Domain — task / appointment / note only. Routines + projects
+              have their own scheduling models. Captured items default to
+              Work; pick another domain if the item belongs to a different
+              life area (its rules then govern surface time-of-day). */}
+          {taskType !== 'routine' && taskType !== 'project' && domains.length > 0 && (
+            <PillRow
+              label="Domain"
+              options={domains.map(d => ({ id: d.id, label: d.name }))}
+              value={form.domain_id}
+              onChange={(v) => set('domain_id', v)}
+            />
           )}
 
           <div className="flex items-center justify-between pt-1">

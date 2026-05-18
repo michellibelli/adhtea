@@ -78,14 +78,21 @@ function pickNext(tasks) {
   // appear near their due time (see utils/timing.js for the windows).
   const visible = tasks.filter(isTimedVisible)
 
-  // Step 2 — sort: imminent timed items (≤ 5 min away) bubble to the top,
-  // then fall back to sort_order (the user's manual priority ranking from triage).
+  // Step 2 — sort priorities (top wins):
+  //   1. Imminent timed items (≤ 5 min away) — always trump everything else
+  //   2. In-context domain (server-stamped `in_context`; out-of-context sinks)
+  //   3. sort_order — user's manual priority from triage
   const copy = [...visible]
   copy.sort((a, b) => {
     const aImm = isImminent(a)
     const bImm = isImminent(b)
     if (aImm && !bImm) return -1
     if (bImm && !aImm) return 1
+    // Out-of-context sinks: e.g. a Home task during work hours never bubbles
+    // up unless every in-context task is already done.
+    const aCtx = a.in_context !== false
+    const bCtx = b.in_context !== false
+    if (aCtx !== bCtx) return aCtx ? -1 : 1
     return (a.sort_order ?? 999) - (b.sort_order ?? 999)
   })
 
