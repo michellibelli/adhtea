@@ -293,24 +293,26 @@ body {
 }
 
 /* Metallic silver done button — bonus mode replacement for orange.
-   Two-layer background: an animated diagonal shine band over a brighter
-   silver gradient that has more contrast top→bottom than a flat mid-grey.
-   The brighter top stop + thin specular highlight at ~12% sells "metal."
+   Chrome look needs DARK mid-tones so the bright shine band actually
+   reads as a highlight. Previous version had a too-light base that
+   pegged at white — the shine had no contrast to add. New base goes
+   bright specular belt at ~15% → dark base → near-black bottom, and
+   the shine band is a sharp 100%-alpha sliver for max contrast.
 */
 .pixel-btn-silver {
   background:
     linear-gradient(115deg,
-      transparent 35%,
-      rgba(255, 255, 255, 0) 44%,
-      rgba(255, 255, 255, 0.65) 50%,
-      rgba(255, 255, 255, 0) 56%,
-      transparent 65%),
+      transparent 40%,
+      rgba(255, 255, 255, 0) 47%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0) 53%,
+      transparent 60%),
     linear-gradient(180deg,
-      #FFFFFF 0%,
-      #F4F4F8 10%,
-      #D8D8E0 35%,
-      #A8A8B2 70%,
-      #7A7A82 100%) !important;
+      #6A6A72 0%,
+      #D8D8E2 15%,
+      #B0B0BA 45%,
+      #808088 75%,
+      #4A4A52 100%) !important;
   background-size:
     250% 100%,
     100% 100% !important;
@@ -320,33 +322,33 @@ body {
   background-repeat:
     no-repeat,
     no-repeat !important;
-  animation: silver-shine 5s linear infinite !important;
+  animation: silver-shine 3.5s linear infinite !important;
   color: #1A1A22 !important;
-  border: 2px solid #6E6E78 !important;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+  border: 2px solid #4A4A52 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -1px 0 rgba(30, 30, 40, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
-    2px 2px 0 rgba(60, 60, 70, 0.7) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(20, 20, 30, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    2px 2px 0 rgba(40, 40, 50, 0.8) !important;
   font-weight: 700 !important;
 }
 
 .pixel-btn-silver:hover {
-  /* Hover bumps the base gradient brighter; shine animation continues */
+  /* Hover lifts the whole gradient one shade brighter */
   background:
     linear-gradient(115deg,
-      transparent 35%,
-      rgba(255, 255, 255, 0) 44%,
-      rgba(255, 255, 255, 0.75) 50%,
-      rgba(255, 255, 255, 0) 56%,
-      transparent 65%),
+      transparent 40%,
+      rgba(255, 255, 255, 0) 47%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0) 53%,
+      transparent 60%),
     linear-gradient(180deg,
-      #FFFFFF 0%,
-      #FAFAFE 10%,
-      #E4E4EC 35%,
-      #BABAC4 70%,
-      #8A8A92 100%) !important;
+      #82828A 0%,
+      #EAEAF2 15%,
+      #C0C0CA 45%,
+      #909098 75%,
+      #5A5A62 100%) !important;
   background-size:
     250% 100%,
     100% 100% !important;
@@ -356,7 +358,7 @@ body {
 }
 
 @keyframes silver-shine {
-  /* Sweep across in the first ~1.5s, rest the remaining ~3.5s */
+  /* Sweep across in the first ~1s, rest the remaining ~2.5s */
   0%   { background-position: -50% 50%, 0 0; }
   30%  { background-position: 150% 50%, 0 0; }
   100% { background-position: 150% 50%, 0 0; }
