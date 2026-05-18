@@ -223,15 +223,16 @@ body {
    - Asymmetric leaves (the "flutter" cohort) generate uneven drag and
      whirl much more slowly → LONGER durations (16–18s).
    - Gliders sit in between (13–14s).
-   The cubic-bezier `0.45, 0, 1, 0.92` ramps fast at the start
-   (gravity dominant) then stays near-linear (terminal velocity
-   reached) — approximates the real accel-then-constant profile. */
-.falling-leaf-1 { left: 8%;  width: 19px; animation: leaf-glide-r 13s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: 0s; }
-.falling-leaf-2 { left: 24%; width: 23px; animation: leaf-flutter 17s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -5s; }
-.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-drop    10s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -4s; }
-.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-glide-l 14s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -3s; }
-.falling-leaf-5 { left: 78%; width: 22px; animation: leaf-flutter 18s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -10s; }
-.falling-leaf-6 { left: 91%; width: 18px; animation: leaf-drop    11s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -6s; }
+   Timing function is `linear`: CSS applies the per-segment easing
+   *between every keyframe pair*, so a non-linear curve makes each leaf
+   pause briefly at every keyframe (the "sticking" effect). The gravity
+   feel comes from the keyframe spacing inside @keyframes leaf-* instead. */
+.falling-leaf-1 { left: 8%;  width: 19px; animation: leaf-glide-r 13s linear infinite; animation-delay: 0s; }
+.falling-leaf-2 { left: 24%; width: 23px; animation: leaf-flutter 17s linear infinite; animation-delay: -5s; }
+.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-drop    10s linear infinite; animation-delay: -4s; }
+.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-glide-l 14s linear infinite; animation-delay: -3s; }
+.falling-leaf-5 { left: 78%; width: 22px; animation: leaf-flutter 18s linear infinite; animation-delay: -10s; }
+.falling-leaf-6 { left: 91%; width: 18px; animation: leaf-drop    11s linear infinite; animation-delay: -6s; }
 
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
