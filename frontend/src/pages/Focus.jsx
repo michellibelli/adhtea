@@ -216,17 +216,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
   const fetchAll = useCallback(async () => {
     try {
-      const [list, cap, done] = await Promise.all([getToday(), getTodayCapacity(), getDoneToday()])
+      // Always fetch bonus alongside today. Display gating uses pickNext() —
+      // a non-empty today list can still have nothing visible (timed routines
+      // more than 5 min out are hidden), so deciding bonus-fetch from
+      // list.length missed the case "no visible task but list has a hidden routine".
+      const [list, cap, done, bonus] = await Promise.all([
+        getToday(), getTodayCapacity(), getDoneToday(), getBonusTasks(),
+      ])
       setTasks(list)
       setCapacity(cap)
       setDoneTodayBase(done.length)
       setLocalDone(0)
-      if (list.length === 0) {
-        const bonus = await getBonusTasks()
-        setBonusTasks(bonus)
-      } else {
-        setBonusTasks([])
-      }
+      setBonusTasks(bonus)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }, [])
