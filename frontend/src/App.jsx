@@ -5,6 +5,23 @@ function readShowBuildChip() {
   const v = localStorage.getItem(BUILD_CHIP_KEY)
   return v === null ? true : v === 'true'
 }
+
+// Six tea-leaf SVGs drifting top-to-bottom across the viewport. Sizes,
+// columns, durations, and (negative) delays are set per-leaf in
+// index.css so they appear scattered from page load. Pointer-events
+// none + fixed under-everything z-index keeps them purely decorative.
+function FallingLeaves() {
+  return (
+    <div className="falling-leaves" aria-hidden="true">
+      {[1, 2, 3, 4, 5, 6].map(i => (
+        <svg key={i} className={`falling-leaf falling-leaf-${i}`} viewBox="0 0 12 24">
+          <path d="M 6 0 C 13 5 13 18 6 22 C -1 18 -1 5 6 0 Z" fill="rgba(24,59,78,0.45)" />
+          <line x1="6" y1="2" x2="6" y2="20" stroke="rgba(24,59,78,0.65)" strokeWidth="0.6" strokeLinecap="round" />
+        </svg>
+      ))}
+    </div>
+  )
+}
 import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn, likelySleeping } from './api/client'
 import WakeScreen from './components/WakeScreen'
@@ -223,6 +240,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <FallingLeaves />
       {showChip && (
         <div style={{
           position: 'fixed', top: 4, right: 4, zIndex: 9999,
