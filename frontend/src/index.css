@@ -194,56 +194,108 @@ body {
     inset 0 0 0 1px rgba(160, 120, 60, 0.12) !important;
 }
 
-/* Bonus mode = gold foil:
-   L1 animated highlight band sweeps diagonally (shimmer)
-   L2 micro fiber dots (subtle texture grain)
-   L3 SVG fractal noise (paper retention; lower opacity than original)
-   L4 multi-stop gold gradient base (deep amber → bright gold → amber)
+/* Bonus mode bag intentionally inherits the paper .teabag-card look.
+   Gold action moves to the .focus-bar-bonus header above. The classname
+   is kept on the element as a stable hook for future per-bonus tweaks. */
+
+/* Gold-bar focus header — only applied when isBonusMode is true.
+   - Vertical gold gradient + inset highlights + drop shadow give a thin-bar feel
+   - ::before runs a diagonal shine sweep across the bar
+   - ::after fires a corner sparkle aligned to where the shine exits
+   - Single 7s cycle drives both via the same timing baseline
 */
-.teabag-card.teabag-bonus,
-.teabag-bonus {
-  background-color: #E0B040 !important;
-  background-image:
-    linear-gradient(115deg,
-      transparent 30%,
-      rgba(255, 250, 220, 0) 42%,
-      rgba(255, 250, 220, 0.55) 50%,
-      rgba(255, 250, 220, 0) 58%,
-      transparent 70%),
-    radial-gradient(circle at 50% 50%, rgba(120, 70, 0, 0.20) 0.35px, transparent 0.5px),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.35 0 0 0 0 0.1 0 0 0 0.20 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23b)'/%3E%3C/svg%3E"),
-    linear-gradient(135deg,
-      #B8771C 0%,
-      #E0B040 22%,
-      #FFE08A 42%,
-      #FFD060 56%,
-      #C9881C 78%,
-      #E6B84A 100%) !important;
-  background-size:
-    250% 100%,
-    2.5px 2.5px,
-    180px 180px,
-    100% 100% !important;
-  background-position:
-    0% 50%,
-    0 0,
-    0 0,
-    0 0 !important;
-  background-repeat:
-    no-repeat,
-    repeat,
-    repeat,
-    no-repeat !important;
-  animation: foil-shimmer 3.5s linear infinite !important;
+.focus-bar-bonus {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg,
+    #FFD970 0%,
+    #E8B040 50%,
+    #B8771C 100%) !important;
+  border: 1px solid rgba(184, 119, 28, 0.6) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 250, 220, 0.70),
-    inset 0 -12px 22px -8px rgba(120, 70, 0, 0.32),
-    inset 0 0 0 1px rgba(140, 90, 0, 0.18) !important;
+    inset 0 1px 0 rgba(255, 250, 220, 0.95),
+    inset 0 -1px 0 rgba(120, 70, 0, 0.55),
+    inset 0 0 0 1px rgba(140, 90, 0, 0.18),
+    0 2px 4px rgba(120, 70, 0, 0.30),
+    0 4px 10px rgba(120, 70, 0, 0.15) !important;
 }
 
-@keyframes foil-shimmer {
-  0%   { background-position: 150% 50%, 0 0, 0 0, 0 0; }
-  100% { background-position: -50% 50%, 0 0, 0 0, 0 0; }
+.focus-bar-bonus::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg,
+    transparent 35%,
+    rgba(255, 255, 240, 0) 44%,
+    rgba(255, 255, 240, 0.75) 50%,
+    rgba(255, 255, 240, 0) 56%,
+    transparent 65%);
+  background-size: 250% 100%;
+  background-position: -50% 50%;
+  background-repeat: no-repeat;
+  animation: gold-bar-shine 7s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.focus-bar-bonus::after {
+  content: '✦';
+  position: absolute;
+  top: 0;
+  right: 4px;
+  font-size: 22px;
+  line-height: 1;
+  color: #FFFAE0;
+  text-shadow:
+    0 0 6px rgba(255, 245, 200, 0.9),
+    0 0 12px rgba(255, 220, 100, 0.7);
+  opacity: 0;
+  transform: scale(0.4) rotate(0deg);
+  pointer-events: none;
+  z-index: 2;
+  animation: gold-bar-sparkle 7s linear infinite;
+}
+
+/* Children (Now/Bonus label, capacity bar) must sit above the shine layer */
+.focus-bar-bonus > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes gold-bar-shine {
+  /* Sweep across in the first ~1.4s, then rest for the remainder */
+  0%   { background-position: -50% 50%; }
+  20%  { background-position: 150% 50%; }
+  100% { background-position: 150% 50%; }
+}
+
+@keyframes gold-bar-sparkle {
+  /* Fires right as the shine exits the right edge (~20%) */
+  0%, 17%   { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  20%       { opacity: 1; transform: scale(1.3) rotate(30deg); }
+  23%       { opacity: 1; transform: scale(1.0) rotate(60deg); }
+  28%, 100% { opacity: 0; transform: scale(0.4) rotate(90deg); }
+}
+
+/* Metallic silver done button — used in bonus mode in place of orange */
+.pixel-btn-silver {
+  background: linear-gradient(180deg,
+    #FAFAFF 0%,
+    #D4D4DD 45%,
+    #A0A0AA 100%) !important;
+  color: #2A2A30 !important;
+  border: 2px solid #8A8A92 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(50, 50, 60, 0.35),
+    2px 2px 0 rgba(80, 80, 90, 0.65) !important;
+  font-weight: 700 !important;
+}
+.pixel-btn-silver:hover {
+  background: linear-gradient(180deg,
+    #FFFFFF 0%,
+    #E0E0EA 45%,
+    #B0B0BA 100%) !important;
 }
 
 .teabag-card::before,
