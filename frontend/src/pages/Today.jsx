@@ -22,6 +22,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import ConfirmModal from '../components/ConfirmModal'
 import { PageLoading, PageError } from '../components/PageState'
+import { isTimedVisible } from '../utils/timing'
 
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 
@@ -121,6 +122,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
 
   const timed = tasks
     .filter(t => t.task_type === 'appointment' || t.task_type === 'routine')
+    .filter(isTimedVisible)
     .sort((a, b) => {
       const at = a.due_time || '99:99'
       const bt = b.due_time || '99:99'

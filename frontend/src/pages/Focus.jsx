@@ -7,6 +7,7 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
+import { minutesUntil, isTimedVisible } from '../utils/timing'
 
 
 const SPARKLE_POSITIONS = [
@@ -49,14 +50,6 @@ const TAG_NAMES = {
   task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note', project: 'Project',
 }
 
-function minutesUntil(dueTime) {
-  const [h, m] = dueTime.split(':').map(Number)
-  const now = new Date()
-  const due = new Date(now)
-  due.setHours(h, m, 0, 0)
-  return (due - now) / 60000
-}
-
 function tagDateLabel(task) {
   if (!task) return null
   if (task.due_time) {
@@ -81,19 +74,9 @@ function isImminent(task) {
 }
 
 function pickNext(tasks) {
-  // Choose which single task to show as the "focus now" card.
-  //
-  // Step 1 — filter: timed routines only appear in a window around their due time.
-  //   - Show starting 5 min before (≤ 5) so the user can prepare
-  //   - Hide 60 min after (≥ -60) so an overdue routine doesn't permanently block the queue
-  //   - Non-routine tasks are always visible
-  const visible = tasks.filter(t => {
-    if (t.task_type === 'routine' && t.due_time) {
-      const m = minutesUntil(t.due_time)  // positive = future, negative = overdue
-      return m <= 5 && m >= -60
-    }
-    return true
-  })
+  // Step 1 — apply the time-of-day window. Appointments + routines only
+  // appear near their due time (see utils/timing.js for the windows).
+  const visible = tasks.filter(isTimedVisible)
 
   // Step 2 — sort: imminent timed items (≤ 5 min away) bubble to the top,
   // then fall back to sort_order (the user's manual priority ranking from triage).
