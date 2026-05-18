@@ -110,8 +110,7 @@ function pickNext(tasks) {
 }
 
 function TeaCupBack() {
-  // Back of cup — renders BEHIND the bag
-  // Tea pool + back arc of rim (top half of oval = the far side)
+  // Back of cup — renders BEHIND the bag (used during dunk animation)
   return (
     <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
       <ellipse cx="52" cy="22" rx="34" ry="4.5" fill="#DBA96A" opacity="0.55"/>
@@ -121,8 +120,7 @@ function TeaCupBack() {
 }
 
 function TeaCupFront() {
-  // Front of cup — renders IN FRONT of the bag
-  // Base, body (front wall), handle, rim fill + front arc of rim (bottom half of oval = near side)
+  // Front of cup — renders IN FRONT of the bag (used during dunk animation)
   return (
     <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
       <ellipse cx="52" cy="77" rx="46" ry="7" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
@@ -130,6 +128,50 @@ function TeaCupFront() {
       <path d="M 90 32 Q 108 32 108 50 Q 108 66 90 62" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
       <ellipse cx="52" cy="22" rx="38" ry="6.5" fill="#EDD5A8" stroke="none"/>
       <path d="M 14 22 A 38 6.5 0 0 1 90 22" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
+    </svg>
+  )
+}
+
+// Persistent steeping cup — always renders below the bag, fills + darkens
+// with each completed task, steams continuously. fillCount = totalDone today,
+// maxFill is the count at which the cup is considered full (≈8 tasks).
+function SteepingCup({ fillCount = 0, maxFill = 8 }) {
+  const fill = Math.min(Math.max(fillCount, 0) / maxFill, 1)
+  // Cream (#E6D4A0) → deep brewed brown (#6B4A2C) interpolated by fill ratio
+  const r = Math.round(230 - fill * 119)
+  const g = Math.round(212 - fill * 138)
+  const b = Math.round(160 - fill * 116)
+  const teaColor = `rgb(${r}, ${g}, ${b})`
+  // Tea pool depth maps fill → ellipse ry (1px empty, 6.5px full)
+  const teaRy = 1 + fill * 5.5
+  const teaOpacity = 0.55 + fill * 0.40
+
+  return (
+    <svg width="150" height="100" viewBox="0 0 110 80" fill="none" style={{ display: 'block' }}>
+      {/* Steam wisps — rise + fade with staggered keyframes */}
+      <g className="cup-steam" stroke="rgba(243,243,224,0.85)" strokeWidth="1.6" fill="none" strokeLinecap="round">
+        <path d="M 40 17 q 3 -5 0 -10 q -3 -5 0 -10" />
+        <path d="M 52 14 q 4 -6 0 -12 q -4 -6 0 -12" />
+        <path d="M 65 17 q 3 -5 0 -10 q -3 -5 0 -10" />
+      </g>
+
+      {/* Back arc of rim — drawn before tea so tea pool sits in front */}
+      <path d="M 14 30 A 38 6.5 0 0 0 90 30" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
+
+      {/* Tea pool — dynamic depth + color based on completed count */}
+      <ellipse cx="52" cy="30" rx="34" ry={teaRy} fill={teaColor} opacity={teaOpacity}/>
+
+      {/* Cup body (front wall) */}
+      <path d="M 14 30 L 90 30 L 80 70 L 24 70 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
+
+      {/* Cup base ellipse */}
+      <ellipse cx="52" cy="76" rx="46" ry="4" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
+
+      {/* Front arc of rim — caps the tea, drawn after pool */}
+      <path d="M 14 30 A 38 6.5 0 0 1 90 30" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
+
+      {/* Handle */}
+      <path d="M 90 38 Q 108 38 108 54 Q 108 68 90 64" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -487,13 +529,16 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
           {/* Relative wrapper — mx-14 narrows bag on mobile without affecting focus box */}
           <div className="relative mx-14 md:mx-0">
 
-            {/* Teabag unit — tag + string + card descend as one */}
+            {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
+                During dunk the whole unit descends; the sway animation continues
+                inside the descending wrapper. */}
             <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : undefined}>
 
-            {/* Tag + string */}
+            {/* Tag — outside sway-wrap so it stays still (where the string meets
+                the imaginary cup rim above). String + bag swing from here. */}
             <div
               className="flex flex-col items-center"
-              style={{ marginBottom: '-1px', zIndex: 1, position: 'relative' }}
+              style={{ marginBottom: 0, zIndex: 2, position: 'relative' }}
             >
               {(() => {
                 const isProject = !!task?.project_name
@@ -535,52 +580,79 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                   </div>
                 )
               })()}
+            </div>
+
+            {/* Sway wrapper — string + bag pivot together from top center.
+                Disabled during dunk so the descent reads cleanly. */}
+            <div
+              className="flex flex-col items-center"
+              style={{
+                marginTop: -1, position: 'relative', zIndex: 1,
+                transformOrigin: 'top center',
+                animation: celebrate === 'dunk' ? 'none' : 'teabag-sway 5s ease-in-out infinite',
+              }}
+            >
               <div style={{
                 width: 3,
                 height: 38,
                 background: 'linear-gradient(to bottom, #B8AE98 0%, #CEC4AE 55%, #DED4BE 100%)',
                 borderRadius: 1,
               }} />
-            </div>
 
-            {/* Bonus glow ring + clipped card */}
-            <div
-              className={isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}
-              style={!isBonusMode ? { filter: 'drop-shadow(3px 3px 0 #7A5090)' } : undefined}
-            >
-              <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-              <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-3 md:py-5 min-h-[150px] md:min-h-[220px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
-                {isBonusMode && SPARKLE_POSITIONS.map((pos, i) => (
-                  <span key={i} className="sparkle" style={pos}>✦</span>
-                ))}
+              {/* Bonus glow ring + clipped card */}
+              <div
+                className={`w-full ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
+                style={!isBonusMode ? { filter: 'drop-shadow(3px 3px 0 #7A5090)' } : undefined}
+              >
+                <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-3 md:py-5 min-h-[150px] md:min-h-[220px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                  {isBonusMode && SPARKLE_POSITIONS.map((pos, i) => (
+                    <span key={i} className="sparkle" style={pos}>✦</span>
+                  ))}
 
-                {task.priority && PRIORITY_BADGE[task.priority] && (
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
-                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                  </span>
-                )}
+                  {task.priority && PRIORITY_BADGE[task.priority] && (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
+                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                    </span>
+                  )}
 
-                <h2 className="text-2xl font-bold text-ui-text leading-snug mb-3">
-                  {task.title}
-                </h2>
+                  <h2 className="text-2xl font-bold text-ui-text leading-snug mb-3">
+                    {task.title}
+                  </h2>
 
-                {task.location_detail && (
-                  <div className="mb-2 text-sm text-ui-subtext">
-                    <span className="mr-1.5">📍</span>
-                    <span>{task.location_detail}</span>
-                  </div>
-                )}
+                  {task.location_detail && (
+                    <div className="mb-2 text-sm text-ui-subtext">
+                      <span className="mr-1.5">📍</span>
+                      <span>{task.location_detail}</span>
+                    </div>
+                  )}
 
-                {task.notes && (
-                  <p className="text-xs italic text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-1 w-full">
-                    {task.notes}
-                  </p>
-                )}
+                  {task.notes && (
+                    <p className="text-xs italic text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-1 w-full">
+                      {task.notes}
+                    </p>
+                  )}
 
-              </Card>
-              </div>{/* end teabag clip-path */}
-            </div>
+                  {/* Stitched bottom seam — pixel-style dashed line above bag bottom */}
+                  <div className="teabag-stitches" />
+                </Card>
+                </div>{/* end teabag clip-path */}
+              </div>
+            </div>{/* end sway wrapper */}
             </div>{/* end teabag unit */}
+
+            {/* Persistent steeping cup — fills + darkens with totalDone, steams.
+                In flow with negative margin so the bag bottom dips into the cup.
+                Hidden during dunk animation (which renders its own cup). */}
+            {celebrate !== 'dunk' && (
+              <div style={{
+                display: 'flex', justifyContent: 'center',
+                marginTop: -42, position: 'relative', zIndex: 2,
+                pointerEvents: 'none',
+              }}>
+                <SteepingCup fillCount={totalDone} />
+              </div>
+            )}
 
             {/* Teacup back — behind bag (back rim arc + tea pool) */}
             {celebrate === 'dunk' && (

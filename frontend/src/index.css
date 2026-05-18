@@ -356,6 +356,50 @@ body {
   display: none !important;
 }
 
+/* Stitched bottom seam — drawn inside the bag, just above the bottom edge.
+   Sits behind text because the Card content is positioned later in flow.
+   Dashed line via repeating-linear-gradient (cheap + theme-agnostic). */
+.teabag-stitches {
+  position: absolute;
+  bottom: 9px;
+  left: 16%;
+  right: 16%;
+  height: 1.5px;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(110, 75, 35, 0.55) 0 5px,
+    transparent 5px 9px
+  );
+  pointer-events: none;
+  border-radius: 1px;
+  z-index: 1;
+}
+
+/* Bag pendulum sway — pivots at top center so the string + bag swing as one.
+   Tag is NOT inside the sway wrapper so it stays still where the string
+   meets the (imaginary) cup rim above. */
+@keyframes teabag-sway {
+  0%, 100% { transform: rotate(-2.4deg); }
+  50%      { transform: rotate( 2.4deg); }
+}
+
+.teabag-sway-wrap {
+  transform-origin: top center;
+  animation: teabag-sway 5s ease-in-out infinite;
+}
+
+/* Steam wisps rising from the cup — staggered timing, gentle drift. */
+@keyframes cup-steam-rise {
+  0%   { opacity: 0; transform: translateY(0); }
+  25%  { opacity: 0.75; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+.cup-steam path { transform-origin: center bottom; }
+.cup-steam path:nth-child(1) { animation: cup-steam-rise 3.2s ease-out infinite; }
+.cup-steam path:nth-child(2) { animation: cup-steam-rise 3.2s ease-out 1.0s infinite; }
+.cup-steam path:nth-child(3) { animation: cup-steam-rise 3.2s ease-out 2.1s infinite; }
+
 @keyframes twinkle {
   0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
   50%       { opacity: 1; transform: scale(1)   rotate(20deg); }
