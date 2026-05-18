@@ -267,3 +267,56 @@ def test_demote_domain_violations_leaves_allowed_today_alone(client, auth_header
     db_session.refresh(t)
     assert n == 0
     assert t.status == TaskStatus.today
+
+
+# ---------------------------------------------------------------------------
+# Task-level domain_id (orphan tasks)
+# ---------------------------------------------------------------------------
+
+def test_create_task_persists_domain_id_when_no_project(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    home = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4, 5, 6], name="Home")
+    r = client.post(
+        "/tasks",
+        json={"title": "Orphan home task", "domain_id": home.id},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["domain_id"] == home.id
+    assert body["domain_name"] == "Home"
+
+
+def test_create_task_ignores_domain_id_when_project_set(client, auth_headers, db_session):
+    """Project domain wins — task-level domain_id is silently dropped on save."""
+    user = _mk_user(db_session)
+    work = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4], name="Work")
+    home = _mk_domain(db_session, user.id, allowed_weekdays=[5, 6], name="Home")
+    project = _mk_project(db_session, user.id)
+    _attach_domain(db_session, project, work)
+
+    r = client.post(
+        "/tasks",
+        json={"title": "In a Work project, tagged Home", "project_id": project.id, "domain_id": home.id},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["domain_id"] is None              # task-level dropped
+    assert body["domain_name"] == "Work"          # effective name reflects project domain
+
+
+def test_update_task_ignores_domain_id_when_project_already_set(client, auth_headers, db_session):
+    """PATCH on a projected task with domain_id silently drops the task-level domain."""
+    user = _mk_user(db_session)
+    work = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4], name="Work")
+    home = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4, 5, 6], name="Home")
+    project = _mk_project(db_session, user.id)
+    _attach_domain(db_session, project, work)
+    t = _mk_task(db_session, user.id, project.id)
+
+    r = client.patch(f"/tasks/{t.id}", json={"domain_id": home.id}, headers=auth_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["domain_id"] is None              # nulled because project wins
+    assert body["domain_name"] == "Work"

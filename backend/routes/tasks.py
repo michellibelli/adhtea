@@ -18,7 +18,7 @@ from schemas import (
     ActuatorCategoryCreate, ActuatorCategoryResponse,
 )
 from routes.auth import get_current_user
-from routes.domain_utils import next_allowed_date, date_allowed
+from routes.domain_utils import next_allowed_date, date_allowed, time_of_day_allowed, effective_rules
 
 router = APIRouter()
 
@@ -54,6 +54,28 @@ def own_task(task_id: int, user: User, db: Session) -> Task:
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+def _rules_for_inputs(db: Session, project_id: Optional[int], domain_id: Optional[int]) -> list:
+    """Return the rule list that governs a task created/updated with these inputs.
+
+    Mirrors effective_domain priority: project domain wins over task-level domain.
+    Returns [] when neither resolves to a domain — caller treats that as
+    "no scheduling restrictions" (the runtime fallback for orphan tasks
+    without a tagged domain — equivalent to Work, which has no time rules).
+    """
+    if project_id:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if project and project.domain_id:
+            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
+            if domain:
+                return json.loads(domain.rules or "[]")
+        return []
+    if domain_id:
+        domain = db.query(Domain).filter(Domain.id == domain_id).first()
+        if domain:
+            return json.loads(domain.rules or "[]")
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -409,18 +431,19 @@ def create_task(
 ):
     today_local = _app_today(current_user)
 
-    # Snap the due date through the project's domain rules FIRST so the
+    # Project domain wins over task-level domain. The task-level domain_id
+    # is only stored when the task is an orphan (no project_id).
+    task_domain_id = body.domain_id if not body.project_id else None
+    domain_rules = _rules_for_inputs(db, body.project_id, task_domain_id)
+
+    # Snap the due date through the effective domain rules FIRST so the
     # status decision below sees the actually-placed date, not the user pick.
     # Without this, a Sunday pick on a weekday-only Work project would
     # compute due_today=True (Sun <= Sun) and land status=today even though
     # the snapped due_date is the following Monday.
     due_date = body.due_date
-    if due_date and body.project_id:
-        project = db.query(Project).filter(Project.id == body.project_id).first()
-        if project and project.domain_id:
-            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
-            if domain:
-                due_date = next_allowed_date(due_date, json.loads(domain.rules or "[]"))
+    if due_date and domain_rules:
+        due_date = next_allowed_date(due_date, domain_rules)
 
     due_today = due_date is not None and due_date <= today_local
 
@@ -442,6 +465,7 @@ def create_task(
         sort_order=float(existing_count) if due_today else None,
         actuator_category_id=body.actuator_category_id,
         project_id=body.project_id,
+        domain_id=task_domain_id,
         is_critical=body.is_critical,
         due_date=due_date,
         due_time=body.due_time,
@@ -625,7 +649,10 @@ def get_today(
 
     tasks = (
         db.query(Task)
-        .options(joinedload(Task.project))
+        .options(
+            joinedload(Task.project).joinedload(Project.domain),
+            joinedload(Task.domain),
+        )
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.today,
@@ -635,6 +662,15 @@ def get_today(
         .order_by(Task.sort_order.asc().nullslast(), Task.created_at.asc())
         .all()
     )
+
+    # Soft time-of-day filter: stamp each task with whether its effective
+    # domain considers the user's current hour in-bounds. The frontend uses
+    # `in_context` in Focus pickNext to sink off-context items to the
+    # bottom without hiding them (e.g. a Home task during work hours).
+    now = datetime.now(_tz(current_user))
+    for t in tasks:
+        t.in_context = time_of_day_allowed(now, effective_rules(t))
+    tasks.sort(key=lambda t: (0 if t.in_context else 1,))
     return tasks
 
 
@@ -805,18 +841,22 @@ def update_task(
         setattr(task, field, value)
     task.updated_at = utcnow()
 
+    # Project domain wins. Null out any task-level domain whenever a project
+    # is attached, so the data stays unambiguous about which rules apply.
+    if task.project_id:
+        task.domain_id = None
+
+    # Resolve the effective rule set for THIS task right now (after patch
+    # applied, after project-vs-domain reconciliation). Used for snap +
+    # demote + cascade below.
+    domain_rules = _rules_for_inputs(db, task.project_id, task.domain_id)
+
     # Domain snap FIRST so status logic below sees the actually-placed due_date.
     # Without the snap-first order, picking Sunday on a weekday-only Work task
     # passes the demote-on-future check (Sun > Sun is False) but the post-snap
     # due_date becomes Monday — leaving the task incorrectly status=today on Sunday.
-    domain_rules = []
-    if "due_date" in patch and task.due_date is not None and task.project_id:
-        project = db.query(Project).filter(Project.id == task.project_id).first()
-        if project and project.domain_id:
-            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
-            if domain:
-                domain_rules = json.loads(domain.rules or "[]")
-                task.due_date = next_allowed_date(task.due_date, domain_rules)
+    if "due_date" in patch and task.due_date is not None and domain_rules:
+        task.due_date = next_allowed_date(task.due_date, domain_rules)
 
     today = date.today()
     # If a Today-list task gets pushed to a future due_date, demote it back to inbox

@@ -145,6 +145,7 @@ class TaskCreate(BaseModel):
     task_type: TaskType = TaskType.task
     actuator_category_id: Optional[int] = None
     project_id: Optional[int] = None
+    domain_id: Optional[int] = None         # only honored when project_id is null
     is_critical: bool = False
     due_date: Optional[date] = None
     due_time: Optional[str] = None          # HH:MM
@@ -166,6 +167,7 @@ class TaskUpdate(BaseModel):
     snooze_until: Optional[datetime] = None
     sort_order: Optional[float] = None
     actuator_category_id: Optional[int] = None
+    domain_id: Optional[int] = None         # only honored when project_id is null
     is_critical: Optional[bool] = None
     due_date: Optional[date] = None
     due_time: Optional[str] = None
@@ -195,6 +197,12 @@ class TaskResponse(BaseModel):
     routine_id: Optional[int]
     project_id: Optional[int]
     project_name: Optional[str] = None
+    domain_id: Optional[int] = None
+    domain_name: Optional[str] = None
+    in_context: bool = True   # set False when the user's current time-of-day is
+                              # outside the effective domain's rules. Used by
+                              # /tasks/today + Focus pickNext to sink off-context
+                              # items to the bottom without hiding them.
     title: str
     notes: Optional[str]
     task_type: TaskType

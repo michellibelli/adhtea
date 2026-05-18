@@ -44,6 +44,8 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN dose"))
             if "project_id" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
+            if "domain_id" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN domain_id INTEGER REFERENCES domains(id)"))
             if "email" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
             if "is_owner" not in users_cols:
@@ -76,6 +78,9 @@ def _migrate(target_engine=None):
             ))
             conn.execute(text(
                 "ALTER TABLE projects ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
+            ))
+            conn.execute(text(
+                "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
             ))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"

@@ -218,6 +218,10 @@ class Task(Base):
     actuator_category_id = Column(Integer, ForeignKey("actuator_categories.id"), nullable=True)
     routine_id = Column(Integer, ForeignKey("routines.id"), nullable=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    # Only honored for orphan tasks (no project_id). When the task IS in a
+    # project, the project's domain wins — see effective_domain() in
+    # routes/domain_utils.py. Null + no project => treated as Work at runtime.
+    domain_id = Column(Integer, ForeignKey("domains.id"), nullable=True)
 
     title = Column(String(500), nullable=False)
     notes = Column(Text, nullable=True)
@@ -254,10 +258,22 @@ class Task(Base):
     assigned_to = relationship("User", foreign_keys=[assigned_to_id])
     actuator_category = relationship("ActuatorCategory")
     project = relationship("Project", back_populates="tasks", foreign_keys=[project_id])
+    domain = relationship("Domain", foreign_keys=[domain_id])
 
     @property
     def project_name(self):
         return self.project.title if self.project else None
+
+    @property
+    def domain_name(self):
+        # Effective domain for display: project wins over task's own domain.
+        # Null when the task has neither — UI treats that as "Work" but the
+        # API stays honest about the underlying column being unset.
+        if self.project and getattr(self.project, "domain", None):
+            return self.project.domain.name
+        if self.domain:
+            return self.domain.name
+        return None
 
 
 # ---------------------------------------------------------------------------
