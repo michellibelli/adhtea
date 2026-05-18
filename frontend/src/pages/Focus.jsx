@@ -685,7 +685,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
             <div className="mt-2 md:mt-4">
               {/* Mobile: single row */}
               <div className="flex gap-2 md:hidden">
-                <Button size="lg" onClick={handleComplete} className={`flex-1 ${isBonusMode ? 'pixel-btn-silver' : 'pixel-btn-rainbow'}`}>
+                <Button size="lg" onClick={handleComplete} className="flex-1 pixel-btn-rainbow">
                   Done ✓
                 </Button>
                 {isBonusMode
@@ -694,7 +694,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               </div>
               {/* Desktop: stacked */}
               <div className="hidden md:flex md:flex-col gap-2">
-                <Button size="lg" onClick={handleComplete} className={`w-full ${isBonusMode ? 'pixel-btn-silver' : 'pixel-btn-rainbow'}`}>
+                <Button size="lg" onClick={handleComplete} className="w-full pixel-btn-rainbow">
                   Done ✓
                 </Button>
                 <div className="flex gap-2">
