@@ -563,10 +563,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
                 <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-3 md:py-5 min-h-[150px] md:min-h-[220px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
-                  {isBonusMode && SPARKLE_POSITIONS.map((pos, i) => (
-                    <span key={i} className="sparkle" style={pos}>✦</span>
-                  ))}
-
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}

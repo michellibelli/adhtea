@@ -22,7 +22,11 @@
   --color-ui-input-focus:   var(--aria-input-focus);
   --color-ui-badge:         var(--aria-badge);
   --color-ui-badge-text:    var(--aria-badge-text);
-  --font-pixel: 'Press Start 2P', monospace;
+  /* Display serif — paper-menu / library register. Replaces the previous
+     Press Start 2P pixel font. Variable name kept for code-stability; the
+     font is now a humanist serif (Lora). Used wherever font-pixel utility
+     class is applied and where .pixel-heading references this var. */
+  --font-pixel: 'Lora', Georgia, 'Times New Roman', serif;
 }
 
 /* =============================================================================
@@ -157,22 +161,30 @@ body {
   will-change: transform, opacity;
 }
 
+/* Leaves with high wind-resistance to weight ratio — lots of lateral
+   drift, varied rotation, ease curve between waypoints so each swing
+   slows at its peak before reversing (more autumn-leaf, less straight-
+   line fall). The cubic-bezier on animation-timing gives a soft pause
+   at peaks. */
 @keyframes leaf-fall {
-  0%   { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+  0%   { transform: translateY(0)     translateX(0)     rotate(0deg);   opacity: 0; }
   6%   { opacity: 0.6; }
-  25%  { transform: translateY(25vh) translateX(22px) rotate(95deg); }
-  50%  { transform: translateY(50vh) translateX(-18px) rotate(190deg); }
-  75%  { transform: translateY(75vh) translateX(24px) rotate(285deg); }
-  94%  { opacity: 0.6; }
-  100% { transform: translateY(108vh) translateX(0) rotate(360deg); opacity: 0; }
+  12%  { transform: translateY(8vh)   translateX(55px)  rotate(45deg); }
+  24%  { transform: translateY(20vh)  translateX(-40px) rotate(110deg); }
+  38%  { transform: translateY(34vh)  translateX(60px)  rotate(180deg); }
+  52%  { transform: translateY(48vh)  translateX(-50px) rotate(240deg); }
+  66%  { transform: translateY(62vh)  translateX(55px)  rotate(300deg); }
+  80%  { transform: translateY(80vh)  translateX(-35px) rotate(360deg); }
+  94%  { transform: translateY(95vh)  translateX(25px)  rotate(390deg); opacity: 0.6; }
+  100% { transform: translateY(108vh) translateX(0)     rotate(410deg); opacity: 0; }
 }
 
-.falling-leaf-1 { left: 8%;  width: 18px; animation: leaf-fall 14s linear infinite; animation-delay: 0s; }
-.falling-leaf-2 { left: 24%; width: 22px; animation: leaf-fall 18s linear infinite; animation-delay: -5s; }
-.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-fall 12s linear infinite; animation-delay: -8s; }
-.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-fall 16s linear infinite; animation-delay: -3s; }
-.falling-leaf-5 { left: 78%; width: 21px; animation: leaf-fall 13s linear infinite; animation-delay: -10s; }
-.falling-leaf-6 { left: 91%; width: 17px; animation: leaf-fall 15s linear infinite; animation-delay: -6s; }
+.falling-leaf-1 { left: 8%;  width: 18px; animation: leaf-fall 14s ease-in-out infinite; animation-delay: 0s; }
+.falling-leaf-2 { left: 24%; width: 22px; animation: leaf-fall 18s ease-in-out infinite; animation-delay: -5s; }
+.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-fall 12s ease-in-out infinite; animation-delay: -8s; }
+.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-fall 16s ease-in-out infinite; animation-delay: -3s; }
+.falling-leaf-5 { left: 78%; width: 21px; animation: leaf-fall 13s ease-in-out infinite; animation-delay: -10s; }
+.falling-leaf-6 { left: 91%; width: 17px; animation: leaf-fall 15s ease-in-out infinite; animation-delay: -6s; }
 
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
@@ -308,10 +320,11 @@ body {
     0 -1px 0 rgba(80, 50, 0, 0.25);
 }
 
-/* Bonus label gets size + tracking for more punch */
+/* Bonus label — slightly larger + small-caps feel via tracking for serif */
 .focus-bar-bonus h1 {
-  font-size: 12px !important;
-  letter-spacing: 0.12em;
+  font-size: 13px !important;
+  letter-spacing: 0.08em;
+  font-weight: 700;
 }
 
 @keyframes gold-bar-shine {
@@ -479,70 +492,92 @@ body {
   line-height: 1;
 }
 
+/* Card — softened from the Stardew-style hard pixel offset shadow + 4px
+   border to a 1px subtle border + 8px rounded corners + soft warm wood
+   shadow. Reads like a paper card on an oak counter, not a video-game UI. */
 .pixel-card {
   position: relative;
   overflow: hidden;
-  border: 4px solid var(--aria-border);
-  box-shadow: 4px 4px 0 0 var(--aria-shadow), inset 0 0 0 2px color-mix(in srgb, var(--aria-border) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--aria-border) 70%, transparent);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(60, 40, 20, 0.06),
+    0 4px 14px -2px rgba(60, 40, 20, 0.10);
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"),
     var(--aria-surface) !important;
   background-size: 200px 200px, 100% !important;
 }
 
-.pixel-card::before,
-.pixel-card::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 28px;
-  background: linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6);
-  z-index: 1;
-  pointer-events: none;
-}
-
-.pixel-card::before {
-  top: 0;
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
-}
-
-.pixel-card::after {
-  bottom: 0;
-  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
-  mask-image: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
-}
+/* Removed pride-rainbow top/bottom strips that previously rendered via
+   .pixel-card::before / ::after. Cohesion direction is calm cafe, not
+   video-game-arcade. The teabag-card display:none override on these
+   pseudos still applies (paper bag never wanted them anyway). */
 
 .pixel-btn {
-  border: 4px solid var(--aria-border) !important;
-  box-shadow: 3px 3px 0 0 var(--aria-shadow);
-  transition: box-shadow 80ms, transform 80ms !important;
+  border: 1px solid color-mix(in srgb, var(--aria-border) 80%, transparent) !important;
+  border-radius: 8px;
+  box-shadow:
+    0 1px 2px rgba(60, 40, 20, 0.10),
+    0 3px 8px -1px rgba(60, 40, 20, 0.12);
+  transition: box-shadow 120ms ease-out, transform 80ms ease-out !important;
 }
 .pixel-btn:hover {
-  box-shadow: 1px 1px 0 0 var(--aria-shadow);
-  transform: translate(2px, 2px);
+  box-shadow:
+    0 1px 2px rgba(60, 40, 20, 0.10),
+    0 5px 14px -2px rgba(60, 40, 20, 0.16);
+  transform: translateY(-1px);
 }
 .pixel-btn:active {
-  box-shadow: none;
-  transform: translate(3px, 3px);
+  transform: translateY(1px);
+  box-shadow: 0 0 1px rgba(60, 40, 20, 0.18);
 }
 
+/* Repurposed: warm amber-wood done button (was a pride-rainbow border).
+   Gradient runs honey → amber → deep oak; hover adds a dusty-rose glow
+   ring as the feminine accent (subtle, only on intent-to-click). */
 .pixel-btn-rainbow {
-  border: 4px solid transparent !important;
-  background:
-    linear-gradient(var(--aria-primary), var(--aria-primary-hover)) padding-box,
-    linear-gradient(to right, #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6) border-box !important;
+  background: linear-gradient(180deg,
+    #EFC988 0%,
+    #DDA853 45%,
+    #9F6E2D 100%) !important;
+  border: 1.5px solid #6B4A2C !important;
+  border-radius: 8px !important;
+  color: #2D1F12 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 245, 200, 0.80),
+    inset 0 -1px 0 rgba(80, 50, 20, 0.40),
+    0 2px 4px rgba(70, 45, 20, 0.18),
+    0 4px 10px -2px rgba(70, 45, 20, 0.20) !important;
+  transition: box-shadow 160ms ease-out, transform 120ms ease-out !important;
 }
+.pixel-btn-rainbow:hover {
+  background: linear-gradient(180deg,
+    #F4D49C 0%,
+    #E6B567 45%,
+    #B8823C 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 245, 200, 0.90),
+    inset 0 -1px 0 rgba(80, 50, 20, 0.40),
+    0 0 0 1px rgba(216, 160, 154, 0.60),
+    0 0 12px rgba(216, 160, 154, 0.30),
+    0 4px 12px -2px rgba(70, 45, 20, 0.22) !important;
+  transform: translateY(-1px);
+}
+.pixel-btn-rainbow:active { transform: translateY(1px); }
 
 /* =============================================================================
-   Pixel heading — Press Start 2P for section titles only
+   Display heading — serif (Lora) for section titles. Replaces the old
+   Press Start 2P arcade font; classname kept stable for code references.
    ============================================================================= */
 
 .pixel-heading {
-  font-family: 'Press Start 2P', monospace;
-  line-height: 1.7;
-  letter-spacing: 0.02em;
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
 }
 
 /* =============================================================================
@@ -704,12 +739,18 @@ body {
    Pride gradient bar
    ============================================================================= */
 
+/* Was a 4px saturated pride rainbow band. Replaced with a soft dusty-rose
+   hairline that fades at the ends — keeps a feminine accent on the nav
+   without dominating the rustic cafe palette. */
 .pride-stripe {
-  height: 4px;
+  height: 1.5px;
   width: 100%;
   background: linear-gradient(to right,
-    #F06B9A, #F7A165, #F0E07A, #7BC97A, #6DC8CC, #9D8FD6
-  );
+    rgba(216, 160, 154, 0) 0%,
+    rgba(216, 160, 154, 0.55) 25%,
+    rgba(216, 160, 154, 0.65) 50%,
+    rgba(216, 160, 154, 0.55) 75%,
+    rgba(216, 160, 154, 0) 100%);
 }
 
 /* =============================================================================
