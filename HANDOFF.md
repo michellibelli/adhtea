@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-17 evening (BUILD 3.9.33)*
+*Last updated: 2026-05-17 evening (BUILD 3.9.34)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -41,7 +41,7 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 Everything below is shipped and live on adh-tea.fun.
 
-### Phase 3.9.24–3.9.33 completed (2026-05-17 evening)
+### Phase 3.9.24–3.9.34 completed (2026-05-17 evening)
 
 Aesthetic + UX cohesion pass, plus a domain enforcement bug-fix. No new
 feature scope; this was polish, visual rework, and one systemic bug.
@@ -81,6 +81,16 @@ feature scope; this was polish, visual rework, and one systemic bug.
   strips on `.pixel-card` removed; bonus-mode bag sparkles removed;
   falling-leaves keyframe given wider lateral swings (±50px peaks) on
   ease-in-out timing for autumn-drift feel.
+- **3.9.34** — Three physics-based leaf behaviors split across the six
+  leaves: **flutter** (2 leaves, 17–18s, `rotate3d` end-over-end tumble
+  on mixed X/Y/Z axes so the leaf flips edge-on; asymmetric leaves whirl
+  slowly per fluid mechanics), **glide** (2 leaves, 13–14s, smooth
+  diagonal drift in opposite directions, slow Z-rotation arc), **drop**
+  (2 leaves, 10–11s, near-straight fall with ±8px sway; symmetric leaves
+  are aerodynamically efficient and reach a higher terminal velocity).
+  All six share a `cubic-bezier(0.45,0,1,0.92)` timing approximating
+  gravity → terminal-velocity. GPU-composited transforms; no measurable
+  perf cost. **Still needs more tuning per user — carry forward.**
 - **fix(domain) 17be0ed** — Three domain-enforcement bugs in
   `backend/routes/tasks.py` and a new sweep. (1) `create_task` was
   computing `due_today` from the pre-snap `body.due_date`, so a Sunday
@@ -201,10 +211,14 @@ Tournament-driven Triage at scale.
 
 ## Known issues / small todos
 
-1. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
-2. **Real human code review** — both AI passes still missed things a human would catch.
-3. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
-4. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone. Pre-existing; not in scope for this session's domain fix.
+1. **Falling-leaf animation still needs work** — three-behavior physics
+   pass (3.9.34) is closer but not done per user. Carry forward into
+   next session. Tunables: durations, swing magnitudes, rotation
+   speeds, leaf-count, ease curves.
+2. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
+3. **Real human code review** — both AI passes still missed things a human would catch.
+4. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
+5. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone. Pre-existing; not in scope for this session's domain fix.
 
 Resolved 2026-05-15: #2 UptimeRobot, #3 TriageCard inline edit, #4 GCal multi-cal, #5 loading/error states, #11 security audit, #21 GCal sync bug.
 Resolved 2026-05-17 (morning): #7 Build chip Settings toggle (3.9.20), #22 Login rate limit (3.9.19), Phase 3.8 Part 2 domain enforcement (3.9.18).

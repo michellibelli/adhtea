@@ -3,7 +3,7 @@
 
 ## State
 
-Live commit: `d74f031` (cohesion pass). BUILD chip on prod reads `3.9.33` once Vercel finishes.
+Live commit: `f7600d1` (physics-based leaf behaviors). BUILD chip on prod reads `3.9.34` once Vercel finishes.
 
 Vercel + Render auto-deploy from `master`. CI runs 91 pytest tests on every push + PR.
 
@@ -23,6 +23,7 @@ Vercel + Render auto-deploy from `master`. CI runs 91 pytest tests on every push
 | **3.9.31** | Four-fix bundle: (1) leaves now stay visible by extracting page bg to a separate `.aria-page-bg` fixed layer at z-index -1 (the `.aria-page` `animation: page-in` was creating a stacking context that painted bg over the fixed leaves); (2) persistent SteepingCup removed (cup back to dunk-only); (3) bag sway slowed 5s → 10s per cycle; (4) Americano gradient swapped from blue twilight to warm amber sunrise. |
 | **3.9.32** | Teabag mesh: removed the 4px solid border that was leaving rectangular ghost outlines at the polygon's chamfered corners (border ignores clip-path). Added two woven-thread layers (horizontal + vertical thin lines on a 3.5px grid) so the bag reads as cotton mesh. |
 | **3.9.33** | Cohesion pass (calm rustic cafe direction): (A) `.pixel-btn-rainbow` repurposed honey→amber→oak gradient with a dusty-rose hover glow; (B) `.pride-stripe` swapped 4px saturated rainbow for a 1.5px dusty-rose hairline that fades at the ends; (C) display font Press Start 2P → Lora serif (var name kept); (D) `.pixel-card` softened: 1px subtle border, 10px rounded corners, soft warm wood shadow; `.pixel-card::before/::after` pride strips removed; `.pixel-btn` similarly softened; (E) brand-display work deferred. Plus: bonus-mode bag sparkles removed; falling-leaves keyframe given wider lateral swings (±50px peaks) on ease-in-out timing for autumn-drift feel. |
+| **3.9.34** | Physics-based leaf behaviors. Replaced the single uniform keyframe with three: **flutter** (2 leaves, 17–18s, `rotate3d` end-over-end tumble showing edge-on flips, asymmetric → slow), **glide** (2 leaves, 13–14s, smooth diagonal drift in opposite directions), **drop** (2 leaves, 10–11s, near-straight with ±8px sway; symmetric → fast terminal velocity). All six share a `cubic-bezier(0.45,0,1,0.92)` timing for fast-accel-then-constant (gravity → terminal velocity). Pure GPU-composited transforms; no measurable perf cost. |
 
 ## Also shipped (backend)
 
@@ -74,6 +75,7 @@ From the May 15 review passes, intentionally skipped:
 ## Commits this session (latest first)
 
 ```
+f7600d1 style(leaves): three behaviors modeled on real leaf aerodynamics [3.9.34]
 d74f031 style: cohesion pass — serif font, amber done btn, soft card, rose stripe [3.9.33]
 ab08ed3 style(teabag): remove rect border at clipped corners, add woven mesh [3.9.32]
 acf3583 fix(focus,theme): leaves keep falling, bag slows, cup gone, warmer bg [3.9.31]
