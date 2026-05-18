@@ -18,7 +18,7 @@ from schemas import (
     ActuatorCategoryCreate, ActuatorCategoryResponse,
 )
 from routes.auth import get_current_user
-from routes.domain_utils import next_allowed_date
+from routes.domain_utils import next_allowed_date, date_allowed
 
 router = APIRouter()
 
@@ -207,10 +207,24 @@ def resolve_snoozes(user: User, db: Session):
 # Auto-promote: inbox tasks with due_date <= today move into Today list
 # ---------------------------------------------------------------------------
 
+def _domain_rules_for_tasks(tasks, db: Session) -> dict:
+    """Return {domain_id: rules_list} for the projects referenced by these tasks.
+
+    Single Domain query keyed by the distinct domain_ids on the tasks' projects.
+    Tasks without a project or whose project has no domain contribute nothing.
+    """
+    domain_ids = {t.project.domain_id for t in tasks if t.project and t.project.domain_id}
+    if not domain_ids:
+        return {}
+    domains = db.query(Domain).filter(Domain.id.in_(domain_ids)).all()
+    return {d.id: json.loads(d.rules or "[]") for d in domains}
+
+
 def promote_due_tasks(user: User, db: Session):
     today_local = _app_today(user)
     due = (
         db.query(Task)
+        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == user.id,
             Task.status == TaskStatus.inbox,
@@ -222,17 +236,72 @@ def promote_due_tasks(user: User, db: Session):
     )
     if not due:
         return
+
+    # Skip tasks whose project's domain disallows today. A Work-domain task
+    # due last Friday must not auto-promote to Today on Sunday.
+    rules_by_domain = _domain_rules_for_tasks(due, db)
+    promotable = []
+    for task in due:
+        domain_id = task.project.domain_id if task.project else None
+        rules = rules_by_domain.get(domain_id, []) if domain_id else []
+        if rules and not date_allowed(today_local, rules):
+            continue
+        promotable.append(task)
+    if not promotable:
+        return
+
     existing_count = (
         db.query(Task)
         .filter(Task.owner_id == user.id, Task.status == TaskStatus.today)
         .count()
     )
     start = _day_start(user)
-    for i, task in enumerate(due):
+    for i, task in enumerate(promotable):
         task.status = TaskStatus.today
         task.scheduled_date = start
         task.sort_order = float(existing_count + i)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Demote status=today tasks whose project's domain disallows today's date.
+# Cleanup sweep for tasks that landed in Today via paths that skipped the
+# domain snap (drag-to-today, batch edits, legacy create-before-snap) or
+# whose project's domain rules changed after the task was placed.
+# ---------------------------------------------------------------------------
+
+def demote_domain_violations(user: User, db: Session):
+    today_local = _app_today(user)
+    today_tasks = (
+        db.query(Task)
+        .options(joinedload(Task.project))
+        .filter(
+            Task.owner_id == user.id,
+            Task.status == TaskStatus.today,
+            Task.task_type != TaskType.routine,
+        )
+        .all()
+    )
+    if not today_tasks:
+        return 0
+
+    rules_by_domain = _domain_rules_for_tasks(today_tasks, db)
+    demoted = 0
+    for task in today_tasks:
+        domain_id = task.project.domain_id if task.project else None
+        if domain_id is None:
+            continue
+        rules = rules_by_domain.get(domain_id, [])
+        if not rules:
+            continue
+        if not date_allowed(today_local, rules):
+            task.status = TaskStatus.inbox
+            task.scheduled_date = None
+            task.sort_order = None
+            demoted += 1
+    if demoted:
+        db.commit()
+    return demoted
 
 
 # ---------------------------------------------------------------------------
@@ -339,15 +408,12 @@ def create_task(
     db: Session = Depends(get_db),
 ):
     today_local = _app_today(current_user)
-    due_today = body.due_date is not None and body.due_date <= today_local
 
-    if due_today:
-        existing_count = (
-            db.query(Task)
-            .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
-            .count()
-        )
-
+    # Snap the due date through the project's domain rules FIRST so the
+    # status decision below sees the actually-placed date, not the user pick.
+    # Without this, a Sunday pick on a weekday-only Work project would
+    # compute due_today=True (Sun <= Sun) and land status=today even though
+    # the snapped due_date is the following Monday.
     due_date = body.due_date
     if due_date and body.project_id:
         project = db.query(Project).filter(Project.id == body.project_id).first()
@@ -355,6 +421,16 @@ def create_task(
             domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
             if domain:
                 due_date = next_allowed_date(due_date, json.loads(domain.rules or "[]"))
+
+    due_today = due_date is not None and due_date <= today_local
+
+    existing_count = 0
+    if due_today:
+        existing_count = (
+            db.query(Task)
+            .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
+            .count()
+        )
 
     task = Task(
         owner_id=current_user.id,
@@ -544,6 +620,7 @@ def get_today(
     generate_routine_instances(current_user, db)
     promote_due_tasks(current_user, db)
     demote_misclassified_today(current_user, db)
+    demote_domain_violations(current_user, db)
     _maybe_sync_gcal(current_user.id, db)
 
     tasks = (
@@ -728,9 +805,22 @@ def update_task(
         setattr(task, field, value)
     task.updated_at = utcnow()
 
+    # Domain snap FIRST so status logic below sees the actually-placed due_date.
+    # Without the snap-first order, picking Sunday on a weekday-only Work task
+    # passes the demote-on-future check (Sun > Sun is False) but the post-snap
+    # due_date becomes Monday — leaving the task incorrectly status=today on Sunday.
+    domain_rules = []
+    if "due_date" in patch and task.due_date is not None and task.project_id:
+        project = db.query(Project).filter(Project.id == task.project_id).first()
+        if project and project.domain_id:
+            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
+            if domain:
+                domain_rules = json.loads(domain.rules or "[]")
+                task.due_date = next_allowed_date(task.due_date, domain_rules)
+
+    today = date.today()
     # If a Today-list task gets pushed to a future due_date, demote it back to inbox
     # so it leaves the Today view automatically.
-    today = date.today()
     if (
         "due_date" in patch
         and task.status == TaskStatus.today
@@ -741,15 +831,17 @@ def update_task(
         task.scheduled_date = None
         task.sort_order = None
 
-    # Domain snap: if project has a domain, snap the new due_date to next allowed day
-    domain_rules = []
-    if "due_date" in patch and task.due_date is not None and task.project_id:
-        project = db.query(Project).filter(Project.id == task.project_id).first()
-        if project and project.domain_id:
-            domain = db.query(Domain).filter(Domain.id == project.domain_id).first()
-            if domain:
-                domain_rules = json.loads(domain.rules or "[]")
-                task.due_date = next_allowed_date(task.due_date, domain_rules)
+    # Demote if status=today but today violates the task's domain.
+    # Covers tasks that were status=today via paths that bypassed the snap
+    # (drag-to-today, legacy rows, batch edits) or before a domain rule change.
+    if (
+        task.status == TaskStatus.today
+        and domain_rules
+        and not date_allowed(today, domain_rules)
+    ):
+        task.status = TaskStatus.inbox
+        task.scheduled_date = None
+        task.sort_order = None
 
     # Cascade: if a project sub-task's due_date moves, shift later sibling tasks by same delta
     if (

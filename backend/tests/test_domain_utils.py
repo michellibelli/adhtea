@@ -7,7 +7,7 @@ cascade shifts, and frontend warnings all snap through it.
 from datetime import date
 
 from routes.domain_utils import (
-    _date_allowed,
+    date_allowed,
     next_allowed_date,
     allowed_days_set,
     domain_days_prompt_hint,
@@ -58,17 +58,17 @@ def test_unrestricted_rule_permits_any_day():
 
 
 # ---------------------------------------------------------------------------
-# _date_allowed
+# date_allowed
 # ---------------------------------------------------------------------------
 
-def test_date_allowed_empty_rules_accepts():
-    assert _date_allowed(SAT, []) is True
+def testdate_allowed_empty_rules_accepts():
+    assert date_allowed(SAT, []) is True
 
 
-def test_date_allowed_rejects_when_no_rule_matches():
+def testdate_allowed_rejects_when_no_rule_matches():
     rules = [{"days": WEEKDAYS}]
-    assert _date_allowed(SAT, rules) is False
-    assert _date_allowed(MON, rules) is True
+    assert date_allowed(SAT, rules) is False
+    assert date_allowed(MON, rules) is True
 
 
 # ---------------------------------------------------------------------------

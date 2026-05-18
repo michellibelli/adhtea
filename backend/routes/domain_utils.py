@@ -11,7 +11,7 @@ from datetime import date, timedelta
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
-def _date_allowed(d: date, rules: list) -> bool:
+def date_allowed(d: date, rules: list) -> bool:
     """Return True if date d is permitted by at least one rule in the list.
 
     Rules use OR logic — if ANY rule permits the day, the date is allowed.
@@ -42,7 +42,7 @@ def next_allowed_date(d: date, rules: list, max_days: int = 365) -> date:
         return d
     for i in range(max_days):
         candidate = d + timedelta(days=i)
-        if _date_allowed(candidate, rules):
+        if date_allowed(candidate, rules):
             return candidate
     return d  # safety fallback — shouldn't happen with reasonable rules
 
