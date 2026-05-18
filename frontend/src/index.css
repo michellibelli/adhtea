@@ -2,7 +2,7 @@
 
 /* =============================================================================
    ARIA Design Tokens
-   All colours live here. Tweak values in [data-theme="adhtea"] to restyle.
+   All colours live here. Tweak values in [data-theme="aria-americano"] to restyle.
    Never hardcode colours in components — use ui-* utilities.
    ============================================================================= */
 
@@ -26,38 +26,7 @@
 }
 
 /* =============================================================================
-   adhTea design system — queer pixel cozy palette
-   ============================================================================= */
-
-[data-theme="adhtea"] {
-  --pride-pink:    #F06B9A;
-  --pride-peach:   #F7A165;
-  --pride-yellow:  #F0E07A;
-  --pride-green:   #7BC97A;
-  --pride-aqua:    #6DC8CC;
-  --pride-lavender:#9D8FD6;
-
-  --aria-surface:       #FFFBF0;
-  --aria-border:        #C4A8D4;
-  --aria-text:          #2A0F40;
-  --aria-subtext:       #7A5090;
-  --aria-accent:        #C490D1;
-  --aria-primary:       #B4A8E0;
-  --aria-primary-hover: #9A8CC8;
-  --aria-primary-text:  #2A0F40;
-  --aria-nav:           #130828;
-  --aria-nav-border:    #4A2068;
-  --aria-input:         #FFFBF0;
-  --aria-input-border:  #C4A8D4;
-  --aria-input-focus:   #C490D1;
-  --aria-badge:         #F7A165;
-  --aria-badge-text:    #2A0F40;
-  --aria-shadow:        #7A5090;
-  --aria-body-bg:       #DFC8FF;
-}
-
-/* =============================================================================
-   Picker themes — manual selection via Settings → Display → Theme
+   Themes — manual selection via Settings → Display → Theme
    D=surface, A=text, B=primary, Ac=accent. Derived: subtext, border,
    primary-hover, primary-text, nav, nav-border, input-border, badge-text.
    ============================================================================= */
@@ -143,15 +112,23 @@ body {
   background: var(--aria-body-bg, var(--aria-surface));
 }
 
-[data-theme="adhtea"] {
+/* Americano page bg — multi-stop sky-to-paper gradient with a tiled SVG
+   layer of tea leaves, amber sparkles, and steam wisps. Leaves are drawn
+   in the palette's dark blue at low alpha so they read as scattered
+   silhouettes; sparkles use the amber accent; steam wisps the cream. */
+[data-theme="aria-americano"] {
   --aria-page-bg:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='14' y='7' width='2' height='6' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='12' y='9' width='6' height='2' fill='rgba(196,144,209,0.22)'/%3E%3Crect x='84' y='25' width='2' height='10' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='80' y='29' width='10' height='2' fill='rgba(240,107,154,0.18)'/%3E%3Crect x='39' y='62' width='2' height='6' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='37' y='64' width='6' height='2' fill='rgba(157,143,214,0.22)'/%3E%3Crect x='99' y='86' width='2' height='4' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='98' y='87' width='4' height='2' fill='rgba(247,161,101,0.28)'/%3E%3Crect x='19' y='96' width='2' height='8' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='16' y='99' width='8' height='2' fill='rgba(109,200,204,0.22)'/%3E%3Crect x='59' y='38' width='2' height='4' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='58' y='39' width='4' height='2' fill='rgba(240,224,122,0.32)'/%3E%3Crect x='109' y='52' width='2' height='6' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='107' y='54' width='6' height='2' fill='rgba(196,144,209,0.18)'/%3E%3Crect x='50' y='19' width='12' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='53' y='16' width='6' height='4' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='55' y='20' width='4' height='2' fill='rgba(220,180,240,0.14)'/%3E%3Crect x='2' y='74' width='10' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='4' y='72' width='5' height='3' fill='rgba(180,210,240,0.12)'/%3E%3Crect x='75' y='10' width='2' height='2' fill='rgba(247,161,101,0.32)'/%3E%3Crect x='30' y='42' width='2' height='2' fill='rgba(196,144,209,0.32)'/%3E%3Crect x='65' y='88' width='2' height='2' fill='rgba(240,107,154,0.28)'/%3E%3Crect x='110' y='15' width='2' height='2' fill='rgba(109,200,204,0.3)'/%3E%3C/svg%3E"),
-    linear-gradient(160deg, #DFC8FF 0%, #F5C0F2 22%, #FFD0C0 50%, #FFE8C0 72%, #FFFBF0 100%);
-  --aria-page-bg-size: 120px 120px, 100%;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='rgba(24,59,78,0.16)'%3E%3Cpath d='M 25 30 q 5 -9 10 0 q -5 9 -10 0' transform='rotate(15 30 30)'/%3E%3Cpath d='M 86 70 q 6 -10 12 0 q -6 10 -12 0' transform='rotate(-25 92 70)'/%3E%3Cpath d='M 165 40 q 5 -9 10 0 q -5 9 -10 0' transform='rotate(40 170 40)'/%3E%3Cpath d='M 47 130 q 7 -11 14 0 q -7 11 -14 0' transform='rotate(-60 54 130)'/%3E%3Cpath d='M 125 150 q 5 -9 10 0 q -5 9 -10 0' transform='rotate(20 130 150)'/%3E%3Cpath d='M 206 110 q 6 -10 12 0 q -6 10 -12 0' transform='rotate(70 212 110)'/%3E%3Cpath d='M 75 200 q 5 -9 10 0 q -5 9 -10 0' transform='rotate(-15 80 200)'/%3E%3Cpath d='M 186 210 q 6 -10 12 0 q -6 10 -12 0' transform='rotate(50 192 210)'/%3E%3Cpath d='M 10 95 q 5 -9 10 0 q -5 9 -10 0' transform='rotate(-40 15 95)'/%3E%3Cpath d='M 140 90 q 5 -8 10 0 q -5 8 -10 0' transform='rotate(110 145 90)'/%3E%3C/g%3E%3Cg fill='rgba(221,168,83,0.40)'%3E%3Ccircle cx='110' cy='25' r='1.3'/%3E%3Ccircle cx='55' cy='95' r='1.4'/%3E%3Ccircle cx='195' cy='80' r='1.3'/%3E%3Ccircle cx='30' cy='180' r='1.3'/%3E%3Ccircle cx='150' cy='195' r='1.4'/%3E%3Ccircle cx='220' cy='35' r='1.2'/%3E%3Ccircle cx='90' cy='225' r='1.3'/%3E%3C/g%3E%3Cg stroke='rgba(243,243,224,0.45)' stroke-width='1.4' fill='none' stroke-linecap='round'%3E%3Cpath d='M 100 105 q 4 -6 0 -12 q -4 -6 0 -12 q 4 -6 0 -12'/%3E%3Cpath d='M 175 165 q 3 -5 0 -10 q -3 -5 0 -10 q 3 -5 0 -10'/%3E%3Cpath d='M 35 60 q 3 -5 0 -10 q -3 -5 0 -10'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(160deg,
+      #27548A 0%,
+      #5C7DAA 18%,
+      #B5C2D0 42%,
+      #E8E6D2 70%,
+      #F3F3E0 100%);
+  --aria-page-bg-size: 240px 240px, 100%;
 }
 
-[data-theme="aria-berries"]  { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
-[data-theme="aria-americano"]{ --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #F3F3E0 70%, #27548A) 0%, #F3F3E0 100%); }
+[data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
 
 /* =============================================================================
