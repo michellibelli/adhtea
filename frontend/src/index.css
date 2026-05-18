@@ -161,30 +161,77 @@ body {
   will-change: transform, opacity;
 }
 
-/* Leaves with high wind-resistance to weight ratio — lots of lateral
-   drift, varied rotation, ease curve between waypoints so each swing
-   slows at its peak before reversing (more autumn-leaf, less straight-
-   line fall). The cubic-bezier on animation-timing gives a soft pause
-   at peaks. */
-@keyframes leaf-fall {
-  0%   { transform: translateY(0)     translateX(0)     rotate(0deg);   opacity: 0; }
-  6%   { opacity: 0.6; }
-  12%  { transform: translateY(8vh)   translateX(55px)  rotate(45deg); }
-  24%  { transform: translateY(20vh)  translateX(-40px) rotate(110deg); }
-  38%  { transform: translateY(34vh)  translateX(60px)  rotate(180deg); }
-  52%  { transform: translateY(48vh)  translateX(-50px) rotate(240deg); }
-  66%  { transform: translateY(62vh)  translateX(55px)  rotate(300deg); }
-  80%  { transform: translateY(80vh)  translateX(-35px) rotate(360deg); }
-  94%  { transform: translateY(95vh)  translateX(25px)  rotate(390deg); opacity: 0.6; }
-  100% { transform: translateY(108vh) translateX(0)     rotate(410deg); opacity: 0; }
+/* Three leaf-fall behaviors modeled after real aerodynamics:
+
+   1. FLUTTER — wide flat leaf catches air, pitches/rolls/tumbles.
+      Big lateral swings + rapid rotate3d for an actual end-over-end
+      tumble (X/Y axis flips show the leaf edge-on briefly).
+   2. GLIDE — stiffer leaf catches air and glides at an angle. Steady
+      diagonal drift in one direction, slow Z-rotation arc.
+   3. DROP — dried-dead leaf, very light. Nearly straight fall with
+      gentle small sway (~8px) and slow back-and-forth rotation as
+      the leaf creates mini pockets of turbulence underneath itself.
+
+   Each leaf is assigned one behavior so the six together read as
+   a mix of leaf types/conditions, not one uniform sweep. */
+
+@keyframes leaf-flutter {
+  0%   { transform: translate(0, 0)         rotate3d(0,0,1,0deg);          opacity: 0; }
+  5%   { opacity: 0.65; }
+  15%  { transform: translate(45px, 12vh)   rotate3d(1,0.4,0.6,180deg); }
+  28%  { transform: translate(-55px, 24vh)  rotate3d(0.5,1,0.3,360deg); }
+  42%  { transform: translate(60px, 38vh)   rotate3d(0.3,0.5,1,540deg); }
+  58%  { transform: translate(-45px, 52vh)  rotate3d(1,0.3,0.6,720deg); }
+  72%  { transform: translate(55px, 68vh)   rotate3d(0.5,1,0.3,900deg); }
+  86%  { transform: translate(-35px, 84vh)  rotate3d(0.3,0.5,1,1080deg); }
+  95%  { opacity: 0.65; }
+  100% { transform: translate(20px, 108vh)  rotate3d(1,1,0.5,1260deg);     opacity: 0; }
 }
 
-.falling-leaf-1 { left: 8%;  width: 18px; animation: leaf-fall 14s ease-in-out infinite; animation-delay: 0s; }
-.falling-leaf-2 { left: 24%; width: 22px; animation: leaf-fall 18s ease-in-out infinite; animation-delay: -5s; }
-.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-fall 12s ease-in-out infinite; animation-delay: -8s; }
-.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-fall 16s ease-in-out infinite; animation-delay: -3s; }
-.falling-leaf-5 { left: 78%; width: 21px; animation: leaf-fall 13s ease-in-out infinite; animation-delay: -10s; }
-.falling-leaf-6 { left: 91%; width: 17px; animation: leaf-fall 15s ease-in-out infinite; animation-delay: -6s; }
+@keyframes leaf-glide-r {
+  0%   { transform: translate(0, 0)         rotate(-12deg); opacity: 0; }
+  7%   { opacity: 0.6; }
+  35%  { transform: translate(35px, 35vh)   rotate(8deg); }
+  70%  { transform: translate(80px, 70vh)   rotate(25deg); }
+  93%  { opacity: 0.6; }
+  100% { transform: translate(120px, 108vh) rotate(38deg);  opacity: 0; }
+}
+
+@keyframes leaf-glide-l {
+  0%   { transform: translate(0, 0)          rotate(12deg);  opacity: 0; }
+  7%   { opacity: 0.6; }
+  35%  { transform: translate(-35px, 35vh)   rotate(-8deg); }
+  70%  { transform: translate(-80px, 70vh)   rotate(-25deg); }
+  93%  { opacity: 0.6; }
+  100% { transform: translate(-120px, 108vh) rotate(-38deg); opacity: 0; }
+}
+
+@keyframes leaf-drop {
+  0%   { transform: translate(0, 0)        rotate(0deg);   opacity: 0; }
+  6%   { opacity: 0.55; }
+  18%  { transform: translate(7px, 18vh)   rotate(14deg); }
+  36%  { transform: translate(-6px, 36vh)  rotate(-11deg); }
+  54%  { transform: translate(8px, 54vh)   rotate(16deg); }
+  72%  { transform: translate(-5px, 72vh)  rotate(-9deg); }
+  90%  { transform: translate(4px, 90vh)   rotate(12deg); opacity: 0.55; }
+  100% { transform: translate(0, 108vh)    rotate(0deg);  opacity: 0; }
+}
+
+/* Behavior mix across the six leaves. Timing per the physics:
+   - Symmetric leaves (the "drop" cohort) are aerodynamically efficient
+     and reach a higher terminal velocity → SHORTER durations (10–11s).
+   - Asymmetric leaves (the "flutter" cohort) generate uneven drag and
+     whirl much more slowly → LONGER durations (16–18s).
+   - Gliders sit in between (13–14s).
+   The cubic-bezier `0.45, 0, 1, 0.92` ramps fast at the start
+   (gravity dominant) then stays near-linear (terminal velocity
+   reached) — approximates the real accel-then-constant profile. */
+.falling-leaf-1 { left: 8%;  width: 19px; animation: leaf-glide-r 13s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: 0s; }
+.falling-leaf-2 { left: 24%; width: 23px; animation: leaf-flutter 17s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -5s; }
+.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-drop    10s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -4s; }
+.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-glide-l 14s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -3s; }
+.falling-leaf-5 { left: 78%; width: 22px; animation: leaf-flutter 18s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -10s; }
+.falling-leaf-6 { left: 91%; width: 18px; animation: leaf-drop    11s cubic-bezier(0.45,0,1,0.92) infinite; animation-delay: -6s; }
 
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
