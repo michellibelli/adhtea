@@ -26,6 +26,8 @@ export default function Inbox({ onCountChange }) {
     finally { setLoading(false) }
   }, [])  // stable — doesn't recreate when parent re-renders with a new callback ref
 
+  // Mount-only fetch; fetchTasks is stable (useCallback []).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
   async function handleScheduleToday(id) { await scheduleToday(id); fetchTasks() }

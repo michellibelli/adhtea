@@ -118,6 +118,8 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
     finally { setLoading(false) }
   }, [])
 
+  // Mount-only fetch; fetchTasks is stable (useCallback []).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
   const timed = tasks

@@ -3,7 +3,7 @@
 
 ## State
 
-Live commit: `<head-after-push>` (BUILD 4.0.0). BUILD chip on prod will read `4.0.0` after Vercel + Render finish.
+Live commit: `f5180fd` (BUILD 4.0.0). BUILD chip on prod will read `4.0.0` after Vercel + Render finish.
 
 Vercel + Render auto-deploy from `master`. CI runs 133 pytest tests on every push + PR.
 
@@ -70,7 +70,7 @@ User has lined up the next visual overhaul. Phase 3 closed; Phase 4 still deferr
 ## Commits this session (latest first)
 
 ```
-<commit-hash> chore: bump BUILD to 4.0.0 + R7 drag/pin in 7-day plan view
+f5180fd chore: BUILD 4.0.0 — R7 follow-up, drag/pin in 7-day plan view
 ```
 
 Yesterday's commits (2026-05-18):

@@ -41,9 +41,10 @@ function GoogleCalendarCard() {
     }
   }, [])
 
-  // Load calendar list once connected
+  // Load calendar list once connected.
   useEffect(() => {
     if (!status?.connected) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCalLoading(true)
     listCalendars()
       .then(setCalendars)

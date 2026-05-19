@@ -386,6 +386,8 @@ export default function Tournament({ onDone }) {
     }
   }, [])
 
+  // Mount-only fetch; refresh is stable (useCallback []).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { refresh() }, [refresh])
 
   // All live tasks the bin-pack saw, flattened + sorted by score desc.

@@ -195,6 +195,8 @@ export default function AllTasks() {
       .finally(() => setLoading(false))
   }
 
+  // Mount-only fetch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchAll() }, [])
 
   const filtered = query.trim()

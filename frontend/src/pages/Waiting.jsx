@@ -127,6 +127,8 @@ export default function Waiting() {
     finally { setLoading(false) }
   }, [])
 
+  // Mount-only fetch; fetchTasks is stable (useCallback []).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
   async function handleComplete(id)  { await completeTask(id);  fetchTasks() }

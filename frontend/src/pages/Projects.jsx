@@ -271,6 +271,8 @@ export default function Projects({ onNavigate }) {
   }
 
   useEffect(() => {
+    // Mount-only fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProjects()
     listDomains().then(setDomains).catch(console.error)
   }, [])

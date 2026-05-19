@@ -221,6 +221,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
     finally { setLoading(false) }
   }, [])
 
+  // Mount-only fetch; fetchAll is stable (useCallback []).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchAll() }, [fetchAll])
 
   // Bonus mode triggers when no visible today-task exists. pickNext filters
