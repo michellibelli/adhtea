@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal, listCalendars, updateCalendars } from '../api/gcal'
 import { listUsers, createUser, deleteUser, createInvite, listInvites, revokeInvite, logout, getAlphaCode, setAlphaCode } from '../api/auth'
 import { listDomains, updateDomain, deleteDomain } from '../api/domains'
-import { startTournament } from '../api/tasks'
 import { updateSettings } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
@@ -354,9 +353,8 @@ export default function Settings({ onNavigate, user }) {
         confirmLabel="Let's brew it"
         cancelLabel="Not now"
         onCancel={() => setAskTriage(false)}
-        onConfirm={async () => {
+        onConfirm={() => {
           setAskTriage(false)
-          try { await startTournament() } catch (e) { console.error(e) }
           onNavigate?.('tournament')
         }}
       />
@@ -367,13 +365,9 @@ export default function Settings({ onNavigate, user }) {
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Tasks</h2>
           <div className="space-y-2">
-            <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('triage')}>
-              <p className="text-sm font-medium text-ui-text">Triage inbox</p>
-              <p className="text-xs text-ui-subtext mt-0.5">Review and schedule new items</p>
-            </Card>
             <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => setAskTriage(true)}>
-              <p className="text-sm font-medium text-ui-text">Triage tournament 🍵</p>
-              <p className="text-xs text-ui-subtext mt-0.5">Re-rank everything; distribute across days using your caps</p>
+              <p className="text-sm font-medium text-ui-text">Triage 🍵</p>
+              <p className="text-xs text-ui-subtext mt-0.5">Bin-pack the next 7 days by score; pin items that must happen on a specific day</p>
             </Card>
             <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('tasks')}>
               <p className="text-sm font-medium text-ui-text">All tasks</p>

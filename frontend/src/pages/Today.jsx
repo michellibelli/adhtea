@@ -89,7 +89,7 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
   )
 }
 
-export default function Today({ visibleLimit = 10, carriedOver = false, onTriage, onTournament }) {
+export default function Today({ visibleLimit = 10, carriedOver = false, onTournament }) {
   const [tasks, setTasks]       = useState([])
   const [doneTasks, setDone]    = useState([])
   const [capacity, setCapacity] = useState(null)
@@ -207,12 +207,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
             <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
             {onTournament && (
               <Button variant="secondary" onClick={() => setAskTriage(true)}>
-                🍵 Triage all
-              </Button>
-            )}
-            {onTriage && (
-              <Button variant="secondary" onClick={onTriage}>
-                <span className="text-red-500">✚</span> Triage
+                🍵 Triage
               </Button>
             )}
           </div>

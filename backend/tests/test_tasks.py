@@ -1,10 +1,10 @@
-"""Tasks route tests: cascade date shift + tournament target-day caps + domain enforcement."""
+"""Tasks route tests: cascade date shift + domain enforcement."""
 
 import json
 from datetime import date, timedelta
 
 from models import Domain, Project, Task, TaskStatus, TaskType, User
-from routes.tasks import _find_target, demote_domain_violations, promote_due_tasks
+from routes.tasks import demote_domain_violations, promote_due_tasks
 
 
 def _mk_user(db, username="testuser"):
@@ -125,63 +125,6 @@ def test_cascade_does_not_run_across_projects(client, auth_headers, db_session):
 
     db_session.refresh(b1)
     assert b1.due_date == today + timedelta(days=10)
-
-
-# ---------------------------------------------------------------------------
-# _find_target: tournament caps
-# ---------------------------------------------------------------------------
-
-def test_find_target_picks_today_when_empty(client, auth_headers, db_session):
-    user = _mk_user(db_session)
-    target, offset, tcount, total = _find_target(db_session, user)
-    assert target == date.today()
-    assert offset == 0
-    assert tcount == 0
-    assert total == 0
-
-
-def test_find_target_skips_today_when_task_cap_reached(client, auth_headers, db_session):
-    user = _mk_user(db_session)
-    user.max_tasks_per_day = 2
-    user.max_total_per_day = 15
-    db_session.commit()
-
-    for _ in range(2):
-        _mk_task(db_session, user.id, status=TaskStatus.today)
-
-    target, offset, _, _ = _find_target(db_session, user)
-    assert offset == 1  # today filled, next day picked
-    assert target == date.today() + timedelta(days=1)
-
-
-def test_find_target_skips_today_when_total_cap_reached(client, auth_headers, db_session):
-    """Routines + appointments count toward total even though tasks alone is under cap."""
-    user = _mk_user(db_session)
-    user.max_tasks_per_day = 10
-    user.max_total_per_day = 3
-    db_session.commit()
-
-    _mk_task(db_session, user.id, status=TaskStatus.today, task_type=TaskType.task)
-    _mk_task(db_session, user.id, status=TaskStatus.today, task_type=TaskType.appointment)
-    _mk_task(db_session, user.id, status=TaskStatus.today, task_type=TaskType.routine)
-
-    target, offset, _, _ = _find_target(db_session, user)
-    assert offset == 1
-
-
-def test_find_target_returns_none_when_horizon_full(client, auth_headers, db_session):
-    """Cap at 1/1 and fill all 30 horizon days -> no target available."""
-    user = _mk_user(db_session)
-    user.max_tasks_per_day = 1
-    user.max_total_per_day = 1
-    db_session.commit()
-    today = date.today()
-    _mk_task(db_session, user.id, status=TaskStatus.today)  # fills offset=0
-    for offset in range(1, 30):
-        _mk_task(db_session, user.id, due=today + timedelta(days=offset))
-    target, offset, _, _ = _find_target(db_session, user)
-    assert target is None
-    assert offset is None
 
 
 # ---------------------------------------------------------------------------

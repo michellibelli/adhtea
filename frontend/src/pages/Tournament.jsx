@@ -10,11 +10,19 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   previewTriage, runTriage, recomputeTriage, pinTask, unpinTask,
 } from '../api/triage'
+import { deleteTask, snoozeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ProjectBadge from '../components/ProjectBadge'
 import { PageLoading, PageError } from '../components/PageState'
-import { markTriageDone } from './Triage'
+import { markTriageDone } from '../utils/triage'
+
+// When a task crosses this many pushes, surface the archive/delete nudge.
+// Matches the score's push_penalty cumulative impact: at 5 pushes the
+// penalty is -25 points — usually enough to sink the task on its own,
+// but the prompt makes the choice explicit instead of letting the task
+// quietly rot.
+const STALE_PUSH_THRESHOLD = 5
 
 
 // Human-readable labels for `score_components` keys. Anything missing here
@@ -87,16 +95,68 @@ function WhyTooltip({ components, total }) {
 }
 
 
-function TriageCard({ task, dayDate, pinDisabled, onPin, onUnpin }) {
+function StalePrompt({ task, onRefresh }) {
+  // Surfaces when a task has been pushed too many times. Gives two
+  // explicit actions instead of letting the user push it again — the
+  // whole point of the score penalty + this prompt is to break the
+  // re-push loop the user described as the original triage pain.
+  const [busy, setBusy] = useState(false)
+  async function handleDelete() {
+    setBusy(true)
+    try { await deleteTask(task.id); await onRefresh() }
+    catch (e) { alert(e?.message || 'Delete failed') }
+    finally { setBusy(false) }
+  }
+  async function handleSnoozeMonth() {
+    setBusy(true)
+    try {
+      const until = new Date()
+      until.setDate(until.getDate() + 30)
+      until.setHours(0, 0, 0, 0)
+      await snoozeTask(task.id, until.toISOString())
+      await onRefresh()
+    } catch (e) { alert(e?.message || 'Snooze failed') }
+    finally { setBusy(false) }
+  }
+  return (
+    <div className="mt-2 pt-2 border-t border-amber-400/30 bg-amber-400/5 -mx-3 -mb-2 px-3 py-2 rounded-b-xl">
+      <p className="text-[10px] text-amber-500 leading-snug">
+        Pushed {task.push_count}× — keep delaying it, or let it go?
+      </p>
+      <div className="flex gap-2 mt-1.5">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={busy}
+          className="text-[10px] font-medium px-2 py-1 rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          onClick={handleSnoozeMonth}
+          disabled={busy}
+          className="text-[10px] font-medium px-2 py-1 rounded border border-ui-border text-ui-subtext hover:text-ui-text transition-colors"
+        >
+          Snooze 30d
+        </button>
+      </div>
+    </div>
+  )
+}
+
+
+function TriageCard({ task, dayDate, pinDisabled, onPin, onUnpin, onRefresh }) {
   const [showWhy, setShowWhy] = useState(false)
   const isPinned = task.pinned_for === dayDate
+  const isStale  = (task.push_count || 0) >= STALE_PUSH_THRESHOLD
   const components = task.score_components
     ? (() => { try { return JSON.parse(task.score_components) } catch { return null } })()
     : null
   const score = task.score == null ? null : Math.round(task.score)
 
   return (
-    <Card className={`px-3 py-2 mb-1.5 ${isPinned ? 'ring-1 ring-amber-400/40' : ''}`}>
+    <Card className={`px-3 py-2 mb-1.5 ${isPinned ? 'ring-1 ring-amber-400/40' : ''} ${isStale ? 'border-amber-400/40' : ''}`}>
       <div className="flex items-start gap-2">
         <button
           type="button"
@@ -125,6 +185,9 @@ function TriageCard({ task, dayDate, pinDisabled, onPin, onUnpin }) {
             {task.is_critical && (
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">critical</span>
             )}
+            {isStale && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-medium">stale ×{task.push_count}</span>
+            )}
             {task.due_date && (
               <span className="text-[9px] text-ui-subtext">due {task.due_date}</span>
             )}
@@ -142,12 +205,13 @@ function TriageCard({ task, dayDate, pinDisabled, onPin, onUnpin }) {
         )}
       </div>
       {showWhy && <WhyTooltip components={components} total={task.score} />}
+      {isStale && <StalePrompt task={task} onRefresh={onRefresh} />}
     </Card>
   )
 }
 
 
-function DayColumn({ day, offset, onPin, onUnpin, pinCount }) {
+function DayColumn({ day, offset, onPin, onUnpin, onRefresh, pinCount }) {
   const dayDate    = day.date
   const pinDisabled = pinCount >= 3
   return (
@@ -170,6 +234,7 @@ function DayColumn({ day, offset, onPin, onUnpin, pinCount }) {
             pinDisabled={pinDisabled}
             onPin={()   => onPin(task.id, dayDate)}
             onUnpin={() => onUnpin(task.id)}
+            onRefresh={onRefresh}
           />
         ))
       )}
@@ -280,6 +345,7 @@ export default function Tournament({ onDone }) {
               pinCount={pinsPerDay[day.date]}
               onPin={handlePin}
               onUnpin={handleUnpin}
+              onRefresh={refresh}
             />
           ))}
         </div>
@@ -301,6 +367,7 @@ export default function Tournament({ onDone }) {
                 pinDisabled
                 onPin={() => {}}
                 onUnpin={() => handleUnpin(task.id)}
+                onRefresh={refresh}
               />
             ))}
           </Card>

@@ -33,7 +33,6 @@ import Register from './pages/Register'
 import Signup from './pages/Signup'
 import AlphaChallenge from './pages/AlphaChallenge'
 import Capture from './pages/Capture'
-import Triage from './pages/Triage'
 import Tournament from './pages/Tournament'
 import Focus from './pages/Focus'
 import Today from './pages/Today'
@@ -163,10 +162,9 @@ function AppShell() {
 
       <main className="pt-[88px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
-        {screen === 'triage'   && <Triage onTriageDone={handleTriageDone} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('triage')} onNavigate={setScreen} />}
-        {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTriage={() => setScreen('triage')} onTournament={() => setScreen('tournament')} />}
+        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('tournament')} onNavigate={setScreen} />}
+        {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTournament={() => setScreen('tournament')} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
