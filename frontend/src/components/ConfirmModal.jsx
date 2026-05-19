@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Card from './Card'
 import Button from './Button'
 
@@ -40,9 +41,14 @@ export default function ConfirmModal({
 
   if (!open) return null
 
-  return (
+  // Portal to document.body so .aria-page's `animation: page-in both`
+  // (which leaves a permanent translateY transform context) doesn't pin
+  // our `fixed` positioning to the scrollable page instead of the viewport.
+  // Anchored at the top third of the viewport (pt-[20vh]) per user request
+  // so the modal never lands below the fold.
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+      className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[20vh] overflow-y-auto"
       style={{ background: 'rgba(20,8,40,0.55)', backdropFilter: 'blur(2px)' }}
       onClick={onCancel}
     >
@@ -64,6 +70,7 @@ export default function ConfirmModal({
           <Button onClick={onConfirm}>{confirmLabel}</Button>
         </div>
       </Card>
-    </div>
+    </div>,
+    document.body,
   )
 }

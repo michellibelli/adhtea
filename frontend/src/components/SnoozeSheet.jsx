@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { SNOOZE_OPTIONS, resolveSnoozeDate } from '../utils/snooze'
 import Button from './Button'
 import { Input } from './Input'
@@ -17,10 +18,12 @@ export default function SnoozeSheet({ onSnooze, onClose }) {
     if (date) onSnooze(date.toISOString())
   }
 
-  return (
+  // Portal to document.body so .aria-page's permanent transform context
+  // doesn't pin `fixed` to the page instead of the viewport.
+  return createPortal(
     <>
       <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-ui-surface border-t border-ui-border rounded-t-2xl pb-safe md:left-1/2 md:right-auto md:bottom-auto md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-96 md:rounded-2xl md:border">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-ui-surface border-t border-ui-border rounded-t-2xl pb-safe md:left-1/2 md:right-auto md:bottom-auto md:top-[20vh] md:-translate-x-1/2 md:translate-y-0 md:w-96 md:rounded-2xl md:border">
 
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 md:hidden">
@@ -63,6 +66,7 @@ export default function SnoozeSheet({ onSnooze, onClose }) {
           </Button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
