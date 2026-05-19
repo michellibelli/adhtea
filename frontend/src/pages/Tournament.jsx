@@ -1,12 +1,10 @@
-// Triage redesign R4 — new entry point at /tournament route.
-// Replaces the prior multi-round drag-to-rank "Tournament" UI.
+// Triage redesign R7 — top-3 primary view with collapsible full plan.
 //
-// Layout: rolling 7-day window as column cards. Each column shows a
-// capacity gauge (used vs budget weight units) and the items the
-// bin-pack placed there. Each card has a pin button (★/☆) and a score
-// chip that opens the "Why this?" component breakdown — confidence
-// comes from showing the math, not hiding it. Apply persists the layout.
-import { useState, useEffect, useCallback } from 'react'
+// Workflow target: open the page with ~10 minutes, pick the 3 tasks for
+// today, hit Apply, system bin-packs the rest into days 1–6 silently.
+// The full 7-day grid is hidden by default behind a "Show full plan"
+// disclosure for when you want the detail.
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   previewTriage, runTriage, recomputeTriage, pinTask, unpinTask,
 } from '../api/triage'
@@ -17,17 +15,16 @@ import ProjectBadge from '../components/ProjectBadge'
 import { PageLoading, PageError } from '../components/PageState'
 import { markTriageDone } from '../utils/triage'
 
-// When a task crosses this many pushes, surface the archive/delete nudge.
-// Matches the score's push_penalty cumulative impact: at 5 pushes the
-// penalty is -25 points — usually enough to sink the task on its own,
-// but the prompt makes the choice explicit instead of letting the task
-// quietly rot.
+// At ≥ this many pushes, surface the archive/delete prompt instead of letting
+// the task drift through another snooze cycle.
 const STALE_PUSH_THRESHOLD = 5
 
+// Initial suggested-candidate count before "show more". Tuned so the list
+// fits a phone viewport without scrolling.
+const SUGGESTED_INITIAL = 10
+const SUGGESTED_PAGE = 25
 
-// Human-readable labels for `score_components` keys. Anything missing here
-// renders as the raw key — fine for early iteration; we can add labels as
-// new levers get introduced.
+// Human-readable labels for `score_components` keys, used by WhyTooltip.
 const LEVER_LABELS = {
   priority:       'Priority',
   critical_bonus: 'Critical',
@@ -41,6 +38,16 @@ const LEVER_LABELS = {
 }
 
 
+function todayIso() {
+  // Local-date ISO (YYYY-MM-DD) — what the pin endpoint expects.
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+
 function dayLabel(isoDate, offset) {
   if (offset === 0) return 'Today'
   if (offset === 1) return 'Tomorrow'
@@ -49,34 +56,15 @@ function dayLabel(isoDate, offset) {
 }
 
 
-function CapacityBar({ used, committed, budget }) {
-  const total  = used + committed
-  const pct    = budget > 0 ? Math.min(100, (total / budget) * 100) : 0
-  const over   = total > budget
-  return (
-    <div className="mb-2">
-      <div className="flex items-center justify-between text-[10px] text-ui-subtext mb-1">
-        <span>{total.toFixed(0)} / {budget.toFixed(0)} units</span>
-        {over && <span className="text-red-400 font-medium">over capacity</span>}
-      </div>
-      <div className="h-1 rounded-full bg-ui-border overflow-hidden">
-        <div
-          className={`h-full transition-all duration-300 ${over ? 'bg-red-400' : 'bg-ui-accent'}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
+function parseComponents(raw) {
+  if (!raw) return null
+  try { return JSON.parse(raw) } catch { return null }
 }
 
 
 function WhyTooltip({ components, total }) {
   if (!components) return null
-  // Sort by absolute contribution (largest first) so the dominant
-  // reasons render on top.
-  const entries = Object.entries(components).sort(
-    (a, b) => Math.abs(b[1]) - Math.abs(a[1]),
-  )
+  const entries = Object.entries(components).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
   return (
     <div className="mt-2 pt-2 border-t border-ui-border/50 space-y-0.5">
       <p className="text-[10px] font-semibold text-ui-text mb-1">
@@ -95,15 +83,49 @@ function WhyTooltip({ components, total }) {
 }
 
 
-function StalePrompt({ task, onRefresh }) {
-  // Surfaces when a task has been pushed too many times. Gives two
-  // explicit actions instead of letting the user push it again — the
-  // whole point of the score penalty + this prompt is to break the
-  // re-push loop the user described as the original triage pain.
+function ScoreChip({ task, onClick }) {
+  if (task.score == null) return null
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Why this score?"
+      className="flex-shrink-0 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-ui-border/40 text-ui-text hover:bg-ui-accent/20 hover:text-ui-accent transition-colors"
+    >
+      {Math.round(task.score)}
+    </button>
+  )
+}
+
+
+function MetaBadges({ task }) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <ProjectBadge name={task.project_name} size="xs" />
+      {task.domain_name && (
+        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-ui-border/60 text-ui-subtext uppercase tracking-wider">
+          {task.domain_name}
+        </span>
+      )}
+      {task.is_critical && (
+        <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">critical</span>
+      )}
+      {(task.push_count || 0) >= STALE_PUSH_THRESHOLD && (
+        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-medium">stale ×{task.push_count}</span>
+      )}
+      {task.due_date && (
+        <span className="text-[9px] text-ui-subtext">due {task.due_date}</span>
+      )}
+    </div>
+  )
+}
+
+
+function StalePrompt({ task, onAfterAction }) {
   const [busy, setBusy] = useState(false)
   async function handleDelete() {
     setBusy(true)
-    try { await deleteTask(task.id); await onRefresh() }
+    try { await deleteTask(task.id); await onAfterAction() }
     catch (e) { alert(e?.message || 'Delete failed') }
     finally { setBusy(false) }
   }
@@ -114,30 +136,22 @@ function StalePrompt({ task, onRefresh }) {
       until.setDate(until.getDate() + 30)
       until.setHours(0, 0, 0, 0)
       await snoozeTask(task.id, until.toISOString())
-      await onRefresh()
+      await onAfterAction()
     } catch (e) { alert(e?.message || 'Snooze failed') }
     finally { setBusy(false) }
   }
   return (
     <div className="mt-2 pt-2 border-t border-amber-400/30 bg-amber-400/5 -mx-3 -mb-2 px-3 py-2 rounded-b-xl">
       <p className="text-[10px] text-amber-500 leading-snug">
-        Pushed {task.push_count}× — keep delaying it, or let it go?
+        Pushed {task.push_count}× — keep delaying, or let it go?
       </p>
       <div className="flex gap-2 mt-1.5">
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={busy}
-          className="text-[10px] font-medium px-2 py-1 rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
-        >
+        <button type="button" onClick={handleDelete} disabled={busy}
+          className="text-[10px] font-medium px-2 py-1 rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors">
           Delete
         </button>
-        <button
-          type="button"
-          onClick={handleSnoozeMonth}
-          disabled={busy}
-          className="text-[10px] font-medium px-2 py-1 rounded border border-ui-border text-ui-subtext hover:text-ui-text transition-colors"
-        >
+        <button type="button" onClick={handleSnoozeMonth} disabled={busy}
+          className="text-[10px] font-medium px-2 py-1 rounded border border-ui-border text-ui-subtext hover:text-ui-text transition-colors">
           Snooze 30d
         </button>
       </div>
@@ -146,102 +160,144 @@ function StalePrompt({ task, onRefresh }) {
 }
 
 
-function TriageCard({ task, dayDate, pinDisabled, onPin, onUnpin, onRefresh }) {
-  const [showWhy, setShowWhy] = useState(false)
-  const isPinned = task.pinned_for === dayDate
-  const isStale  = (task.push_count || 0) >= STALE_PUSH_THRESHOLD
-  const components = task.score_components
-    ? (() => { try { return JSON.parse(task.score_components) } catch { return null } })()
-    : null
-  const score = task.score == null ? null : Math.round(task.score)
+// ── Top-3 slot card ──────────────────────────────────────────────────────────
 
+function SlotCard({ index, task, onClear, onWhy, showWhy }) {
+  const components = task ? parseComponents(task.score_components) : null
   return (
-    <Card className={`px-3 py-2 mb-1.5 ${isPinned ? 'ring-1 ring-amber-400/40' : ''} ${isStale ? 'border-amber-400/40' : ''}`}>
+    <Card className={`px-3 py-3 ${task ? 'ring-1 ring-amber-400/50 bg-amber-400/5' : 'border-dashed opacity-70'}`}>
+      <div className="flex items-start gap-2">
+        <span className="text-base text-amber-400 flex-shrink-0 font-semibold">★{index + 1}</span>
+        <div className="flex-1 min-w-0">
+          {task ? (
+            <>
+              <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
+              <div className="mt-1">
+                <MetaBadges task={task} />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-ui-subtext italic">tap a suggestion below to fill</p>
+          )}
+        </div>
+        {task && <ScoreChip task={task} onClick={onWhy} />}
+        {task && (
+          <button
+            type="button"
+            onClick={onClear}
+            title="Remove from top 3"
+            className="flex-shrink-0 text-ui-subtext/40 hover:text-red-400 transition-colors text-sm font-bold"
+          >×</button>
+        )}
+      </div>
+      {showWhy && task && <WhyTooltip components={components} total={task.score} />}
+    </Card>
+  )
+}
+
+
+// ── Candidate row in the suggested / search list ─────────────────────────────
+
+function CandidateRow({ task, onAdd, onWhy, showWhy, inSlots, slotsFull, onAfterStale }) {
+  const components = parseComponents(task.score_components)
+  const isStale  = (task.push_count || 0) >= STALE_PUSH_THRESHOLD
+  return (
+    <Card className={`px-3 py-2 mb-1.5 ${inSlots ? 'opacity-50' : ''} ${isStale ? 'border-amber-400/40' : ''}`}>
       <div className="flex items-start gap-2">
         <button
           type="button"
-          onClick={() => (isPinned ? onUnpin() : onPin())}
-          disabled={!isPinned && pinDisabled}
-          title={isPinned ? 'Unpin' : pinDisabled ? 'Day already has 3 pins' : 'Pin to this day'}
-          className={`flex-shrink-0 text-base leading-none transition-colors ${
-            isPinned
-              ? 'text-amber-400'
-              : pinDisabled
-                ? 'text-ui-subtext/30 cursor-not-allowed'
-                : 'text-ui-subtext/40 hover:text-amber-400'
+          onClick={onAdd}
+          disabled={inSlots || slotsFull}
+          title={inSlots ? 'Already in top 3' : slotsFull ? 'Clear a slot first' : 'Add to top 3'}
+          className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
+            inSlots
+              ? 'border-amber-400/60 text-amber-400'
+              : slotsFull
+                ? 'border-ui-border text-ui-subtext/30 cursor-not-allowed'
+                : 'border-ui-border text-ui-subtext hover:border-amber-400 hover:text-amber-400'
           }`}
         >
-          {isPinned ? '★' : '☆'}
+          {inSlots ? '★' : '+'}
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
-          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <ProjectBadge name={task.project_name} size="xs" />
-            {task.domain_name && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-ui-border/60 text-ui-subtext uppercase tracking-wider">
-                {task.domain_name}
-              </span>
-            )}
-            {task.is_critical && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">critical</span>
-            )}
-            {isStale && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-medium">stale ×{task.push_count}</span>
-            )}
-            {task.due_date && (
-              <span className="text-[9px] text-ui-subtext">due {task.due_date}</span>
-            )}
+          <div className="mt-1">
+            <MetaBadges task={task} />
           </div>
         </div>
-        {score != null && (
-          <button
-            type="button"
-            onClick={() => setShowWhy(!showWhy)}
-            title="Why this score?"
-            className="flex-shrink-0 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-ui-border/40 text-ui-text hover:bg-ui-accent/20 hover:text-ui-accent transition-colors"
-          >
-            {score}
-          </button>
-        )}
+        <ScoreChip task={task} onClick={onWhy} />
       </div>
       {showWhy && <WhyTooltip components={components} total={task.score} />}
-      {isStale && <StalePrompt task={task} onRefresh={onRefresh} />}
+      {isStale && <StalePrompt task={task} onAfterAction={onAfterStale} />}
     </Card>
   )
 }
 
 
-function DayColumn({ day, offset, onPin, onUnpin, onRefresh, pinCount }) {
-  const dayDate    = day.date
-  const pinDisabled = pinCount >= 3
+// ── Full plan view (collapsible 7-column grid) ───────────────────────────────
+
+function CapacityBar({ used, committed, budget }) {
+  const total = used + committed
+  const pct   = budget > 0 ? Math.min(100, (total / budget) * 100) : 0
+  const over  = total > budget
   return (
-    <Card className="px-3 py-3 flex flex-col">
-      <div className="flex items-baseline justify-between mb-1.5">
-        <h3 className="text-sm font-semibold text-ui-text">{dayLabel(dayDate, offset)}</h3>
-        <span className="text-[10px] text-ui-subtext">
-          {day.items.length} task{day.items.length === 1 ? '' : 's'}
-        </span>
+    <div className="mb-2">
+      <div className="flex items-center justify-between text-[10px] text-ui-subtext mb-1">
+        <span>{total.toFixed(0)} / {budget.toFixed(0)} units</span>
+        {over && <span className="text-red-400 font-medium">over capacity</span>}
       </div>
-      <CapacityBar used={day.used} committed={day.committed} budget={day.budget} />
-      {day.items.length === 0 ? (
-        <p className="text-[10px] text-ui-subtext/60 italic text-center py-3">empty</p>
-      ) : (
-        day.items.map(task => (
-          <TriageCard
-            key={task.id}
-            task={task}
-            dayDate={dayDate}
-            pinDisabled={pinDisabled}
-            onPin={()   => onPin(task.id, dayDate)}
-            onUnpin={() => onUnpin(task.id)}
-            onRefresh={onRefresh}
-          />
-        ))
-      )}
-    </Card>
+      <div className="h-1 rounded-full bg-ui-border overflow-hidden">
+        <div className={`h-full transition-all duration-300 ${over ? 'bg-red-400' : 'bg-ui-accent'}`}
+          style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   )
 }
 
+
+function FullPlanView({ layout }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
+      {layout.days.map((day, i) => (
+        <Card key={day.date} className="px-3 py-3">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <h3 className="text-sm font-semibold text-ui-text">{dayLabel(day.date, i)}</h3>
+            <span className="text-[10px] text-ui-subtext">
+              {day.items.length} task{day.items.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <CapacityBar used={day.used} committed={day.committed} budget={day.budget} />
+          {day.items.length === 0 ? (
+            <p className="text-[10px] text-ui-subtext/60 italic text-center py-3">empty</p>
+          ) : (
+            day.items.map(t => (
+              <div key={t.id} className="text-xs text-ui-text py-1 border-b border-ui-border/30 last:border-0">
+                {t.title}
+              </div>
+            ))
+          )}
+        </Card>
+      ))}
+      {layout.overflow.length > 0 && (
+        <Card className="px-3 py-3 md:col-span-2 xl:col-span-3">
+          <h3 className="text-sm font-semibold text-ui-text mb-2">
+            The pile — {layout.overflow.length} task{layout.overflow.length === 1 ? '' : 's'} beyond the window
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-3">
+            {layout.overflow.map(t => (
+              <div key={t.id} className="text-xs text-ui-text py-1 border-b border-ui-border/30 last:border-0">
+                {t.title}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+
+// ── Main page ────────────────────────────────────────────────────────────────
 
 export default function Tournament({ onDone }) {
   const [layout, setLayout] = useState(null)
@@ -249,6 +305,13 @@ export default function Tournament({ onDone }) {
   const [error,   setError]   = useState(null)
   const [busy,    setBusy]    = useState(false)
   const [applied, setApplied] = useState(false)
+
+  // [taskId, taskId, taskId] — null in empty slots.
+  const [slots, setSlots] = useState([null, null, null])
+  const [search, setSearch] = useState('')
+  const [showWhyId, setShowWhyId] = useState(null)
+  const [suggestedShown, setSuggestedShown] = useState(SUGGESTED_INITIAL)
+  const [showFullPlan, setShowFullPlan] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true); setError(null)
@@ -264,6 +327,82 @@ export default function Tournament({ onDone }) {
 
   useEffect(() => { refresh() }, [refresh])
 
+  // All live tasks the bin-pack saw, flattened + sorted by score desc.
+  // Includes currently-pinned items (they're inside their day's bucket) so
+  // pre-populating the slots and the suggested list both read the same data.
+  const allTasks = useMemo(() => {
+    if (!layout) return []
+    const flat = [...layout.days.flatMap(d => d.items), ...layout.overflow]
+    // Dedupe by id (pinned items appear in their day's bucket already).
+    const seen = new Set()
+    const unique = flat.filter(t => {
+      if (seen.has(t.id)) return false
+      seen.add(t.id)
+      return true
+    })
+    return unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+  }, [layout])
+
+  // Pre-populate slots once layout arrives: existing pins for today first,
+  // then top-scored items fill remaining slots. User can swap any.
+  useEffect(() => {
+    if (!layout) return
+    const iso = todayIso()
+    const pinned = allTasks.filter(t => t.pinned_for === iso).slice(0, 3)
+    const next = [pinned[0]?.id ?? null, pinned[1]?.id ?? null, pinned[2]?.id ?? null]
+    let fillCursor = 0
+    for (let i = 0; i < 3; i++) {
+      if (next[i] != null) continue
+      while (fillCursor < allTasks.length) {
+        const t = allTasks[fillCursor++]
+        if (next.includes(t.id)) continue
+        next[i] = t.id
+        break
+      }
+    }
+    setSlots(next)
+    // intentional: run only when allTasks changes shape, not on every slot edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout])
+
+  const taskById = useMemo(() => {
+    const m = new Map()
+    for (const t of allTasks) m.set(t.id, t)
+    return m
+  }, [allTasks])
+
+  const slotsFull = slots.every(s => s != null)
+
+  // Suggested + search list: filter, then paginate.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return allTasks
+    return allTasks.filter(t => t.title.toLowerCase().includes(q))
+  }, [allTasks, search])
+
+  const visible = filtered.slice(0, suggestedShown)
+  const moreCount = Math.max(0, filtered.length - suggestedShown)
+
+  function assignToFirstEmptySlot(taskId) {
+    setSlots(prev => {
+      // If already in a slot, this is a no-op (button is disabled).
+      if (prev.includes(taskId)) return prev
+      const idx = prev.findIndex(s => s == null)
+      if (idx === -1) return prev
+      const next = [...prev]
+      next[idx] = taskId
+      return next
+    })
+  }
+
+  function clearSlot(idx) {
+    setSlots(prev => { const n = [...prev]; n[idx] = null; return n })
+  }
+
+  function toggleWhy(taskId) {
+    setShowWhyId(prev => (prev === taskId ? null : taskId))
+  }
+
   async function handleRecompute() {
     setBusy(true)
     try { await recomputeTriage(); await refresh() }
@@ -271,8 +410,24 @@ export default function Tournament({ onDone }) {
   }
 
   async function handleApply() {
-    setBusy(true)
+    setBusy(true); setError(null)
     try {
+      const iso = todayIso()
+      // Pin everything in slots. Server caps at 3/day; we send sequentially
+      // to surface a pin failure (e.g. existing other pin) clearly.
+      for (const id of slots.filter(Boolean)) {
+        try { await pinTask(id, iso) }
+        catch (e) {
+          // 409 = day already at cap. Pre-existing pins might be eating
+          // the slots; unpin anything not in our chosen 3 and retry.
+          if (e?.status === 409 || /409/.test(String(e?.message))) {
+            const day0 = layout?.days?.[0]
+            const conflicts = (day0?.items || []).filter(t => t.pinned_for === iso && !slots.includes(t.id))
+            for (const c of conflicts) await unpinTask(c.id)
+            await pinTask(id, iso)
+          } else { throw e }
+        }
+      }
       await runTriage()
       markTriageDone()
       setApplied(true)
@@ -282,96 +437,110 @@ export default function Tournament({ onDone }) {
     } finally { setBusy(false) }
   }
 
-  async function handlePin(taskId, isoDate) {
-    setBusy(true)
-    try { await pinTask(taskId, isoDate); await refresh() }
-    catch (e) { alert(e?.message || 'Pin failed') }
-    finally { setBusy(false) }
-  }
-
-  async function handleUnpin(taskId) {
-    setBusy(true)
-    try { await unpinTask(taskId); await refresh() }
-    finally { setBusy(false) }
-  }
-
   if (loading) return <PageLoading />
   if (error)   return <PageError onRetry={refresh} />
   if (!layout) return <PageError onRetry={refresh} />
 
-  // Count pins per day so the UI can disable the pin button when a day is
-  // already at the max (3) — matches the server-side cap.
-  const pinsPerDay = {}
-  for (const d of layout.days) {
-    pinsPerDay[d.date] = d.items.filter(t => t.pinned_for === d.date).length
-  }
-
-  const totalToPlace = layout.days.reduce((n, d) => n + d.items.length, 0) + layout.overflow.length
+  const totalLive = allTasks.length
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-6xl mx-auto w-full">
+      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-semibold text-ui-text">Triage</h1>
             <p className="text-sm text-ui-subtext mt-0.5">
-              {totalToPlace} task{totalToPlace === 1 ? '' : 's'} sorted into the next 7 days
+              Pick your top 3 for today — system handles the rest.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="ghost" size="sm" onClick={handleRecompute} disabled={busy}>
               ↻ Recompute
             </Button>
-            <Button onClick={handleApply} disabled={busy}>
-              {applied ? '✓ Applied' : 'Apply triage'}
+            <Button onClick={handleApply} disabled={busy || slots.every(s => s == null)}>
+              {applied ? '✓ Applied' : 'Apply'}
             </Button>
           </div>
         </div>
 
-        <p className="text-xs text-ui-subtext mb-4 mt-1">
-          Tap ★ on a card to pin it to that day. Tap the score chip to see the math.
-          "Apply triage" makes the placement real.
-        </p>
-
-        {/* Day columns — responsive: 1 col mobile, 2 desktop, 3 wide */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {layout.days.map((day, i) => (
-            <DayColumn
-              key={day.date}
-              day={day}
-              offset={i}
-              pinCount={pinsPerDay[day.date]}
-              onPin={handlePin}
-              onUnpin={handleUnpin}
-              onRefresh={refresh}
+        {/* Top-3 slots */}
+        <div className="space-y-2 mt-5 mb-6">
+          {slots.map((id, idx) => (
+            <SlotCard
+              key={idx}
+              index={idx}
+              task={id != null ? taskById.get(id) : null}
+              onClear={() => clearSlot(idx)}
+              onWhy={() => id != null && toggleWhy(id)}
+              showWhy={id != null && showWhyId === id}
             />
           ))}
         </div>
 
-        {/* Overflow pile — items that didn't fit anywhere in the 7-day window */}
-        {layout.overflow.length > 0 && (
-          <Card className="mt-4 px-3 py-3">
-            <div className="flex items-baseline justify-between mb-2">
-              <h3 className="text-sm font-semibold text-ui-text">The pile</h3>
-              <span className="text-[10px] text-ui-subtext">
-                {layout.overflow.length} task{layout.overflow.length === 1 ? '' : 's'} beyond the window
-              </span>
-            </div>
-            {layout.overflow.map(task => (
-              <TriageCard
-                key={task.id}
-                task={task}
-                dayDate={null}
-                pinDisabled
-                onPin={() => {}}
-                onUnpin={() => handleUnpin(task.id)}
-                onRefresh={refresh}
+        {/* Search */}
+        <div className="mb-3">
+          <input
+            type="search"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setSuggestedShown(SUGGESTED_INITIAL) }}
+            placeholder={`Search ${totalLive} task${totalLive === 1 ? '' : 's'}…`}
+            className="w-full text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2 text-ui-text placeholder-ui-subtext/50 outline-none focus:border-ui-accent transition-colors"
+          />
+        </div>
+
+        {/* Suggested / search results */}
+        <div className="mb-4">
+          <div className="flex items-baseline justify-between mb-2 px-0.5">
+            <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">
+              {search ? 'Results' : 'Suggested — top scored'}
+            </p>
+            <span className="text-[10px] text-ui-subtext">
+              {filtered.length} match{filtered.length === 1 ? '' : 'es'}
+            </span>
+          </div>
+          {visible.length === 0 ? (
+            <p className="text-xs text-ui-subtext text-center py-6">no matches</p>
+          ) : (
+            visible.map(t => (
+              <CandidateRow
+                key={t.id}
+                task={t}
+                inSlots={slots.includes(t.id)}
+                slotsFull={slotsFull}
+                onAdd={() => assignToFirstEmptySlot(t.id)}
+                onWhy={() => toggleWhy(t.id)}
+                showWhy={showWhyId === t.id}
+                onAfterStale={refresh}
               />
-            ))}
-          </Card>
-        )}
+            ))
+          )}
+          {moreCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setSuggestedShown(n => n + SUGGESTED_PAGE)}
+              className="w-full mt-2 text-xs text-ui-subtext hover:text-ui-text py-2 transition-colors"
+            >
+              Show {Math.min(moreCount, SUGGESTED_PAGE)} more ↓
+            </button>
+          )}
+        </div>
+
+        {error && <p className="text-xs text-red-400 text-center my-3">{error}</p>}
+
+        {/* Full-plan disclosure */}
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={() => setShowFullPlan(s => !s)}
+            className="w-full flex items-center justify-center gap-2 text-xs text-ui-subtext hover:text-ui-text py-2 transition-colors border-t border-ui-border pt-4"
+          >
+            <span>{showFullPlan ? '▾' : '▸'}</span>
+            <span>{showFullPlan ? 'Hide' : 'Show'} full 7-day plan</span>
+          </button>
+          {showFullPlan && <FullPlanView layout={layout} />}
+        </div>
 
         <div className="mt-6 text-center">
           <button
