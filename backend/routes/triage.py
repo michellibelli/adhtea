@@ -28,7 +28,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -49,6 +49,7 @@ WEIGHT_UNITS = {"light": 1, "medium": 2, "heavy": 3}
 BASE_BUDGET_UNITS = 20.0          # capacity-100 day = 20 units = ~10 medium tasks
 DEFAULT_CAPACITY = 60.0           # used when there's no CapacitySnapshot yet
 ROLLING_WINDOW_DAYS = 7
+MAX_PINS_PER_DAY = 3              # forces real prioritization — pinning everything = pinning nothing
 
 
 PRIORITY_WEIGHTS = {"urgent": 100, "high": 60, "normal": 30, "low": 10}
@@ -305,18 +306,38 @@ def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime)
         .all()
     )
 
-    # Score everything fresh so the placement reflects current state, not
-    # whatever's cached on the row.
+    # Phase 1 — place pinned items first, in their pinned_for day, regardless
+    # of budget. Pins are the user's explicit override: "this WILL happen on
+    # this day." If pinning busts the budget, the day shows as over-capacity
+    # in the UI but the placement holds. Pins outside the window are
+    # ignored here (their entry into the window happens automatically once
+    # today rolls forward to their pinned_for date).
+    day_by_date = {d["date"]: d for d in days}
+    pinned, unpinned = [], []
+    for t in pool:
+        if t.pinned_for is not None and t.pinned_for in day_by_date:
+            pinned.append(t)
+        else:
+            unpinned.append(t)
+
+    for t in pinned:
+        d = day_by_date[t.pinned_for]
+        d["items"].append(t)
+        d["used"] += _task_weight(t)
+
+    # Phase 2 — score the remaining pool fresh, greedy-place into remaining
+    # budget. Scoring still happens for pinned items below (we want the
+    # cached score and components up-to-date for the Why-this tooltip), but
+    # placement of unpinned items is what the scoring drives.
     stall = project_stall_map(db, user_id, today_local)
     scored = []
-    for t in pool:
+    for t in unpinned:
         r = compute_score(t, today_local=today_local, now_local=now_local, stall_map=stall)
-        scored.append((r["total"], t, r["components"]))
-
+        scored.append((r["total"], t))
     scored.sort(key=lambda x: x[0], reverse=True)
 
     overflow = []
-    for score, task, components in scored:
+    for score, task in scored:
         w = _task_weight(task)
         placed = False
         for d in days:
@@ -365,6 +386,73 @@ def preview(
     today_local = now_local.date()
     days, overflow = _bin_pack(db, current_user.id, today_local, now_local)
     return _serialize_layout(days, overflow)
+
+
+@router.post("/tasks/{task_id}/pin", response_model=TaskResponse)
+def pin_task(
+    task_id: int,
+    pin_date: date = Body(..., embed=True, alias="date"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Pin a task to a specific day. Bin-pack will respect the pin over its
+    own score-driven placement. Max MAX_PINS_PER_DAY pins per day so the
+    user can't pin everything (which would defeat the prioritization signal).
+    """
+    tz = ZoneInfo(getattr(current_user, "timezone", None) or "America/Los_Angeles")
+    today_local = datetime.now(tz).date()
+    if pin_date < today_local:
+        raise HTTPException(status_code=400, detail="Cannot pin to a past day")
+
+    task = (
+        db.query(Task)
+        .filter(Task.id == task_id, Task.owner_id == current_user.id)
+        .first()
+    )
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.task_type != TaskType.task:
+        raise HTTPException(status_code=400, detail="Only tasks can be pinned")
+
+    # Re-pinning the same task to the same day is a no-op success.
+    if task.pinned_for != pin_date:
+        existing = (
+            db.query(Task)
+            .filter(
+                Task.owner_id == current_user.id,
+                Task.pinned_for == pin_date,
+                Task.id != task_id,
+            )
+            .count()
+        )
+        if existing >= MAX_PINS_PER_DAY:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Day already has {MAX_PINS_PER_DAY} pins",
+            )
+        task.pinned_for = pin_date
+        db.commit()
+        db.refresh(task)
+    return task
+
+
+@router.delete("/tasks/{task_id}/pin", response_model=TaskResponse)
+def unpin_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    task = (
+        db.query(Task)
+        .filter(Task.id == task_id, Task.owner_id == current_user.id)
+        .first()
+    )
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    task.pinned_for = None
+    db.commit()
+    db.refresh(task)
+    return task
 
 
 @router.post("/run")

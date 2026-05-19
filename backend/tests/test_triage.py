@@ -350,6 +350,71 @@ def test_run_persists_future_day_as_inbox_with_due_date(client, auth_headers, db
         assert spillover.due_date > date.today()
 
 
+# ---------------------------------------------------------------------------
+# Pin / unpin (R3)
+# ---------------------------------------------------------------------------
+
+def test_pin_sets_pinned_for(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id)
+    pin_day = date.today().isoformat()
+    r = client.post(f"/triage/tasks/{t.id}/pin", json={"date": pin_day}, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["pinned_for"] == pin_day
+
+
+def test_pin_rejects_past_day(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id)
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    r = client.post(f"/triage/tasks/{t.id}/pin", json={"date": yesterday}, headers=auth_headers)
+    assert r.status_code == 400
+
+
+def test_pin_enforces_max_per_day(client, auth_headers, db_session):
+    user = _user(db_session)
+    pin_day = date.today().isoformat()
+    # Pin three tasks for today — all should succeed
+    for _ in range(3):
+        t = _mk_task(db_session, user.id)
+        r = client.post(f"/triage/tasks/{t.id}/pin", json={"date": pin_day}, headers=auth_headers)
+        assert r.status_code == 200, r.text
+    # Fourth should 409
+    fourth = _mk_task(db_session, user.id)
+    r = client.post(f"/triage/tasks/{fourth.id}/pin", json={"date": pin_day}, headers=auth_headers)
+    assert r.status_code == 409
+
+
+def test_unpin_clears_pinned_for(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, pinned_for=date.today())
+    r = client.delete(f"/triage/tasks/{t.id}/pin", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["pinned_for"] is None
+
+
+def test_pinned_task_lands_on_pinned_day_regardless_of_score(client, auth_headers, db_session):
+    """A low-priority pinned task should beat a high-priority unpinned for placement."""
+    user = _user(db_session)
+    pinned_low = _mk_task(db_session, user.id, priority="low", pinned_for=date.today())
+    _mk_task(db_session, user.id, priority="urgent")
+    r = client.post("/triage/preview", headers=auth_headers)
+    body = r.json()
+    day0_ids = [i["id"] for i in body["days"][0]["items"]]
+    assert pinned_low.id in day0_ids
+
+
+def test_pin_only_allowed_on_tasks_not_routines(client, auth_headers, db_session):
+    user = _user(db_session)
+    routine = _mk_task(db_session, user.id, task_type=TaskType.routine)
+    r = client.post(
+        f"/triage/tasks/{routine.id}/pin",
+        json={"date": date.today().isoformat()},
+        headers=auth_headers,
+    )
+    assert r.status_code == 400
+
+
 def test_run_overflow_clears_due_date(client, auth_headers, db_session):
     """Items past the 7-day window land with due_date=None ('the pile')."""
     user = _user(db_session)

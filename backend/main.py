@@ -54,6 +54,8 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN score_updated_at DATETIME"))
             if "push_count" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN push_count INTEGER NOT NULL DEFAULT 0"))
+            if "pinned_for" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN pinned_for DATE"))
             if "email" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
             if "is_owner" not in users_cols:
@@ -94,6 +96,7 @@ def _migrate(target_engine=None):
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_components TEXT"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_updated_at TIMESTAMP"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS push_count INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS pinned_for DATE"))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
             ))

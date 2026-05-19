@@ -261,6 +261,12 @@ class Task(Base):
     # archive-or-delete prompts (R5).
     push_count = Column(Integer, default=0, nullable=False)
 
+    # User-pinned "must do on this day." Bin-pack places pinned items first,
+    # before score-driven placement. Max 3 pins per day is enforced at the
+    # route layer (see routes/triage.py::pin_task). Capped at three so the
+    # user is forced to actually choose — pinning everything = pinning nothing.
+    pinned_for = Column(Date, nullable=True, index=True)
+
     # Lifecycle
     completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
