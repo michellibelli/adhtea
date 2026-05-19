@@ -76,6 +76,7 @@ function AppShell() {
   const [carriedOver, setCarriedOver]         = useState(false)
   const [ready, setReady]                     = useState(false)
   const [showEOD, setShowEOD]                 = useState(false)
+  const [showCheckIn, setShowCheckIn]         = useState(false)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
 
@@ -96,12 +97,21 @@ function AppShell() {
         const opening = await getOpeningScreen()
         setScreen(opening)
         getTodayCapacity().then(setCapacity).catch(() => {})
-        if (isEODWindow(u)) {
-          try {
-            const log = await getTodayLog()
-            if (!log) setShowEOD(true)
-          } catch { /* non-blocking */ }
-        }
+
+        // Morning check-in hard gate: every day, the user logs once before
+        // touching the rest of the app. Confidence in "do this next" requires
+        // knowing today's capacity — without a log the bin-pack budget is a
+        // guess. Gate is dismissed the moment a log exists.
+        try {
+          const log = await getTodayLog()
+          if (!log) {
+            setShowCheckIn(true)
+          } else if (isEODWindow(u)) {
+            // Already checked in this morning; still pop the EOD gate in the
+            // evening if there's no closing entry.
+            setShowEOD(true)
+          }
+        } catch { /* non-blocking */ }
         setReady(true)
       })
       .catch(() => setReady(true))
@@ -133,6 +143,21 @@ function AppShell() {
     return (
       <ThemeProvider>
         <OnboardingWelcome onDone={() => { setShowOnboarding(false); setScreen('focus') }} />
+      </ThemeProvider>
+    )
+  }
+
+  if (showCheckIn) {
+    return (
+      <ThemeProvider>
+        <SelfCare
+          userId={user?.id}
+          gateMode
+          onComplete={() => {
+            setShowCheckIn(false)
+            getTodayCapacity().then(setCapacity).catch(() => {})
+          }}
+        />
       </ThemeProvider>
     )
   }

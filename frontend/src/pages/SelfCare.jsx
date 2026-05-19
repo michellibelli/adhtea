@@ -81,7 +81,7 @@ const EMPTY_FORM = {
   mood: null,
 }
 
-export default function SelfCare({ userId }) {
+export default function SelfCare({ userId, gateMode = false, onComplete }) {
   const [log,        setLog]        = useState(null)
   const [capacity,   setCapacity]   = useState(null)
   const [medication, setMedication] = useState([])
@@ -176,9 +176,22 @@ export default function SelfCare({ userId }) {
     return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
   }
 
+  // In gate mode, the bottom nav is hidden and there's no way out except
+  // saving the log. Renders a banner up top + a "Continue" CTA at the
+  // bottom once `log` is populated (first save flips it on).
   return (
     <div className="aria-page">
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+
+        {gateMode && (
+          <div className="mb-5 px-4 py-3 rounded-xl bg-ui-accent/10 border border-ui-accent/30">
+            <p className="text-sm font-semibold text-ui-accent">Morning check-in</p>
+            <p className="text-xs text-ui-subtext mt-0.5">
+              Quick log first — your capacity for today drives what Triage
+              surfaces next.
+            </p>
+          </div>
+        )}
 
         <h1 className="text-2xl font-semibold text-ui-text mb-6">Log</h1>
 
@@ -378,6 +391,21 @@ export default function SelfCare({ userId }) {
             </div>
           )}
         </div>
+
+        {/* Gate mode: prominent continue CTA, only enabled once the log
+            exists (i.e. handleSave or pre-existing log loaded). */}
+        {gateMode && (
+          <div className="mt-8">
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={onComplete}
+              disabled={!log}
+            >
+              {log ? 'Continue → Focus' : 'Log first to continue'}
+            </Button>
+          </div>
+        )}
 
       </div>
     </div>
