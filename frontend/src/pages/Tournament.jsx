@@ -1,10 +1,15 @@
-// Triage redesign R7 — top-3 primary view with collapsible full plan.
+// Triage redesign R7+ — top-3 primary view with interactive 7-day plan.
 //
 // Workflow target: open the page with ~10 minutes, pick the 3 tasks for
 // today, hit Apply, system bin-packs the rest into days 1–6 silently.
 // The full 7-day grid is hidden by default behind a "Show full plan"
-// disclosure for when you want the detail.
-import { useState, useEffect, useMemo, useCallback } from 'react'
+// disclosure. When opened: each item is draggable to any other day card,
+// and the ★ per item pins to today + drops into the next open top-3 slot.
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import {
+  DndContext, closestCenter, useSensor, useSensors, useDraggable, useDroppable, TouchSensor,
+} from '@dnd-kit/core'
+import { SmartPointerSensor } from '../utils/dnd'
 import {
   previewTriage, runTriage, recomputeTriage, pinTask, unpinTask,
 } from '../api/triage'
@@ -255,28 +260,75 @@ function CapacityBar({ used, committed, budget }) {
 }
 
 
-function FullPlanView({ layout }) {
+function PlanItem({ task, isToday, onPinToday }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `plan-item-${task.id}`,
+    data: { taskId: task.id },
+  })
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 50 : undefined }
+    : undefined
+  const starTitle = isToday ? 'Add to top 3' : 'Pin to today'
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-1 py-1 border-b border-ui-border/30 last:border-0 touch-none"
+    >
+      <span
+        {...attributes}
+        {...listeners}
+        className="text-ui-subtext/40 text-[11px] flex-shrink-0 cursor-grab active:cursor-grabbing px-0.5 select-none"
+        aria-label="Drag to move"
+      >⋮⋮</span>
+      <span className="text-xs text-ui-text flex-1 truncate">{task.title}</span>
+      <button
+        type="button"
+        onClick={() => onPinToday(task.id)}
+        title={starTitle}
+        className="text-[11px] text-ui-subtext/60 hover:text-amber-400 transition-colors px-1 flex-shrink-0"
+      >★</button>
+    </div>
+  )
+}
+
+
+function PlanDay({ day, offset, children }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `plan-day-${day.date}`,
+    data: { date: day.date },
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-sm bg-ui-surface pixel-card px-3 py-3 transition-colors ${isOver ? 'ring-2 ring-amber-400 bg-amber-400/10' : ''}`}
+    >
+      <div className="flex items-baseline justify-between mb-1.5">
+        <h3 className="text-sm font-semibold text-ui-text">{dayLabel(day.date, offset)}</h3>
+        <span className="text-[10px] text-ui-subtext">
+          {day.items.length} task{day.items.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <CapacityBar used={day.used} committed={day.committed} budget={day.budget} />
+      {children}
+    </div>
+  )
+}
+
+
+function FullPlanView({ layout, onPinToday }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
       {layout.days.map((day, i) => (
-        <Card key={day.date} className="px-3 py-3">
-          <div className="flex items-baseline justify-between mb-1.5">
-            <h3 className="text-sm font-semibold text-ui-text">{dayLabel(day.date, i)}</h3>
-            <span className="text-[10px] text-ui-subtext">
-              {day.items.length} task{day.items.length === 1 ? '' : 's'}
-            </span>
-          </div>
-          <CapacityBar used={day.used} committed={day.committed} budget={day.budget} />
+        <PlanDay key={day.date} day={day} offset={i}>
           {day.items.length === 0 ? (
-            <p className="text-[10px] text-ui-subtext/60 italic text-center py-3">empty</p>
+            <p className="text-[10px] text-ui-subtext/60 italic text-center py-3">empty — drop a task here</p>
           ) : (
             day.items.map(t => (
-              <div key={t.id} className="text-xs text-ui-text py-1 border-b border-ui-border/30 last:border-0">
-                {t.title}
-              </div>
+              <PlanItem key={t.id} task={t} isToday={i === 0} onPinToday={onPinToday} />
             ))
           )}
-        </Card>
+        </PlanDay>
       ))}
       {layout.overflow.length > 0 && (
         <Card className="px-3 py-3 md:col-span-2 xl:col-span-3">
@@ -285,9 +337,7 @@ function FullPlanView({ layout }) {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-3">
             {layout.overflow.map(t => (
-              <div key={t.id} className="text-xs text-ui-text py-1 border-b border-ui-border/30 last:border-0">
-                {t.title}
-              </div>
+              <PlanItem key={t.id} task={t} isToday={false} onPinToday={onPinToday} />
             ))}
           </div>
         </Card>
@@ -312,6 +362,17 @@ export default function Tournament({ onDone }) {
   const [showWhyId, setShowWhyId] = useState(null)
   const [suggestedShown, setSuggestedShown] = useState(SUGGESTED_INITIAL)
   const [showFullPlan, setShowFullPlan] = useState(false)
+  const [planError, setPlanError] = useState(null)
+
+  // Once the user touches slots (manual + / × / star-from-plan), refresh-driven
+  // pre-population stops overwriting their picks. Without this, recompute or a
+  // pin from the full-plan view would silently wipe their top-3.
+  const slotsTouchedRef = useRef(false)
+
+  const sensors = useSensors(
+    useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,        { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
 
   const refresh = useCallback(async () => {
     setLoading(true); setError(null)
@@ -345,22 +406,29 @@ export default function Tournament({ onDone }) {
 
   // Pre-populate slots once layout arrives: existing pins for today first,
   // then top-scored items fill remaining slots. User can swap any.
+  // If the user has already touched slots, only validate existing ids (drop
+  // any that no longer exist) — never overwrite their picks on refresh.
   useEffect(() => {
     if (!layout) return
-    const iso = todayIso()
-    const pinned = allTasks.filter(t => t.pinned_for === iso).slice(0, 3)
-    const next = [pinned[0]?.id ?? null, pinned[1]?.id ?? null, pinned[2]?.id ?? null]
-    let fillCursor = 0
-    for (let i = 0; i < 3; i++) {
-      if (next[i] != null) continue
-      while (fillCursor < allTasks.length) {
-        const t = allTasks[fillCursor++]
-        if (next.includes(t.id)) continue
-        next[i] = t.id
-        break
+    const validIds = new Set(allTasks.map(t => t.id))
+    setSlots(prev => {
+      const validated = prev.map(id => (id != null && validIds.has(id) ? id : null))
+      if (slotsTouchedRef.current) return validated
+      const iso = todayIso()
+      const pinned = allTasks.filter(t => t.pinned_for === iso).slice(0, 3)
+      const next = [pinned[0]?.id ?? null, pinned[1]?.id ?? null, pinned[2]?.id ?? null]
+      let fillCursor = 0
+      for (let i = 0; i < 3; i++) {
+        if (next[i] != null) continue
+        while (fillCursor < allTasks.length) {
+          const t = allTasks[fillCursor++]
+          if (next.includes(t.id)) continue
+          next[i] = t.id
+          break
+        }
       }
-    }
-    setSlots(next)
+      return next
+    })
     // intentional: run only when allTasks changes shape, not on every slot edit
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout])
@@ -384,6 +452,7 @@ export default function Tournament({ onDone }) {
   const moreCount = Math.max(0, filtered.length - suggestedShown)
 
   function assignToFirstEmptySlot(taskId) {
+    slotsTouchedRef.current = true
     setSlots(prev => {
       // If already in a slot, this is a no-op (button is disabled).
       if (prev.includes(taskId)) return prev
@@ -396,7 +465,50 @@ export default function Tournament({ onDone }) {
   }
 
   function clearSlot(idx) {
+    slotsTouchedRef.current = true
     setSlots(prev => { const n = [...prev]; n[idx] = null; return n })
+  }
+
+  // ★ on a plan-view item: pin to today + drop into the first empty slot.
+  // Errors (e.g. 409 if today already has 3 different pins) bubble into the
+  // plan error banner so the user knows the pin didn't land.
+  async function handlePinFromPlan(taskId) {
+    setPlanError(null)
+    const iso = todayIso()
+    try {
+      await pinTask(taskId, iso)
+      assignToFirstEmptySlot(taskId)
+      await refresh()
+    } catch (e) {
+      const msg = String(e?.message || e || '')
+      if (e?.status === 409 || /409|already has/.test(msg)) {
+        setPlanError('Today already has 3 pins — clear one in the top-3 first.')
+      } else {
+        setPlanError(msg || 'Pin failed')
+      }
+    }
+  }
+
+  // Drag-end from the full plan view: re-pin to the target day. Cap is 3 pins
+  // per day server-side; surface a friendly message on 409.
+  async function handlePlanDragEnd(event) {
+    const { active, over } = event
+    if (!over) return
+    const taskId = active?.data?.current?.taskId
+    const targetDate = over?.data?.current?.date
+    if (!taskId || !targetDate) return
+    setPlanError(null)
+    try {
+      await pinTask(taskId, targetDate)
+      await refresh()
+    } catch (e) {
+      const msg = String(e?.message || e || '')
+      if (e?.status === 409 || /409|already has/.test(msg)) {
+        setPlanError(`${dayLabel(targetDate, -1)} already has 3 pins.`)
+      } else {
+        setPlanError(msg || 'Move failed')
+      }
+    }
   }
 
   function toggleWhy(taskId) {
@@ -539,7 +651,19 @@ export default function Tournament({ onDone }) {
             <span>{showFullPlan ? '▾' : '▸'}</span>
             <span>{showFullPlan ? 'Hide' : 'Show'} full 7-day plan</span>
           </button>
-          {showFullPlan && <FullPlanView layout={layout} />}
+          {showFullPlan && (
+            <>
+              <p className="text-[10px] text-ui-subtext text-center mt-2">
+                Drag between days to repin · tap ★ to send to today
+              </p>
+              {planError && (
+                <p className="text-xs text-amber-400 text-center mt-2">{planError}</p>
+              )}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePlanDragEnd}>
+                <FullPlanView layout={layout} onPinToday={handlePinFromPlan} />
+              </DndContext>
+            </>
+          )}
         </div>
 
         <div className="mt-6 text-center">

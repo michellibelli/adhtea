@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-17 evening (BUILD 3.9.34)*
+*Last updated: 2026-05-19 (BUILD 4.0.0)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -37,9 +37,31 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
-## Current status — Phases 1–3 complete ✅
+## Current status — Phases 1–3 complete + Triage redesign closed ✅
 
 Everything below is shipped and live on adh-tea.fun.
+
+### BUILD 4.0.0 completed (2026-05-19)
+
+Major-version bump marks the close of the triage redesign D+F hybrid (R1–R7+) and the start of the next visual phase (tea-box on Focus, logo, bottom-nav cafe typography).
+
+- **R7 follow-up — drag/pin in 7-day plan view.** `FullPlanView` items wrapped in `useDraggable`; day cards in `useDroppable`. Drag any item to any day card → `pinTask(id, targetDate)` + refresh. Per-item `★` pins to today + auto-fills first empty top-3 slot. `slotsTouchedRef` blocks layout-change pre-population once the user has touched slots so recompute / pin / star no longer wipe manual picks. 409 (day at cap) surfaces a friendly in-page banner. Sensors match `Today.jsx` (`SmartPointerSensor` distance: 8, `TouchSensor` delay: 200). No backend changes — pin endpoint already accepted any future date.
+
+### Phase 3.9.35–3.9.44 completed (2026-05-18) — triage redesign D+F hybrid
+
+Old tournament (30-day horizon + head-to-head ranking) was inherently flawed: lumpy days, push-out → re-push loop, combative for ADHD cognition. Replaced with capacity bin-pack + manual top-3 pinning.
+
+- **R1** `b6a363e` — explainable scoring engine. `score_components` JSON per task with 9 levers: priority, critical_bonus, overdue_boost, due_today, due_soon, project_stall, in_context, age_boost, push_penalty. WhyTooltip surfaces each lever's contribution to the total.
+- **R2** `8bffd21` — capacity bin-pack + rolling 7-day window. Server auto-places tasks into days using priority + age + capacity budget.
+- **R3** `d3f0a84` — `Task.pinned_for` field + `POST /triage/tasks/{id}/pin`. `MAX_PINS_PER_DAY = 3`. Bin-pack respects pins.
+- **3.9.37 (R4)** `e16abe7` — new column layout + score chip + pin button.
+- **3.9.38 (R5+R6)** `d784eed` — stale prompt (push_count ≥ 5 surfaces delete / snooze-30d) + retire old tournament. ~323 lines of `Triage.jsx` deleted.
+- **3.9.39** `e3e02f4` — TaskCard always-visible snooze + edit + delete icon column.
+- **3.9.40** `c7eb696` — modal portal + top-third positioning so dialogs never fall below the fold.
+- **3.9.41** `bc8157d` — wider task cards + taller teabag, no text clipping.
+- **3.9.42** `2509dd6` — domain-aware snooze (respects `next_allowed_date`) + capacity-bar ignores routines.
+- **3.9.43** `80704c1` — morning check-in (mood + sleep + capacity) as hard gate before app access.
+- **3.9.44 (R7)** `1444846` — top-3 picker as primary surface; full 7-day grid collapsed behind disclosure. Apply: pins slotted tasks → on 409 auto-resolves by unpinning displaced today-pins → re-attempts → runs `/triage/run` to bin-pack the rest.
 
 ### Phase 3.9.24–3.9.34 completed (2026-05-17 evening)
 
@@ -211,39 +233,28 @@ Tournament-driven Triage at scale.
 
 ## Known issues / small todos
 
-1. **Falling-leaf animation still needs work** — three-behavior physics
-   pass (3.9.34) is closer but not done per user. Carry forward into
-   next session. Tunables: durations, swing magnitudes, rotation
-   speeds, leaf-count, ease curves.
+1. **Falling-leaf animation still needs work** — three-behavior physics pass (3.9.34) is closer but not done per user. Tunables: durations, swing magnitudes, rotation speeds, leaf-count, ease curves.
 2. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
 3. **Real human code review** — both AI passes still missed things a human would catch.
 4. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
-5. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone. Pre-existing; not in scope for this session's domain fix.
+5. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone.
+6. **Lint: `set-state-in-effect` errors** — Tournament.jsx:389 and several other pages (`Waiting.jsx`, etc.) use `useEffect(() => { fetchTasks() }, [fetchTasks])` pattern that the linter now flags. Pre-existing.
 
-Resolved 2026-05-15: #2 UptimeRobot, #3 TriageCard inline edit, #4 GCal multi-cal, #5 loading/error states, #11 security audit, #21 GCal sync bug.
-Resolved 2026-05-17 (morning): #7 Build chip Settings toggle (3.9.20), #22 Login rate limit (3.9.19), Phase 3.8 Part 2 domain enforcement (3.9.18).
+Resolved 2026-05-18: triage redesign D+F hybrid R1–R7 (replaces old tournament), morning check-in gate, domain-aware snooze, modal portal positioning.
+Resolved 2026-05-19: R7 drag/pin in 7-day plan view (final piece of the redesign); BUILD bumped to 4.0.0.
 Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement bypass on create/update/promote, aesthetic cohesion across nav + buttons + font + cards.
 
 ---
 
-## Next: Focus-page tea-box redesign + new logo (planned for next session)
+## Next: Focus-page tea-box redesign + new logo (in flight 2026-05-19)
 
-Phase 3 closed; Phase 4 still deferred. User has lined up the next visual
-overhaul, scope-locked to the Focus page + branding:
+Triage redesign closed at 4.0.0; Phase 4 still deferred. User has lined up the next visual overhaul, scope-locked to the Focus page + branding:
 
-- **Tea-box on Focus** — visual tea box that bags emerge from. Bag count
-  in the box = uncompleted tasks today (live). The persistent cup was
-  removed in 3.9.31 so there's room to introduce this without colliding
-  with anything currently on the page.
-- **Bag colors per task type** — each bag tinted by its `task_type` (the
-  existing tag-color map already provides this palette).
-- **Bag order = day plan** — emergence order matches the prioritized
-  task order from triage.
-- **Bottom-nav cafe typography** — re-skin nav buttons to read like the
-  letterpress wordmark + simple flat icons + rule lines you see on real
-  tea boxes (Bigelow, Yogi, Harney). `frontend/src/components/BottomNav.jsx`.
-- **New logo + iconography for adhTea** — full brand pass. Current logo
-  file: `public/adhTeaLogo.png` (consumers grepped on 2026-05-17).
+- **Tea-box on Focus** — visual tea box that bags emerge from. Bag count in the box = uncompleted tasks today (live). The persistent cup was removed in 3.9.31 so there's room to introduce this without colliding with anything currently on the page.
+- **Bag colors per task type** — each bag tinted by its `task_type` (the existing tag-color map already provides this palette).
+- **Bag order = day plan** — emergence order matches the prioritized task order from triage (now post-R7: top-3 first, then bin-packed today list).
+- **Bottom-nav cafe typography** — re-skin nav buttons to read like the letterpress wordmark + simple flat icons + rule lines you see on real tea boxes (Bigelow, Yogi, Harney). `frontend/src/components/BottomNav.jsx`.
+- **New logo + iconography for adhTea** — full brand pass. Current logo file: `public/adhTeaLogo.png` (consumers grepped on 2026-05-17).
 
 
 **Status:** Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight.

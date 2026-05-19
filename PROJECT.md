@@ -1,5 +1,5 @@
 # adhTea — Project Documentation
-*Last updated: 2026-05-14*
+*Last updated: 2026-05-19 (BUILD 4.0.0)*
 
 ## What is this
 
@@ -15,7 +15,7 @@ Live at **[adh-tea.fun](https://adh-tea.fun)**.
 
 **Solution:** A system that adapts to your current capacity. Triage each morning decides what goes on today's plate. A capacity bar tracks load. A critical list exists for low-focus days.
 
-**Vibe:** Queer Stardew Valley. Warm, cozy, pixel-art energy. Pride palette. Press Start 2P for headings. Feels like a game you actually want to open.
+**Vibe:** Calm rustic cafe (cohesion direction since 3.9.33). Lora serif display, soft warm wood card shadows, honey→amber→oak gradient buttons, dusty-rose hairline accents, falling tea-leaf overlay. Default theme: Americano (warm amber sunrise). Earlier "queer Stardew Valley / pixel pride" register intentionally toned down — feminine accents kept as hover/hairline, not primary.
 
 ---
 
