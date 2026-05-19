@@ -779,6 +779,7 @@ def snooze_task(
     task.status = TaskStatus.snoozed
     task.snooze_until = body.snooze_until
     task.scheduled_date = None
+    task.push_count = (task.push_count or 0) + 1
     db.commit()
     db.refresh(task)
     return task
@@ -817,6 +818,7 @@ def defer_task(
     task.scheduled_date = None
     task.due_date = None
     task.sort_order = None
+    task.push_count = (task.push_count or 0) + 1
     db.commit()
     db.refresh(task)
     return task

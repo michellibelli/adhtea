@@ -249,6 +249,18 @@ class Task(Base):
     # Notes tags (free-form, comma-separated)
     tags = Column(String(500), nullable=True)
 
+    # Triage scoring (R1 — see routes/triage.py for compute logic)
+    # `score` is the cached priority signal used for bin-pack + Focus surfacing.
+    # `score_components` is JSON breaking down the score by lever so the UI can
+    # show "Why this?" — confidence comes from explaining the math, not hiding it.
+    score = Column(Float, nullable=True)
+    score_components = Column(Text, nullable=True)            # JSON dict
+    score_updated_at = Column(DateTime, nullable=True)
+    # Incremented each time the user snoozes / defers this task. Feeds into the
+    # score as a penalty so chronically pushed items eventually flag for
+    # archive-or-delete prompts (R5).
+    push_count = Column(Integer, default=0, nullable=False)
+
     # Lifecycle
     completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)

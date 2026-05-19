@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, domains
+from routes import projects, domains, triage
 
 load_dotenv()
 
@@ -46,6 +46,14 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
             if "domain_id" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN domain_id INTEGER REFERENCES domains(id)"))
+            if "score" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN score FLOAT"))
+            if "score_components" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN score_components TEXT"))
+            if "score_updated_at" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN score_updated_at DATETIME"))
+            if "push_count" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN push_count INTEGER NOT NULL DEFAULT 0"))
             if "email" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
             if "is_owner" not in users_cols:
@@ -82,6 +90,10 @@ def _migrate(target_engine=None):
             conn.execute(text(
                 "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
             ))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score FLOAT"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_components TEXT"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_updated_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS push_count INTEGER NOT NULL DEFAULT 0"))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
             ))
@@ -133,6 +145,7 @@ app.include_router(import_csv.router,  tags=["import"])
 app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
 app.include_router(domains.router)
+app.include_router(triage.router)
 
 
 @app.get("/health")
