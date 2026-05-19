@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { getToday, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, reorderTasks, startTournament } from '../api/tasks'
+import { getToday, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, reorderTasks } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
@@ -189,13 +189,12 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTriage
         open={askTriage}
         emoji="🍵"
         title="Ready to triage everything?"
-        body="I'll re-rank every incomplete task across your days using your daily caps. Current day assignments get cleared so you start fresh."
-        confirmLabel="Let's brew it"
+        body="I'll preview a 7-day layout — bin-packed by score, your pins respected. You can review before applying."
+        confirmLabel="Show me"
         cancelLabel="Not now"
         onCancel={() => setAskTriage(false)}
-        onConfirm={async () => {
+        onConfirm={() => {
           setAskTriage(false)
-          try { await startTournament() } catch (e) { console.error(e) }
           onTournament?.()
         }}
       />
