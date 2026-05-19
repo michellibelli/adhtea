@@ -323,29 +323,62 @@ export default function TaskCard({
                 </div>
               </div>
 
-              {/* Edit pencil */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditing(true); setShowActions(false) }}
-                className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-subtext transition-colors"
+              {/* Right-side action column: snooze + edit + delete, always visible.
+                  Stops click propagation so tapping an icon doesn't also
+                  toggle the expanded-actions panel on the card body. */}
+              <div
+                className="flex flex-col gap-1.5 flex-shrink-0"
+                onClick={(e) => e.stopPropagation()}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-              </button>
+                {(variant === 'today' || variant === 'inbox') && (
+                  <button
+                    onClick={() => setShowSnooze(true)}
+                    title="Snooze"
+                    aria-label="Snooze"
+                    className="p-1 text-ui-subtext/40 hover:text-amber-400 transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                      <circle cx="12" cy="12" r="9" />
+                      <polyline points="12 7 12 12 15.5 14" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  onClick={() => { setEditing(true); setShowActions(false) }}
+                  title="Edit"
+                  aria-label="Edit"
+                  className="p-1 text-ui-subtext/40 hover:text-ui-subtext transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onDelete?.(task.id)}
+                  title="Delete"
+                  aria-label="Delete"
+                  className="p-1 text-ui-subtext/40 hover:text-red-400 transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {/* Expanded actions */}
+            {/* Expanded actions — variant-specific moves that don't fit the
+                always-visible icon column (schedule-today on inbox, defer on
+                today, unsnooze on waiting). Snooze + Delete live in the icon
+                column above so they're not duplicated here. */}
             {showActions && (
               <div className="mt-3 pt-3 border-t border-ui-border flex flex-wrap gap-2">
                 {variant === 'inbox' && (
                   <Button size="sm" variant="secondary" onClick={() => { setShowActions(false); onScheduleToday?.(task.id) }}>
                     → Today
-                  </Button>
-                )}
-                {(variant === 'today' || variant === 'inbox') && (
-                  <Button size="sm" variant="secondary" onClick={() => { setShowActions(false); setShowSnooze(true) }}>
-                    ◷ Snooze
                   </Button>
                 )}
                 {variant === 'today' && (
@@ -358,9 +391,6 @@ export default function TaskCard({
                     ↩ Back to Inbox
                   </Button>
                 )}
-                <Button size="sm" variant="danger" onClick={() => { setShowActions(false); onDelete?.(task.id) }}>
-                  Delete
-                </Button>
               </div>
             )}
           </>
