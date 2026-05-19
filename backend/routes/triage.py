@@ -29,14 +29,26 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Task, TaskStatus, Project, User
+from models import (
+    Task, TaskStatus, TaskType, TaskWeight,
+    Project, User, CapacitySnapshot,
+)
+from schemas import TaskResponse
 from routes.auth import get_current_user
 from routes.domain_utils import effective_rules, time_of_day_allowed
 
 router = APIRouter(prefix="/triage", tags=["triage"])
+
+# Bin-pack constants. Tuned for a "full capacity day = 10 medium tasks worth
+# of work." Weight units are intentionally coarse — the user's gut feeling
+# about a day being heavy/medium/light is more useful than precise hours.
+WEIGHT_UNITS = {"light": 1, "medium": 2, "heavy": 3}
+BASE_BUDGET_UNITS = 20.0          # capacity-100 day = 20 units = ~10 medium tasks
+DEFAULT_CAPACITY = 60.0           # used when there's no CapacitySnapshot yet
+ROLLING_WINDOW_DAYS = 7
 
 
 PRIORITY_WEIGHTS = {"urgent": 100, "high": 60, "normal": 30, "low": 10}
@@ -195,3 +207,213 @@ def recompute(
     today_local = now_local.date()
     n = recompute_user_scores(db, current_user.id, today_local, now_local)
     return {"updated": n}
+
+
+# ---------------------------------------------------------------------------
+# Bin-pack engine (R2)
+# ---------------------------------------------------------------------------
+
+def _latest_capacity(db: Session, user_id: int, ref_date: date) -> float:
+    """Most recent CapacitySnapshot.executive_capacitor for the user, or default.
+
+    We use the latest snapshot as the projected capacity for ALL days in the
+    rolling window. Real per-day variation is unknowable in advance; the
+    user can adjust the result via drag-between-days if a particular day
+    feels different.
+    """
+    row = (
+        db.query(CapacitySnapshot.executive_capacitor)
+        .filter(
+            CapacitySnapshot.user_id == user_id,
+            CapacitySnapshot.log_date <= ref_date,
+        )
+        .order_by(CapacitySnapshot.log_date.desc())
+        .first()
+    )
+    return float(row[0]) if row and row[0] is not None else DEFAULT_CAPACITY
+
+
+def _task_weight(task: Task) -> int:
+    """Map a Task.weight enum to its bin-pack unit cost (1–3)."""
+    val = getattr(task.weight, "value", task.weight) if task.weight else "medium"
+    return WEIGHT_UNITS.get(val, WEIGHT_UNITS["medium"])
+
+
+def _committed_weight_for_day(db: Session, user_id: int, day: date) -> int:
+    """Weight already booked into a given day by appointments + routines.
+
+    Bin-pack only places `task_type=task` items, so the appointment + routine
+    weight already on that day is a fixed cost that reduces the budget.
+    Looks for both `scheduled_date` (today-status rows already placed) and
+    `due_date` matches (future appointments with explicit dates).
+    """
+    rows = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user_id,
+            Task.task_type.in_([TaskType.appointment, TaskType.routine]),
+            Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
+        )
+        .all()
+    )
+    total = 0
+    for r in rows:
+        booked_day = None
+        if r.scheduled_date is not None:
+            booked_day = r.scheduled_date.date()
+        elif r.due_date is not None:
+            booked_day = r.due_date
+        if booked_day == day:
+            total += _task_weight(r)
+    return total
+
+
+def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime):
+    """Run the bin-pack and return a (days, overflow) tuple.
+
+    days: list of dicts {date, budget, used, items: [Task]}.
+    overflow: list of Task rows that didn't fit anywhere in the window.
+
+    Pure planning — does NOT mutate Task rows. Callers (preview vs run)
+    decide whether to persist the placement.
+    """
+    capacity = _latest_capacity(db, user_id, today_local)
+    base_budget = BASE_BUDGET_UNITS * (capacity / 100.0)
+
+    days = []
+    for offset in range(ROLLING_WINDOW_DAYS):
+        d = today_local + timedelta(days=offset)
+        booked = _committed_weight_for_day(db, user_id, d)
+        days.append({
+            "date": d,
+            "budget": max(0.0, base_budget),
+            "committed": booked,
+            "used": 0,
+            "items": [],
+        })
+
+    # Pool = all live `task` rows (inbox + today). Snoozed items wait for
+    # their snooze_until to expire — bin-pack shouldn't drag them back in.
+    pool = (
+        db.query(Task)
+        .options(joinedload(Task.project).joinedload(Project.domain), joinedload(Task.domain))
+        .filter(
+            Task.owner_id == user_id,
+            Task.task_type == TaskType.task,
+            Task.status.in_([TaskStatus.inbox, TaskStatus.today]),
+        )
+        .all()
+    )
+
+    # Score everything fresh so the placement reflects current state, not
+    # whatever's cached on the row.
+    stall = project_stall_map(db, user_id, today_local)
+    scored = []
+    for t in pool:
+        r = compute_score(t, today_local=today_local, now_local=now_local, stall_map=stall)
+        scored.append((r["total"], t, r["components"]))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    overflow = []
+    for score, task, components in scored:
+        w = _task_weight(task)
+        placed = False
+        for d in days:
+            if d["used"] + d["committed"] + w <= d["budget"]:
+                d["items"].append(task)
+                d["used"] += w
+                placed = True
+                break
+        if not placed:
+            overflow.append(task)
+
+    return days, overflow
+
+
+def _serialize_layout(days, overflow):
+    """Convert the bin-pack output into JSON-friendly response shape."""
+    return {
+        "window_days": ROLLING_WINDOW_DAYS,
+        "days": [
+            {
+                "date": d["date"].isoformat(),
+                "budget": d["budget"],
+                "committed": d["committed"],
+                "used": d["used"],
+                "items": [TaskResponse.model_validate(t).model_dump(mode="json") for t in d["items"]],
+            }
+            for d in days
+        ],
+        "overflow": [TaskResponse.model_validate(t).model_dump(mode="json") for t in overflow],
+    }
+
+
+@router.post("/preview")
+def preview(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Run bin-pack without persisting. Returns the proposed day layout.
+
+    Frontend uses this to show "here's what triage will do" before the
+    user commits, so the action is reversible at the design level (you
+    see the result first).
+    """
+    tz = ZoneInfo(getattr(current_user, "timezone", None) or "America/Los_Angeles")
+    now_local = datetime.now(tz).replace(tzinfo=None)
+    today_local = now_local.date()
+    days, overflow = _bin_pack(db, current_user.id, today_local, now_local)
+    return _serialize_layout(days, overflow)
+
+
+@router.post("/run")
+def run(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Apply the bin-pack: persist day placements onto task rows.
+
+    Day 0 (today): status=today, due_date=today, scheduled_date=today.
+    Days 1..6:     status=inbox, due_date=day, scheduled_date=None.
+    Overflow:      status=inbox, due_date=None, scheduled_date=None.
+
+    push_count is NOT incremented here — that penalty is for explicit
+    user-driven snooze/defer, not for automatic re-placement. Otherwise
+    a user who just runs triage daily would watch every task's score
+    decay even when they're engaging with the system correctly.
+    """
+    tz = ZoneInfo(getattr(current_user, "timezone", None) or "America/Los_Angeles")
+    now_local = datetime.now(tz).replace(tzinfo=None)
+    today_local = now_local.date()
+    days, overflow = _bin_pack(db, current_user.id, today_local, now_local)
+
+    # Today's scheduled_date midnight, naive, matches existing _day_start convention
+    today_midnight = datetime(today_local.year, today_local.month, today_local.day)
+
+    for i, d in enumerate(days):
+        for sort_idx, task in enumerate(d["items"]):
+            if i == 0:
+                task.status = TaskStatus.today
+                task.scheduled_date = today_midnight
+                task.due_date = today_local
+                task.sort_order = float(sort_idx)   # within today, top-scored first
+            else:
+                task.status = TaskStatus.inbox
+                task.scheduled_date = None
+                task.due_date = d["date"]
+                task.sort_order = None
+
+    for task in overflow:
+        task.status = TaskStatus.inbox
+        task.scheduled_date = None
+        task.due_date = None
+        task.sort_order = None
+
+    # Cache the freshly computed scores onto the rows now that we've placed
+    # them — saves a second recompute pass if the UI immediately calls
+    # /tasks/today afterward.
+    recompute_user_scores(db, current_user.id, today_local, now_local)
+    db.commit()
+
+    return _serialize_layout(days, overflow)

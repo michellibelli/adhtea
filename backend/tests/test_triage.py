@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from models import Domain, Project, Task, TaskStatus, TaskType, User
+from models import Domain, Project, Task, TaskStatus, TaskType, TaskWeight, User
 from routes.triage import (
     compute_score,
     project_stall_map,
@@ -262,3 +262,106 @@ def test_defer_increments_push_count(client, auth_headers, db_session):
     assert r.status_code == 200
     db_session.refresh(t)
     assert t.push_count == start + 1
+
+
+# ---------------------------------------------------------------------------
+# Bin-pack (R2)
+# ---------------------------------------------------------------------------
+
+def test_preview_lays_out_7_days(client, auth_headers, db_session):
+    user = _user(db_session)
+    _mk_task(db_session, user.id, priority="urgent")
+    r = client.post("/triage/preview", headers=auth_headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["window_days"] == 7
+    assert len(body["days"]) == 7
+
+
+def test_preview_high_score_lands_on_day_0(client, auth_headers, db_session):
+    """Top-scored item should bin-pack into today."""
+    user = _user(db_session)
+    urgent = _mk_task(db_session, user.id, priority="urgent", is_critical=True)
+    _mk_task(db_session, user.id, priority="low")
+    r = client.post("/triage/preview", headers=auth_headers)
+    body = r.json()
+    day0 = body["days"][0]
+    day0_ids = [i["id"] for i in day0["items"]]
+    assert urgent.id in day0_ids
+
+
+def test_bin_pack_respects_budget(client, auth_headers, db_session):
+    """With a tiny daily budget, items should spill into subsequent days."""
+    user = _user(db_session)
+    # 5 heavy tasks = 15 weight units. Default budget at 60 capacity = 12.
+    # So at least one task must spill to day 1.
+    for i in range(5):
+        _mk_task(db_session, user.id, priority="normal", weight=TaskWeight.heavy)
+    r = client.post("/triage/preview", headers=auth_headers)
+    body = r.json()
+    placed_per_day = [len(d["items"]) for d in body["days"]]
+    # Day 0 cannot hold all 5; at least one spills
+    assert placed_per_day[0] < 5
+
+
+def test_appointment_consumes_day_budget(client, auth_headers, db_session):
+    """An appointment scheduled for today reduces what bin-pack can place on day 0."""
+    user = _user(db_session)
+    # Heavy appointment on today eats 3 units
+    appt = Task(
+        owner_id=user.id, title="Appt", task_type=TaskType.appointment,
+        status=TaskStatus.today, due_date=date.today(),
+        scheduled_date=datetime.combine(date.today(), datetime.min.time()),
+        weight=TaskWeight.heavy,
+    )
+    db_session.add(appt)
+    db_session.commit()
+
+    r = client.post("/triage/preview", headers=auth_headers)
+    body = r.json()
+    assert body["days"][0]["committed"] >= 3
+
+
+def test_run_persists_day_0_to_today(client, auth_headers, db_session):
+    """After /run, a top-ranked inbox task should be status=today with scheduled_date set."""
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, priority="urgent")
+    r = client.post("/triage/run", headers=auth_headers)
+    assert r.status_code == 200
+    db_session.refresh(t)
+    assert t.status == TaskStatus.today
+    assert t.scheduled_date is not None
+    assert t.due_date == date.today()
+
+
+def test_run_persists_future_day_as_inbox_with_due_date(client, auth_headers, db_session):
+    """An item placed on day 1+ should remain status=inbox with due_date on that day."""
+    user = _user(db_session)
+    # Fill day 0 with heavies so the next task spills to day 1
+    for _ in range(10):
+        _mk_task(db_session, user.id, priority="urgent", weight=TaskWeight.heavy)
+    spillover = _mk_task(db_session, user.id, priority="low")
+    r = client.post("/triage/run", headers=auth_headers)
+    assert r.status_code == 200
+    db_session.refresh(spillover)
+    assert spillover.status == TaskStatus.inbox
+    # Should land somewhere in days 1-6 OR overflow
+    if spillover.due_date is not None:
+        assert spillover.due_date > date.today()
+
+
+def test_run_overflow_clears_due_date(client, auth_headers, db_session):
+    """Items past the 7-day window land with due_date=None ('the pile')."""
+    user = _user(db_session)
+    # Fill all 7 days
+    for _ in range(60):  # 60 heavy = 180 units; budget ~12/day × 7 = 84. ~32 overflow.
+        _mk_task(db_session, user.id, priority="urgent", weight=TaskWeight.heavy)
+    r = client.post("/triage/run", headers=auth_headers)
+    body = r.json()
+    assert len(body["overflow"]) > 0
+    overflow_id = body["overflow"][0]["id"]
+    overflow_task = db_session.query(Task).get(overflow_id)
+    assert overflow_task.due_date is None
+    assert overflow_task.status == TaskStatus.inbox
+
+
