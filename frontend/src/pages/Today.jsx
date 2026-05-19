@@ -252,26 +252,24 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
             <p className="text-sm text-ui-subtext">Head to Inbox to schedule tasks, or Capture to add something new.</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          <div className="space-y-6">
 
-            {/* Left — appointments & routines */}
-            <div>
-              {timed.length > 0 && (
-                <>
-                  <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider mb-2 px-0.5">Schedule</p>
-                  <div className="space-y-3">
-                    {timed.map(task => (
-                      <TaskCard key={task.id} task={task} variant="today"
-                        onComplete={handleComplete} onSnooze={handleSnooze}
-                        onDefer={handleDefer} onDelete={handleDelete}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Schedule — appointments + routines (collapses out when empty) */}
+            {timed.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider mb-2 px-0.5">Schedule</p>
+                <div className="space-y-3">
+                  {timed.map(task => (
+                    <TaskCard key={task.id} task={task} variant="today"
+                      onComplete={handleComplete} onSnooze={handleSnooze}
+                      onDefer={handleDefer} onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {/* Right — tasks */}
+            {/* Tasks — full-width column so cards stay wider than tall on PC */}
             <div>
               <div className="flex items-center justify-between mb-2 px-0.5">
                 <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Tasks</p>

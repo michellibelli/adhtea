@@ -546,13 +546,16 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 borderRadius: 1,
               }} />
 
-              {/* Bonus glow ring + clipped card */}
+              {/* Bonus glow ring + clipped card. max-w keeps the bag taller-than-
+                  wide on every breakpoint; extra horizontal padding keeps title
+                  text inside the safe band so the clip-path's chamfered top
+                  corners never clip the text. */}
               <div
-                className={`w-full ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
+                className={`w-full max-w-[260px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
                 style={!isBonusMode ? { filter: 'drop-shadow(3px 3px 0 #7A5090)' } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-5 py-3 md:py-5 min-h-[150px] md:min-h-[220px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-9 py-6 md:py-8 min-h-[280px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
