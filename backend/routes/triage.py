@@ -241,18 +241,19 @@ def _task_weight(task: Task) -> int:
 
 
 def _committed_weight_for_day(db: Session, user_id: int, day: date) -> int:
-    """Weight already booked into a given day by appointments + routines.
+    """Weight already booked into a day by appointments. Routines excluded.
 
-    Bin-pack only places `task_type=task` items, so the appointment + routine
-    weight already on that day is a fixed cost that reduces the budget.
-    Looks for both `scheduled_date` (today-status rows already placed) and
-    `due_date` matches (future appointments with explicit dates).
+    Bin-pack places `task_type=task` items competing for active attention.
+    Appointments are time-blocked (real hours consumed) → count as committed.
+    Routines happen passively (taking meds, morning coffee, etc.) and don't
+    compete for the same attention budget — including them was eating the
+    entire day's capacity for users with many daily routines.
     """
     rows = (
         db.query(Task)
         .filter(
             Task.owner_id == user_id,
-            Task.task_type.in_([TaskType.appointment, TaskType.routine]),
+            Task.task_type == TaskType.appointment,
             Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
         )
         .all()

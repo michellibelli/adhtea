@@ -4,17 +4,17 @@ import { SNOOZE_OPTIONS, resolveSnoozeDate } from '../utils/snooze'
 import Button from './Button'
 import { Input } from './Input'
 
-export default function SnoozeSheet({ onSnooze, onClose }) {
+export default function SnoozeSheet({ onSnooze, onClose, domainName = null }) {
   const [customDate, setCustomDate] = useState('')
 
   function handleOption(option) {
-    const date = resolveSnoozeDate(option.id)
+    const date = resolveSnoozeDate(option.id, null, domainName)
     if (date) onSnooze(date.toISOString())
   }
 
   function handleCustomSubmit() {
     if (!customDate) return
-    const date = resolveSnoozeDate('custom', customDate)
+    const date = resolveSnoozeDate('custom', customDate, domainName)
     if (date) onSnooze(date.toISOString())
   }
 

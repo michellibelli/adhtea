@@ -658,7 +658,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
 
       </div>
 
-      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
+      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task?.domain_name} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
       {showMenu && onNavigate && (
         <HamburgerMenu

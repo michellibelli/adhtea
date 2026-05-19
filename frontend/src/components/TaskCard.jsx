@@ -397,7 +397,7 @@ export default function TaskCard({
         )}
       </Card>
 
-      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
+      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task.domain_name} />}
     </>
   )
 }
