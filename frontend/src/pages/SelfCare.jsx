@@ -404,7 +404,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
               onClick={onComplete}
               disabled={!log}
             >
-              {log ? 'Continue → Focus' : 'Log first to continue'}
+              {log ? 'Continue → Triage' : 'Log first to continue'}
             </Button>
           </div>
         )}

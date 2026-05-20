@@ -147,6 +147,7 @@ function AppShell() {
           gateMode
           onComplete={() => {
             setShowCheckIn(false)
+            setScreen('tournament')
             getTodayCapacity().then(setCapacity).catch(() => {})
           }}
         />

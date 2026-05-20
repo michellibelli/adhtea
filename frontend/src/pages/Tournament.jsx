@@ -5,7 +5,7 @@
 // The full 7-day grid is hidden by default behind a "Show full plan"
 // disclosure. When opened: each item is draggable to any other day card,
 // and the ★ per item pins to today + drops into the next open top-3 slot.
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   DndContext, closestCenter, useSensor, useSensors, useDraggable, useDroppable, TouchSensor,
 } from '@dnd-kit/core'
@@ -13,7 +13,7 @@ import { SmartPointerSensor } from '../utils/dnd'
 import {
   previewTriage, runTriage, recomputeTriage, pinTask, unpinTask,
 } from '../api/triage'
-import { deleteTask, snoozeTask } from '../api/tasks'
+import { createTask, deleteTask, snoozeTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ProjectBadge from '../components/ProjectBadge'
@@ -167,35 +167,93 @@ function StalePrompt({ task, onAfterAction }) {
 
 // ── Top-3 slot card ──────────────────────────────────────────────────────────
 
-function SlotCard({ index, task, onClear, onWhy, showWhy }) {
-  const components = task ? parseComponents(task.score_components) : null
-  return (
-    <Card className={`px-3 py-3 ${task ? 'ring-1 ring-amber-400/50 bg-amber-400/5' : 'border-dashed opacity-70'}`}>
-      <div className="flex items-start gap-2">
-        <span className="text-base text-amber-400 flex-shrink-0 font-semibold">★{index + 1}</span>
-        <div className="flex-1 min-w-0">
-          {task ? (
-            <>
-              <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
-              <div className="mt-1">
-                <MetaBadges task={task} />
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-ui-subtext italic">tap a suggestion below to fill</p>
-          )}
-        </div>
-        {task && <ScoreChip task={task} onClick={onWhy} />}
-        {task && (
+function SlotCard({ index, task, slotFilledIds, allTasks, onClear, onWhy, showWhy, onPick, onCreate, busy }) {
+  const [query, setQuery] = useState('')
+
+  // Type-ahead matches: existing tasks whose title contains the query and
+  // that aren't already in another slot. In-memory substring filter — same
+  // operation the search bar runs, capped at 6 rows.
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return allTasks
+      .filter(t => !slotFilledIds.includes(t.id) && t.title.toLowerCase().includes(q))
+      .slice(0, 6)
+  }, [query, allTasks, slotFilledIds])
+
+  if (task) {
+    const components = parseComponents(task.score_components)
+    return (
+      <Card className="px-3 py-3 ring-1 ring-amber-400/50 bg-amber-400/5">
+        <div className="flex items-start gap-2">
+          <span className="text-base text-amber-400 flex-shrink-0 font-semibold">★{index + 1}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
+            <div className="mt-1">
+              <MetaBadges task={task} />
+            </div>
+          </div>
+          <ScoreChip task={task} onClick={onWhy} />
           <button
             type="button"
             onClick={onClear}
             title="Remove from top 3"
             className="flex-shrink-0 text-ui-subtext/40 hover:text-red-400 transition-colors text-sm font-bold"
           >×</button>
-        )}
+        </div>
+        {showWhy && <WhyTooltip components={components} total={task.score} />}
+      </Card>
+    )
+  }
+
+  // Empty slot: a type-ahead field. Type to find an existing task (dropdown),
+  // or hit the + button to create a brand-new task from the typed text.
+  return (
+    <Card className="px-3 py-3 border-dashed">
+      <div className="flex items-start gap-2">
+        <span className="text-base text-amber-400 flex-shrink-0 font-semibold">★{index + 1}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key !== 'Enter') return
+                if (matches.length > 0) onPick(matches[0].id)
+                else if (query.trim()) onCreate(query.trim())
+              }}
+              placeholder="type to find or add a task…"
+              disabled={busy}
+              className="flex-1 min-w-0 text-sm bg-transparent text-ui-text placeholder-ui-subtext/50 outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => onCreate(query.trim())}
+              disabled={busy || !query.trim()}
+              title="Add as a new task, due today"
+              className="flex-shrink-0 w-6 h-6 rounded-full border border-ui-border flex items-center justify-center text-xs font-bold text-ui-subtext hover:border-amber-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >+</button>
+          </div>
+          {query.trim() && matches.length > 0 && (
+            <div className="mt-2 pt-1.5 border-t border-ui-border/50 space-y-0.5">
+              {matches.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onPick(t.id)}
+                  className="w-full flex items-center gap-2 text-left px-1 py-1 rounded hover:bg-ui-accent/10 transition-colors"
+                >
+                  <span className="text-sm text-ui-text flex-1 truncate">{t.title}</span>
+                  {t.score != null && (
+                    <span className="text-[10px] font-mono text-ui-subtext flex-shrink-0">{Math.round(t.score)}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-      {showWhy && task && <WhyTooltip components={components} total={task.score} />}
     </Card>
   )
 }
@@ -363,11 +421,7 @@ export default function Tournament({ onDone }) {
   const [suggestedShown, setSuggestedShown] = useState(SUGGESTED_INITIAL)
   const [showFullPlan, setShowFullPlan] = useState(false)
   const [planError, setPlanError] = useState(null)
-
-  // Once the user touches slots (manual + / × / star-from-plan), refresh-driven
-  // pre-population stops overwriting their picks. Without this, recompute or a
-  // pin from the full-plan view would silently wipe their top-3.
-  const slotsTouchedRef = useRef(false)
+  const [addingTask, setAddingTask] = useState(false)
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -406,32 +460,13 @@ export default function Tournament({ onDone }) {
     return unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
   }, [layout])
 
-  // Pre-populate slots once layout arrives: existing pins for today first,
-  // then top-scored items fill remaining slots. User can swap any.
-  // If the user has already touched slots, only validate existing ids (drop
-  // any that no longer exist) — never overwrite their picks on refresh.
+  // Slots start empty — triage is an active choice, not a system guess. This
+  // only runs on layout refresh, to drop any slotted task that no longer exists.
   useEffect(() => {
     if (!layout) return
     const validIds = new Set(allTasks.map(t => t.id))
-    setSlots(prev => {
-      const validated = prev.map(id => (id != null && validIds.has(id) ? id : null))
-      if (slotsTouchedRef.current) return validated
-      const iso = todayIso()
-      const pinned = allTasks.filter(t => t.pinned_for === iso).slice(0, 3)
-      const next = [pinned[0]?.id ?? null, pinned[1]?.id ?? null, pinned[2]?.id ?? null]
-      let fillCursor = 0
-      for (let i = 0; i < 3; i++) {
-        if (next[i] != null) continue
-        while (fillCursor < allTasks.length) {
-          const t = allTasks[fillCursor++]
-          if (next.includes(t.id)) continue
-          next[i] = t.id
-          break
-        }
-      }
-      return next
-    })
-    // intentional: run only when allTasks changes shape, not on every slot edit
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlots(prev => prev.map(id => (id != null && validIds.has(id) ? id : null)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout])
 
@@ -454,7 +489,6 @@ export default function Tournament({ onDone }) {
   const moreCount = Math.max(0, filtered.length - suggestedShown)
 
   function assignToFirstEmptySlot(taskId) {
-    slotsTouchedRef.current = true
     setSlots(prev => {
       // If already in a slot, this is a no-op (button is disabled).
       if (prev.includes(taskId)) return prev
@@ -466,9 +500,50 @@ export default function Tournament({ onDone }) {
     })
   }
 
+  // Fill a specific slot — used by the per-slot type-ahead.
+  function assignToSlot(idx, taskId) {
+    setSlots(prev => {
+      if (prev.includes(taskId)) return prev
+      const next = [...prev]
+      next[idx] = taskId
+      return next
+    })
+  }
+
   function clearSlot(idx) {
-    slotsTouchedRef.current = true
     setSlots(prev => { const n = [...prev]; n[idx] = null; return n })
+  }
+
+  // Create a brand-new task from typed text and drop it into slot `idx` — for
+  // something that just came up and isn't in the backlog yet. Due date is set
+  // to today; pinned to today so the bin-pack places it in day 0 and the slot
+  // can resolve it.
+  async function handleCreateIntoSlot(idx, title) {
+    const t = title.trim()
+    if (!t || addingTask) return
+    setAddingTask(true); setError(null)
+    try {
+      const iso = todayIso()
+      const created = await createTask({ title: t, task_type: 'task', due_date: iso })
+      try {
+        await pinTask(created.id, iso)
+      } catch (e) {
+        // 409 = today already at the 3-pin cap. Unpin any today-pins that
+        // aren't in our chosen slots, then retry — same recovery as Apply.
+        if (e?.status === 409 || /409/.test(String(e?.message))) {
+          const day0 = layout?.days?.[0]
+          const conflicts = (day0?.items || []).filter(x => x.pinned_for === iso && !slots.includes(x.id))
+          for (const c of conflicts) await unpinTask(c.id)
+          await pinTask(created.id, iso)
+        } else { throw e }
+      }
+      assignToSlot(idx, created.id)
+      await refresh()
+    } catch (e) {
+      setError(e?.message || 'Could not add task')
+    } finally {
+      setAddingTask(false)
+    }
   }
 
   // ★ on a plan-view item: pin to today + drop into the first empty slot.
@@ -586,9 +661,14 @@ export default function Tournament({ onDone }) {
               key={idx}
               index={idx}
               task={id != null ? taskById.get(id) : null}
+              slotFilledIds={slots.filter(Boolean)}
+              allTasks={allTasks}
               onClear={() => clearSlot(idx)}
               onWhy={() => id != null && toggleWhy(id)}
               showWhy={id != null && showWhyId === id}
+              onPick={(taskId) => assignToSlot(idx, taskId)}
+              onCreate={(title) => handleCreateIntoSlot(idx, title)}
+              busy={addingTask}
             />
           ))}
         </div>
