@@ -111,6 +111,21 @@ def _migrate(target_engine=None):
             ))
             # Privacy: drop dose column. Pre-3.9.11 rows held real dose strings.
             conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN IF EXISTS dose"))
+            # Security: enable Row-Level Security on every table. The backend
+            # connects as the `postgres` owner role, which bypasses RLS, so this
+            # is a no-op for the app. But it shuts Supabase's auto-generated
+            # PostgREST API: with RLS on and no policies, the public `anon` key
+            # can no longer read or write these tables. Re-running ENABLE on an
+            # already-enabled table is a harmless no-op. Not using FORCE — that
+            # would apply RLS to the owner too and lock out the backend.
+            # See Supabase advisor: rls_disabled_in_public.
+            for _table in (
+                "site_config", "users", "session_tokens", "actuator_categories",
+                "domains", "projects", "tasks", "routines", "self_care_logs",
+                "medication_schedules", "medication_logs", "invite_tokens",
+                "google_calendar_tokens", "capacity_snapshots",
+            ):
+                conn.execute(text(f"ALTER TABLE {_table} ENABLE ROW LEVEL SECURITY"))
             conn.commit()
 
 
