@@ -1,41 +1,37 @@
 # Session bookmark
-*Last wrap: 2026-05-19 — triage redesign closed at 4.0.0, R7 drag/pin follow-up shipped*
+*Last wrap: 2026-05-20 — BUILD 4.0.1: triage-flow rework + RLS security fix + lint clean*
 
 ## State
 
-Live commit: `f5180fd` (BUILD 4.0.0). BUILD chip on prod will read `4.0.0` after Vercel + Render finish.
+Live commit: `70ef8ce` (BUILD 4.0.1). BUILD chip on prod reads `4.0.1` once Vercel + Render finish.
 
-Vercel + Render auto-deploy from `master`. CI runs 133 pytest tests on every push + PR.
+Vercel + Render auto-deploy from `master`. CI runs the pytest suite on every push + PR.
 
 
-## What shipped this session (2026-05-19)
+`npm run lint` is clean — 0 errors, 0 warnings.
 
-| BUILD | What |
+## What shipped this session (2026-05-20)
+
+| Commit | What |
 |---|---|
-| **4.0.0** | Major-version bump marks end of triage redesign + start of next visual phase (tea-box on Focus, logo, bottom-nav cafe typography). |
-| **R7 follow-up** | Full 7-day plan view is now interactive. `FullPlanView` items wrapped in `useDraggable` + day cards in `useDroppable`. Drag an item from one day to another → calls `pinTask(id, targetDate)` and refreshes layout. Per-item `★` button pins to today + auto-fills first empty top-3 slot. `slotsTouchedRef` added to prevent refresh-driven pre-population from clobbering the user's manual picks after a star/drag/recompute. 409 conflicts surface a friendly in-page banner ("Today already has 3 pins…"). Sensors match the `Today.jsx` pattern (`SmartPointerSensor` distance: 8, `TouchSensor` delay: 200). Backend untouched — `POST /triage/tasks/{id}/pin` already accepted any future date. |
+| `f5180fd` | BUILD 4.0.0 — R7 follow-up: drag/pin in the 7-day plan view (was uncommitted WIP from the prior session; pushed at session start). |
+| `ecfc3e1` | SESSION.md placeholder fill + `set-state-in-effect` lint suppressions on legit mount-fetch sites. |
+| `134bc64` | Cleared remaining eslint errors → lint now 0/0. `eslint.config.js` registers `__BUILD_TIME__` global + ignores `_`-prefixed unused vars; dead code removed; ref/purity false-positives suppressed with explained disables. |
+| `1b90cee` | **Security** — RLS enabled on all 14 tables. See below. |
+| `70ef8ce` | BUILD 4.0.1 — triage-flow rework: check-in routes to Triage, empty slots, per-slot type-ahead + create button. See below. |
 
-## Bigger-picture state changes
+### Security — Row-Level Security (`1b90cee`)
 
-- **Triage redesign closed.** Old tournament code deleted in 3.9.38. D+F hybrid surface (top-3 picker + collapsible 7-day plan with capacity bin-pack) is the only triage entrypoint.
-- **Plan view is no longer read-only.** Drag-between-days + ★-to-today work from the disclosed grid. Pin-cap (3/day) enforced server-side; UI shows the violation rather than failing silently.
-- **Manual slot picks survive refresh.** `slotsTouchedRef` blocks the layout-change pre-pop once the user has chosen anything — recompute / pin / star no longer wipe their top-3.
+Supabase advisor flagged `rls_disabled_in_public` + `sensitive_columns_exposed`. The `public` schema (incl. `users.hashed_password`, `session_tokens.token`, Google OAuth tokens) was reachable through Supabase's auto-generated PostgREST API with RLS off.
 
-## Yesterday's shipped work (2026-05-18, R1–R7 + extras)
+`_migrate()` now runs `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` on all 14 tables (Postgres branch only). RLS-on + no policies = deny-all for the `anon`/`authenticated` API roles. The backend connects as the `postgres` owner role, which bypasses RLS, so the app is unaffected. Applied to prod manually via the SQL editor too (instant), and re-applies on every deploy. `session_tokens` was wiped as precautionary token rotation; relogin confirmed working. Both advisor criticals cleared.
 
-| BUILD | What |
-|---|---|
-| **R1** (b6a363e) | Explainable scoring engine. `score_components` JSON per task: priority, critical_bonus, overdue_boost, due_today, due_soon, project_stall, in_context, age_boost, push_penalty. WhyTooltip in UI renders each lever's contribution. |
-| **R2** (8bffd21) | Capacity bin-pack + rolling 7-day window. Server auto-places tasks into days using priority + age + capacity budget; no manual ranking required. |
-| **R3** (d3f0a84) | Pin top-3 endpoint + bin-pack respects pins. `Task.pinned_for` field; `MAX_PINS_PER_DAY = 3`. |
-| **3.9.37** (e16abe7) | R4 — new column layout + score chip + pin button. Score chip opens WhyTooltip. |
-| **3.9.38** (d784eed) | R5 stale prompt (push_count ≥ 5 surfaces delete / snooze-30d) + R6 retire old tournament (323 lines of Triage.jsx removed). |
-| **3.9.39** (e3e02f4) | TaskCard always-visible snooze + edit + delete icon column. |
-| **3.9.40** (c7eb696) | Modal portal + top-third positioning so dialogs never fall below the fold on mobile. |
-| **3.9.41** (bc8157d) | Wider task cards + taller teabag, no text clipping. |
-| **3.9.42** (2509dd6) | Domain-aware snooze (respects `next_allowed_date`) + capacity-bar ignores routines (was double-counting). |
-| **3.9.43** (80704c1) | Morning check-in (mood + sleep + capacity) as hard gate before app access. |
-| **3.9.44** (1444846) | R7 — top-3 picker as primary surface; full 7-day grid collapsed behind "Show full plan ↓" disclosure. Apply: pins all slotted tasks → 409 auto-resolves by unpinning displaced today-pins → re-attempts → runs `/triage/run` to bin-pack everything else. |
+### Triage-flow rework (`70ef8ce`, BUILD 4.0.1)
+
+- **Check-in routes to Triage.** After the morning check-in gate, the user lands on Triage instead of Focus — capacity is freshly logged, so triage is the natural next step. Gate CTA reads "Continue to Triage".
+- **Top-3 slots start empty.** Removed the top-scored pre-fill — triage is an active choice, not a system guess. The `slotsTouchedRef` guard is gone with it (no pre-fill left to protect).
+- **Per-slot type-ahead.** Each empty slot is a text field; typing filters existing tasks (in-memory substring match on title) into a dropdown, click to fill. A `+` button at the field's right edge creates a brand-new task from the typed text with `due_date` = today, pins it to today, drops it into that slot. Enter picks the first match, else creates.
+- Search bar + suggested list unchanged. The standalone `+Add` row was absorbed into the slots.
 
 ## Open items / next session
 
@@ -53,9 +49,8 @@ User has lined up the next visual overhaul. Phase 3 closed; Phase 4 still deferr
 - `main.py:41` `is_owner` migration `MIN(id)` — one-time existing-DB only.
 - `tasks.py:194` snooze `<=` race — sub-second window.
 - `domains.py:42` + `tasks.py:517` `== True/None` — `noqa`'d, SQLAlchemy translates to SQL `IS NULL`.
-- `Today.jsx:144` optimistic update — `fetchTasks()` fallback is more robust than explicit revert.
+- `Today.jsx` optimistic update — `fetchTasks()` fallback is more robust than explicit revert.
 - `tasks.py update_task` uses `date.today()` (server UTC) instead of `_app_today(user)` (user tz).
-- Tournament.jsx:389 `useEffect(() => { refresh() }, [refresh])` — pre-existing react-hooks/set-state-in-effect lint error; mirrored in Waiting.jsx and several other pages.
 
 ## Where to resume
 
@@ -70,10 +65,14 @@ User has lined up the next visual overhaul. Phase 3 closed; Phase 4 still deferr
 ## Commits this session (latest first)
 
 ```
+70ef8ce feat(triage): route from check-in, empty slots, per-slot type-ahead [4.0.1]
+1b90cee fix(security): enable Row-Level Security on all tables
+134bc64 chore(lint): clear remaining eslint errors — lint now clean
+ecfc3e1 chore(lint): suppress set-state-in-effect at legit mount-fetch sites
 f5180fd chore: BUILD 4.0.0 — R7 follow-up, drag/pin in 7-day plan view
 ```
 
-Yesterday's commits (2026-05-18):
+Prior session commits (2026-05-18 / 19, R1–R7 + extras):
 ```
 1444846 feat(triage): R7 — top-3 picker + collapsible full plan + search [3.9.44]
 80704c1 feat(checkin): morning log as hard gate before app access [3.9.43]

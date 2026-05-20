@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-19 (BUILD 4.0.0)*
+*Last updated: 2026-05-20 (BUILD 4.0.1)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -40,6 +40,39 @@ Primary user (prod): username=`demo_user`, user_id=2.
 ## Current status — Phases 1–3 complete + Triage redesign closed ✅
 
 Everything below is shipped and live on adh-tea.fun.
+
+### BUILD 4.0.1 completed (2026-05-20)
+
+Triage-flow rework + a critical security fix.
+
+- **Security — RLS on all tables** `1b90cee`. Supabase advisor flagged
+  `rls_disabled_in_public` + `sensitive_columns_exposed`: the `public`
+  schema (incl. `users.hashed_password`, `session_tokens.token`, Google
+  OAuth tokens) was reachable via the auto-generated PostgREST API with
+  RLS off. `_migrate()` now runs `ALTER TABLE ... ENABLE ROW LEVEL
+  SECURITY` on all 14 tables (Postgres branch). RLS-on + no policies =
+  deny-all for the `anon`/`authenticated` API roles; the backend
+  connects as the `postgres` owner role, which bypasses RLS, so the app
+  is unaffected. Applied to prod manually via SQL editor + re-applies on
+  deploy. `session_tokens` was also wiped (precautionary token rotation).
+- **Check-in routes to Triage** `70ef8ce`. After the morning check-in
+  gate, the user now lands on Triage instead of Focus — capacity is
+  freshly logged, so triage is the natural next step. Gate CTA reads
+  "Continue to Triage".
+- **Triage top-3 starts empty** `70ef8ce`. Removed the top-scored
+  pre-fill — triage is an active choice, not a system guess. The
+  `slotsTouchedRef` guard is gone with it.
+- **Per-slot type-ahead** `70ef8ce`. Each empty slot is a text field;
+  typing filters existing tasks (in-memory substring match on title)
+  into a dropdown. A `+` button at the field's right edge creates a
+  brand-new task from the typed text with `due_date` = today, pins it
+  to today, and drops it into that slot. Search bar + suggested list
+  unchanged. The standalone `+Add` row was absorbed into the slots.
+- **Lint clean** `ecfc3e1` + `134bc64`. `npm run lint` is now 0 errors
+  / 0 warnings (was 41). `eslint.config.js` registers `__BUILD_TIME__`
+  as a global and ignores `_`-prefixed unused vars; dead code removed;
+  legit data-fetch-on-mount + ref/purity patterns suppressed with
+  explained `eslint-disable` comments.
 
 ### BUILD 4.0.0 completed (2026-05-19)
 
@@ -238,10 +271,10 @@ Tournament-driven Triage at scale.
 3. **Real human code review** — both AI passes still missed things a human would catch.
 4. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
 5. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone.
-6. **Lint: `set-state-in-effect` errors** — Tournament.jsx:389 and several other pages (`Waiting.jsx`, etc.) use `useEffect(() => { fetchTasks() }, [fetchTasks])` pattern that the linter now flags. Pre-existing.
 
 Resolved 2026-05-18: triage redesign D+F hybrid R1–R7 (replaces old tournament), morning check-in gate, domain-aware snooze, modal portal positioning.
 Resolved 2026-05-19: R7 drag/pin in 7-day plan view (final piece of the redesign); BUILD bumped to 4.0.0.
+Resolved 2026-05-20: RLS enabled on all tables (Supabase security advisor); `npm run lint` brought to 0 errors / 0 warnings (incl. the old `set-state-in-effect` items); triage check-in routing + empty slots + per-slot type-ahead. BUILD 4.0.1.
 Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement bypass on create/update/promote, aesthetic cohesion across nav + buttons + font + cards.
 
 ---
