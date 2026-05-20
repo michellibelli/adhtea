@@ -8,6 +8,8 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
+import { TAG_COLORS } from '../utils/taskColors'
+import TeaBox from '../components/TeaBox'
 
 
 const TEA_PUNS = [
@@ -28,13 +30,6 @@ const TEA_PUNS = [
 const PRIORITY_BADGE = {
   urgent: 'bg-red-500/20 text-red-400',
   high:   'bg-amber-500/20 text-amber-400',
-}
-const TAG_COLORS = {
-  task:        { bg: 'linear-gradient(135deg, #C97068, #E8968C)', border: '#9B4E4E', shadow: '#7A3030' },
-  appointment: { bg: 'linear-gradient(135deg, #5B8FD4, #7FB3F0)', border: '#3D6FA8', shadow: '#2A5080' },
-  routine:     { bg: 'linear-gradient(135deg, #5BA876, #7FC898)', border: '#3D7A56', shadow: '#2A5A3C' },
-  note:        { bg: 'linear-gradient(135deg, #9068C9, #B48CE8)', border: '#6A4A9B', shadow: '#4A3070' },
-  project:     { bg: 'linear-gradient(135deg, #C98A40, #E8B268)', border: '#9B6A2E', shadow: '#7A4A18' },
 }
 const TAG_NAMES = {
   task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note', project: 'Project',
@@ -644,6 +639,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
             {remaining > 8 && <span className="text-[10px] text-ui-subtext ml-1">+{remaining - 8}</span>}
           </div>
         )}
+
+        {/* Tea-box — today's tasks as bags; the active bag is highlighted */}
+        <div className="mt-3">
+          <TeaBox tasks={tasks} activeTaskId={task?.id} />
+        </div>
 
       </div>
 
