@@ -628,7 +628,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
         {/* Tea-box — today's tasks as bags; the active bag is highlighted.
             Fixed above the nav on mobile so it's always in frame; in-flow on desktop. */}
-        <div className="fixed left-0 right-0 mx-auto max-w-[300px] z-30 bottom-[calc(90px_+_env(safe-area-inset-bottom))] px-4 md:static md:max-w-none md:bottom-auto md:px-0 md:mt-3">
+        <div
+          className="fixed left-0 right-0 mx-auto max-w-[300px] z-30 px-4 md:static md:max-w-none md:px-0 md:mt-3"
+          style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
+        >
           <TeaBox tasks={tasks} activeTaskId={task?.id} />
         </div>
 
