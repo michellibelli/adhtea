@@ -357,7 +357,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-20 md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[190px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -626,22 +626,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           )}
         </div>
 
-        {/* Progress dots */}
-        {remaining > 1 && !celebrate && (
-          <div className="flex justify-center gap-1 mt-1 md:mt-4">
-            {Array.from({ length: Math.min(remaining, 8) }).map((_, i) => (
-              <div key={i} className={`w-2 h-2 rounded-full ${
-                i === 0
-                  ? (isBonusMode ? 'bg-amber-500' : 'bg-ui-accent')
-                  : 'bg-ui-border'
-              }`} />
-            ))}
-            {remaining > 8 && <span className="text-[10px] text-ui-subtext ml-1">+{remaining - 8}</span>}
-          </div>
-        )}
-
-        {/* Tea-box — today's tasks as bags; the active bag is highlighted */}
-        <div className="mt-3">
+        {/* Tea-box — today's tasks as bags; the active bag is highlighted.
+            Fixed above the nav on mobile so it's always in frame; in-flow on desktop. */}
+        <div className="fixed left-0 right-0 z-30 bottom-[calc(90px_+_env(safe-area-inset-bottom))] md:static md:bottom-auto md:mt-3">
           <TeaBox tasks={tasks} activeTaskId={task?.id} />
         </div>
 

@@ -4,6 +4,16 @@ import { TAG_COLORS } from '../utils/taskColors'
 // max_total_per_day cap, so this is also the natural display limit.
 const BOX_CAPACITY = 15
 
+// Mild wood texture — warm-brown base + faint horizontal grain streaks.
+const WOOD_BG = `
+  repeating-linear-gradient(0deg,
+    rgba(60,38,18,0) 0px,
+    rgba(60,38,18,0.07) 3px,
+    rgba(255,240,214,0.05) 6px,
+    rgba(60,38,18,0) 11px),
+  linear-gradient(180deg, #BE9A66 0%, #A37F4C 100%)
+`
+
 // Phase 1 — static tea-box for the Focus page. 2D side profile, no lid: an
 // open box with today's tasks standing in it as bags, each tinted by task
 // type. The bag matching the current Focus pick is raised + highlighted.
@@ -17,9 +27,10 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
 
   return (
     <div className="relative w-full select-none" style={{ height: 96 }}>
-      {/* Bags — stand behind the box front panel, poking up above the rim */}
+      {/* Bags — stand behind the box front panel, poking up above the rim.
+          Extra right padding on mobile keeps bags clear of the capture FAB. */}
       <div
-        className="absolute left-0 right-0 flex items-end justify-center gap-[3px] px-3"
+        className="absolute left-0 right-0 flex items-end justify-center gap-[3px] pl-3 pr-20 md:pr-3"
         style={{ bottom: 30 }}
       >
         {bags.map(t => {
@@ -59,33 +70,17 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
         })}
       </div>
 
-      {/* Box front panel — kraft-coloured, covers the lower part of the bags */}
+      {/* Box front panel — mild wood texture, covers the lower part of the bags */}
       <div
         className="absolute left-0 right-0 bottom-0"
         style={{
           height: 46,
-          background: 'linear-gradient(180deg, #C9A876 0%, #B8966A 100%)',
-          borderRadius: '4px 4px 7px 7px',
-          border: '2px solid #9B7A4E',
+          background: WOOD_BG,
+          borderRadius: '6px 6px 7px 7px',
+          border: '2px solid #8A6B40',
           borderBottomWidth: 3,
         }}
-      >
-        {/* Label band — letterpress treatment lands in the cafe-typography pass */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
-          style={{
-            top: 13,
-            width: '64%',
-            height: 20,
-            border: '1.5px solid #9B7A4E',
-            borderRadius: 3,
-          }}
-        >
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: '#6B5436' }}>
-            TODAY
-          </span>
-        </div>
-      </div>
+      />
     </div>
   )
 }
