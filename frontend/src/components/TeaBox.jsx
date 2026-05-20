@@ -26,12 +26,11 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
     .slice(0, BOX_CAPACITY)
 
   return (
-    <div className="relative w-full select-none" style={{ height: 96 }}>
-      {/* Bags — stand behind the box front panel, poking up above the rim.
-          Extra right padding on mobile keeps bags clear of the capture FAB. */}
+    <div className="relative w-full select-none" style={{ height: 72 }}>
+      {/* Bags — stand behind the box front panel, poking up above the rim */}
       <div
-        className="absolute left-0 right-0 flex items-end justify-center gap-[3px] pl-3 pr-20 md:pr-3"
-        style={{ bottom: 30 }}
+        className="absolute left-0 right-0 flex items-end justify-center gap-[2px] px-3"
+        style={{ bottom: 22 }}
       >
         {bags.map(t => {
           const isProject = !!t.project_name
@@ -40,12 +39,12 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
             : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
           const active = activeTaskId != null && t.id === activeTaskId
           return (
-            <div key={t.id} className="flex flex-col items-center" style={{ width: 18 }}>
+            <div key={t.id} className="flex flex-col items-center" style={{ width: 14 }}>
               {/* string */}
               <div
                 style={{
                   width: 2,
-                  height: active ? 9 : 6,
+                  height: active ? 8 : 5,
                   background: '#B8AE98',
                   transition: 'height 200ms ease',
                 }}
@@ -53,14 +52,14 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
               {/* bag */}
               <div
                 style={{
-                  width: 18,
-                  height: 40,
+                  width: 14,
+                  height: 30,
                   background: colors.bg,
                   border: `1.5px solid ${colors.border}`,
-                  borderRadius: 3,
-                  transform: active ? 'translateY(-7px)' : 'none',
+                  borderRadius: 2.5,
+                  transform: active ? 'translateY(-6px)' : 'none',
                   boxShadow: active
-                    ? `0 0 0 2px ${colors.border}, 0 5px 9px rgba(0,0,0,0.28)`
+                    ? `0 0 0 2px ${colors.border}, 0 4px 7px rgba(0,0,0,0.28)`
                     : `1px 1px 0 ${colors.shadow}`,
                   transition: 'transform 200ms ease, box-shadow 200ms ease',
                 }}
@@ -74,7 +73,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
       <div
         className="absolute left-0 right-0 bottom-0"
         style={{
-          height: 46,
+          height: 40,
           background: WOOD_BG,
           borderRadius: '6px 6px 7px 7px',
           border: '2px solid #8A6B40',

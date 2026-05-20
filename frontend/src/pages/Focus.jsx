@@ -357,7 +357,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[190px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[150px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -449,7 +449,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
         {/* Card */}
         <div
-          className={`flex-1 flex flex-col justify-start pt-5 ${
+          className={`flex-1 min-h-0 flex flex-col justify-start pt-2 md:pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate
@@ -539,14 +539,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                 style={!isBonusMode ? { filter: 'drop-shadow(3px 3px 0 #7A5090)' } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-9 py-6 md:py-8 min-h-[280px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-9 py-4 md:py-8 min-h-[190px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                     </span>
                   )}
 
-                  <h2 className="text-2xl font-bold text-ui-text leading-snug mb-3">
+                  <h2 className="text-xl md:text-2xl font-bold text-ui-text leading-snug mb-3">
                     {task.title}
                   </h2>
 
@@ -628,7 +628,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
         {/* Tea-box — today's tasks as bags; the active bag is highlighted.
             Fixed above the nav on mobile so it's always in frame; in-flow on desktop. */}
-        <div className="fixed left-0 right-0 z-30 bottom-[calc(90px_+_env(safe-area-inset-bottom))] md:static md:bottom-auto md:mt-3">
+        <div className="fixed left-0 right-0 mx-auto max-w-[300px] z-30 bottom-[calc(90px_+_env(safe-area-inset-bottom))] px-4 md:static md:max-w-none md:bottom-auto md:px-0 md:mt-3">
           <TeaBox tasks={tasks} activeTaskId={task?.id} />
         </div>
 

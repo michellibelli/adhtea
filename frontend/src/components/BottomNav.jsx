@@ -134,10 +134,13 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
         })}
       </nav>
 
-      {/* Mobile FAB — capture, floats above bottom nav */}
+      {/* Mobile FAB — capture. Lifts above the tea-box on the Focus page,
+          otherwise floats just above the bottom nav. */}
       <button
         onClick={onCapture}
-        className="fixed bottom-[86px] right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-ui-primary-text active:scale-95 transition-transform md:hidden pixel-btn bg-ui-primary"
+        className={`fixed right-4 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-ui-primary-text active:scale-95 transition-transform md:hidden pixel-btn bg-ui-primary ${
+          active === 'focus' ? 'bottom-[174px]' : 'bottom-[86px]'
+        }`}
         aria-label="Capture"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
