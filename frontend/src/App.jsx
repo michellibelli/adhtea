@@ -49,14 +49,6 @@ import BottomNav from './components/BottomNav'
 import PageProgress from './components/PageProgress'
 import './App.css'
 
-// Returns true if current hour is within triage window
-function isMorningWindow(user) {
-  const hour  = new Date().getHours()
-  const start = user?.triage_start_hour ?? 6
-  const end   = user?.triage_end_hour   ?? 10
-  return hour >= start && hour < end
-}
-
 // Returns true if it's EOD time — after 5 PM by default
 function isEODWindow(user) {
   const hour = new Date().getHours()

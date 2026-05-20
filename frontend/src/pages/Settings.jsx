@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal, listCalendars, updateCalendars } from '../api/gcal'
-import { listUsers, createUser, deleteUser, createInvite, listInvites, revokeInvite, logout, getAlphaCode, setAlphaCode } from '../api/auth'
+import { listUsers, createUser, deleteUser, logout, getAlphaCode, setAlphaCode } from '../api/auth'
 import { listDomains, updateDomain, deleteDomain } from '../api/domains'
 import { updateSettings } from '../api/auth'
 import { api } from '../api/client'

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located THEMES list + context; splitting would just churn imports */
 import { createContext, useState, useEffect, useCallback } from 'react'
 
 // Manual theme picker. User selects in Settings → Display → Theme.

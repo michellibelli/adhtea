@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getToday, completeTask, snoozeTask, deferTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
+import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import { logout } from '../api/auth'
 import SnoozeSheet from '../components/SnoozeSheet'
@@ -9,14 +9,6 @@ import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
 
-
-const SPARKLE_POSITIONS = [
-  { top: '14%', left: '11%',  '--delay': '0s',   '--dur': '2.2s' },
-  { top: '18%', right: '13%', '--delay': '0.8s', '--dur': '1.9s' },
-  { top: '50%', left: '7%',   '--delay': '1.5s', '--dur': '2.5s' },
-  { top: '60%', right: '9%',  '--delay': '0.4s', '--dur': '2.0s' },
-  { top: '38%', left: '48%',  '--delay': '1.1s', '--dur': '2.8s' },
-]
 
 const TEA_PUNS = [
   "Steeped in success! 🍵",
@@ -33,8 +25,6 @@ const TEA_PUNS = [
   "No steep too deep! 🌿",
 ]
 
-const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
-const TYPE_LABELS = { task: 'Task', appointment: 'Appointment', routine: 'Routine', note: 'Note' }
 const PRIORITY_BADGE = {
   urgent: 'bg-red-500/20 text-red-400',
   high:   'bg-amber-500/20 text-amber-400',
@@ -187,7 +177,7 @@ function EditTaskSheet({ task, onSave, onClose }) {
   )
 }
 
-export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 }) {
+export default function Focus({ onGoToList, onTriage, onNavigate }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [capacity,    setCapacity]    = useState(null)
@@ -268,6 +258,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
   async function handleComplete() {
     if (!task) return
     setLocalDone((n) => n + 1)
+    // eslint-disable-next-line react-hooks/purity -- handler, not render
     punRef.current = TEA_PUNS[Math.floor(Math.random() * TEA_PUNS.length)]
     const taskId = task.id
     const wasBonus = isBonusMode
@@ -281,11 +272,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
       setTimeout(() => setCelebrate('p3'),  5350 + 1180),
       setTimeout(() => skipCelebration(),   5350 + 1180 + 3000),
     ]
-  }
-
-  async function handleDefer() {
-    if (!task) return
-    await advance(() => deferTask(task.id))
   }
 
   async function handleEditSave(patch) {
@@ -424,6 +410,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, doneCount = 0 
                 style={{ animation: 'celebrate-pun-in 280ms ease-out forwards' }}
               >
                 <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1' }}>✨</span>
+                {/* eslint-disable-next-line react-hooks/refs -- punRef set in handleComplete before this renders */}
                 <span className="text-lg font-semibold text-center flex-1 px-3" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
                 <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1', animationDelay: '0.5s' }}>✨</span>
               </div>

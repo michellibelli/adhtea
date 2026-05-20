@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { getBacklog, updateTask, snoozeTask, unsnoozeTask, deleteTask } from '../api/tasks'
 import { listProjects, addTaskToProject } from '../api/projects'
 import Card from '../components/Card'

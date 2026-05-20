@@ -124,6 +124,8 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
       finally { setLoading(false) }
     }
     fetchAll()
+    // Mount-only fetch; userId is stable for the session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSave() {

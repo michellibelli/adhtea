@@ -101,7 +101,9 @@ async function request(method, path, body = undefined, isForm = false) {
     try {
       const err = await res.json()
       detail = err.detail || detail
-    } catch (_) {}
+    } catch (_) {
+      // non-JSON error body — fall through with default detail
+    }
     throw new Error(detail)
   }
 

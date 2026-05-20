@@ -39,7 +39,7 @@ export function resolveSnoozeDate(optionId, customDate = null, domainName = null
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-  let target = null
+  let target
   switch (optionId) {
     case 'tonight': {
       const d = new Date(today)

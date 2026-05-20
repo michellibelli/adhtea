@@ -12,15 +12,10 @@ import {
   updateProject, generateProjectTasks, removeTaskFromProject,
 } from '../api/projects'
 import { createTask, completeTask, reorderTasks, updateTask } from '../api/tasks'
-import { listDomains, createDomain } from '../api/domains'
+import { listDomains } from '../api/domains'
 import DomainPicker from '../components/DomainPicker'
 import DomainDateWarning from '../components/DomainDateWarning'
 
-function fmtDate(iso) {
-  if (!iso) return null
-  const d = new Date(iso.includes('T') ? iso : iso + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
@@ -229,7 +224,7 @@ function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, o
   )
 }
 
-export default function Projects({ onNavigate }) {
+export default function Projects() {
   const [projects,  setProjects]  = useState([])
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)

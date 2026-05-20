@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { warmUp } from '../api/client'
 import { createTask } from '../api/tasks'
 
@@ -119,7 +119,7 @@ export default function WakeScreen({ onReady }) {
   const [ready,      setReady]      = useState(false)
   const [countdown,  setCountdown]  = useState(TOTAL_WAIT)
   const [entry,      setEntry]      = useState('')
-  const config = useRef(getPromptConfig())
+  const [config] = useState(getPromptConfig)
 
   // Splash: 5 seconds then show wake phase
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function WakeScreen({ onReady }) {
         setSaving(true)
         try {
           await createTask({
-            title:     config.current.noteTitle,
+            title:     config.noteTitle,
             task_type: 'note',
             notes:     entry.trim(),
           })
@@ -152,9 +152,12 @@ export default function WakeScreen({ onReady }) {
       }
       setReady(true)
     })
+    // Mount-only: warmUp callback closes over the entry value at warmUp resolution.
+    // Re-running on each keystroke would re-trigger warmUp.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { heading, prompt, placeholder } = config.current
+  const { heading, prompt, placeholder } = config
 
   // ── Splash phase ──────────────────────────────────────────────────────────
   if (!splashDone) {

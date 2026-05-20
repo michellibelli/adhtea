@@ -8,7 +8,6 @@ export default function PageProgress({ trigger }) {
     // Resets bar on each new `trigger`; synchronous resets are the point.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDone(false)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActive(true)
     const finish = setTimeout(() => setDone(true),  500)
     const reset  = setTimeout(() => setActive(false), 750)
