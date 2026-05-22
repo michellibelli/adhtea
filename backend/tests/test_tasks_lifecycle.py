@@ -7,6 +7,7 @@ from models import Task, TaskStatus, TaskType, User
 from routes.tasks import (
     _app_today, _day_start, _day_start_hour,
     carry_forward, resolve_snoozes, demote_misclassified_today, promote_due_tasks,
+    archive_past_appointments,
 )
 
 
@@ -183,38 +184,39 @@ def test_promote_moves_overdue_inbox_to_today(db_session):
 
 
 # ---------------------------------------------------------------------------
-# Appointments: a missed (past-dated) appointment must not resurface in Today.
-# It belongs in Today only on its exact due_date.
+# archive_past_appointments: a missed appointment is over — auto-complete and
+# archive it (same as any completed task) instead of letting it resurface.
 # ---------------------------------------------------------------------------
 
-def test_promote_skips_past_appointments(db_session):
+def test_archive_past_appointments_completes_them(db_session):
     user = _user(db_session)
     today = _app_today(user)
-    missed = _mk_task(db_session, user.id, status=TaskStatus.inbox,
-                      task_type=TaskType.appointment,
-                      due_date=today - timedelta(days=3))
-    due_today = _mk_task(db_session, user.id, status=TaskStatus.inbox,
-                         task_type=TaskType.appointment, due_date=today)
-
-    promote_due_tasks(user, db_session)
-    db_session.refresh(missed)
-    db_session.refresh(due_today)
-    assert missed.status == TaskStatus.inbox       # missed — stays out of Today
-    assert due_today.status == TaskStatus.today    # today's appointment promoted
-
-
-def test_demote_removes_past_appointments_from_today(db_session):
-    user = _user(db_session)
-    today = _app_today(user)
-    stale_appt = _mk_task(db_session, user.id, status=TaskStatus.today,
-                          task_type=TaskType.appointment,
-                          due_date=today - timedelta(days=2))
+    missed_today = _mk_task(db_session, user.id, status=TaskStatus.today,
+                            task_type=TaskType.appointment,
+                            due_date=today - timedelta(days=2))
+    missed_inbox = _mk_task(db_session, user.id, status=TaskStatus.inbox,
+                            task_type=TaskType.appointment,
+                            due_date=today - timedelta(days=5))
     todays_appt = _mk_task(db_session, user.id, status=TaskStatus.today,
                            task_type=TaskType.appointment, due_date=today)
 
-    moved = demote_misclassified_today(user, db_session)
-    assert moved == 1
-    db_session.refresh(stale_appt)
+    n = archive_past_appointments(user, db_session)
+    assert n == 2
+    db_session.refresh(missed_today)
+    db_session.refresh(missed_inbox)
     db_session.refresh(todays_appt)
-    assert stale_appt.status == TaskStatus.inbox
-    assert todays_appt.status == TaskStatus.today
+    assert missed_today.status == TaskStatus.done
+    assert missed_today.completed_at is not None
+    assert missed_inbox.status == TaskStatus.done
+    assert todays_appt.status == TaskStatus.today   # today's appointment untouched
+
+
+def test_archive_past_appointments_ignores_plain_tasks(db_session):
+    user = _user(db_session)
+    today = _app_today(user)
+    overdue_task = _mk_task(db_session, user.id, status=TaskStatus.inbox,
+                            task_type=TaskType.task,
+                            due_date=today - timedelta(days=3))
+    archive_past_appointments(user, db_session)
+    db_session.refresh(overdue_task)
+    assert overdue_task.status == TaskStatus.inbox   # overdue tasks stay actionable

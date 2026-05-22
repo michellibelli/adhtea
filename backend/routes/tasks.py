@@ -175,10 +175,9 @@ def carry_forward(user: User, db: Session):
 
 
 # ---------------------------------------------------------------------------
-# Demote misclassified Today tasks:
-#   - any non-routine whose due_date is in the future (drag, batch, old paths)
-#   - appointments whose due_date is in the past — a missed appointment is over
-#     and must not keep reappearing in Today.
+# Demote stale Today tasks whose due_date is in the future.
+# Fixes a class of bug where tasks got status=today (drag, batch, old code paths)
+# but their due_date stayed in the future. They should not appear in Today.
 # ---------------------------------------------------------------------------
 
 def demote_misclassified_today(user: User, db: Session):
@@ -190,13 +189,7 @@ def demote_misclassified_today(user: User, db: Session):
             Task.status == TaskStatus.today,
             Task.task_type != TaskType.routine,
             Task.due_date.isnot(None),
-            or_(
-                Task.due_date > today_local,
-                and_(
-                    Task.task_type == TaskType.appointment,
-                    Task.due_date < today_local,
-                ),
-            ),
+            Task.due_date > today_local,
         )
         .all()
     )
@@ -204,6 +197,39 @@ def demote_misclassified_today(user: User, db: Session):
         task.status = TaskStatus.inbox
         task.scheduled_date = None
         task.sort_order = None
+    if stale:
+        db.commit()
+    return len(stale)
+
+
+# ---------------------------------------------------------------------------
+# Archive past appointments: an appointment is date-and-time bound, so once
+# its day has passed it is over. Auto-complete + archive it (same as any other
+# completed task) so it stops bouncing between inbox and Today. completed_at is
+# stamped to the appointment's own date, not now, so it archives as a past
+# completion rather than landing in today's Done list.
+# ---------------------------------------------------------------------------
+
+def archive_past_appointments(user: User, db: Session):
+    today_local = _app_today(user)
+    stale = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user.id,
+            Task.task_type == TaskType.appointment,
+            Task.due_date.isnot(None),
+            Task.due_date < today_local,
+            Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
+        )
+        .all()
+    )
+    for task in stale:
+        task.status = TaskStatus.done
+        task.scheduled_date = None
+        task.sort_order = None
+        if task.completed_at is None:
+            d = task.due_date
+            task.completed_at = datetime(d.year, d.month, d.day)
     if stale:
         db.commit()
     return len(stale)
@@ -271,10 +297,6 @@ def promote_due_tasks(user: User, db: Session):
     rules_by_domain = _domain_rules_for_tasks(due, db)
     promotable = []
     for task in due:
-        # A missed appointment (due before today) is over — never resurface it.
-        # Appointments belong in Today only on their exact due_date.
-        if task.task_type == TaskType.appointment and task.due_date < today_local:
-            continue
         domain_id = task.project.domain_id if task.project else None
         rules = rules_by_domain.get(domain_id, []) if domain_id else []
         if rules and not date_allowed(today_local, rules):
@@ -653,6 +675,7 @@ def get_today(
     carry_forward(current_user, db)
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
+    archive_past_appointments(current_user, db)
     promote_due_tasks(current_user, db)
     demote_misclassified_today(current_user, db)
     demote_domain_violations(current_user, db)
