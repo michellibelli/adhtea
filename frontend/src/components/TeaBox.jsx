@@ -10,6 +10,11 @@ const BOX_CAPACITY = 15
 const AXIS_START = 8 * 60 + 30   // 510  (minutes since midnight)
 const AXIS_SPAN  = 12 * 60       // 720  (12 hours → 8:30pm)
 
+// Minimum centre-to-centre gap between bags, as a fraction of the axis.
+// Keeps bags from overlapping when timed + untimed positions collide; small
+// enough that all 15 still fit (14 gaps × 0.066 < 1).
+const MIN_GAP = 0.066
+
 // Mild wood texture — warm-brown base + faint horizontal grain streaks.
 const WOOD_BG = `
   repeating-linear-gradient(0deg,
@@ -43,6 +48,45 @@ function fmtTime(t) {
   const ampm = h >= 12 ? 'p' : 'a'
   const hour = h % 12 || 12
   return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`
+}
+
+// Lay the bags out along the axis: timed items at their exact time, untimed
+// tasks spread evenly. Then nudge any overlapping bags apart while keeping
+// time order, so the row never collapses into a pile.
+function layoutBags(tasks) {
+  const capped = [...tasks]
+    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
+    .slice(0, BOX_CAPACITY)
+  const untimed = capped.filter(t => !t.due_time)
+
+  const placed = capped.map(t => {
+    const min = bagMinutes(t)
+    const pos = min != null
+      ? axisPos(min)
+      : (untimed.indexOf(t) + 0.5) / Math.max(1, untimed.length)
+    return { task: t, pos }
+  })
+
+  placed.sort((a, b) => a.pos - b.pos)
+
+  // Forward pass — push each bag right until it clears the previous one.
+  for (let i = 1; i < placed.length; i++) {
+    if (placed[i].pos < placed[i - 1].pos + MIN_GAP) {
+      placed[i].pos = placed[i - 1].pos + MIN_GAP
+    }
+  }
+  // If that ran past the right edge, pull the tail back left.
+  const last = placed.length - 1
+  if (last >= 0 && placed[last].pos > 1) {
+    placed[last].pos = 1
+    for (let i = last - 1; i >= 0; i--) {
+      if (placed[i].pos > placed[i + 1].pos - MIN_GAP) {
+        placed[i].pos = placed[i + 1].pos - MIN_GAP
+      }
+    }
+    if (placed[0].pos < 0) placed[0].pos = 0
+  }
+  return placed
 }
 
 // Inspect card — an enlarged bag that rises out of the box and turns to face
@@ -84,28 +128,14 @@ function InspectCard({ task, onClose }) {
 }
 
 // Tea-box for the Focus page. 2D side profile, no lid: an open box whose
-// horizontal span is the day, 8:30am → 8:30pm. Timed items (appointments,
-// timed routines) sit at their exact time; untimed tasks are spread evenly
-// across the axis in triage priority order. Each bag is tinted by task type;
-// the bag matching the current Focus pick is raised + highlighted. Clicking
-// the box opens Today; clicking a bag inspects that task.
+// horizontal span is the day, 8:30am → 8:30pm. Timed items sit at their exact
+// time; untimed tasks are spread evenly across the axis. Each bag is tinted by
+// task type; the bag matching the current Focus pick is raised + highlighted.
+// Clicking the box opens Today; clicking a bag inspects that task.
 export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
   const [inspectedId, setInspectedId] = useState(null)
 
-  // Cap at the box capacity, in triage priority order.
-  const capped = [...tasks]
-    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
-    .slice(0, BOX_CAPACITY)
-
-  // Untimed bags share the axis evenly; timed bags snap to their time.
-  const untimed = capped.filter(t => !t.due_time)
-  const bags = capped.map(t => {
-    const min = bagMinutes(t)
-    if (min != null) return { task: t, pos: axisPos(min) }
-    const i = untimed.indexOf(t)
-    return { task: t, pos: (i + 0.5) / untimed.length }
-  })
-
+  const bags = layoutBags(tasks)
   const inspected = inspectedId != null
     ? tasks.find(t => t.id === inspectedId)
     : null
@@ -123,7 +153,9 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
         title="Open today's list"
       >
         {/* Bag layer — positioned context, inset so end-of-axis bags don't
-            overflow the box. Each bag is placed by its position on the axis. */}
+            overflow the box. Each bag is placed by its position on the axis;
+            bag + string are absolutely positioned so every bag shares one
+            baseline (only the active bag lifts). */}
         <div className="absolute" style={{ left: 12, right: 12, bottom: 22, height: 44 }}>
           {bags.map(({ task: t, pos }) => {
             const isProject = !!t.project_name
@@ -134,11 +166,12 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
             return (
               <div
                 key={t.id}
-                className="absolute flex flex-col items-center cursor-pointer"
+                className="absolute cursor-pointer"
                 style={{
                   left: `${pos * 100}%`,
                   bottom: 0,
                   width: 14,
+                  height: 44,
                   transform: 'translateX(-50%)',
                   zIndex: active ? 2 : 1,
                 }}
@@ -148,15 +181,21 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
                 {/* string */}
                 <div
                   style={{
+                    position: 'absolute',
+                    left: 6,
                     width: 2,
+                    bottom: active ? 36 : 30,
                     height: active ? 8 : 5,
                     background: '#B8AE98',
-                    transition: 'height 200ms ease',
+                    transition: 'bottom 200ms ease, height 200ms ease',
                   }}
                 />
                 {/* bag */}
                 <div
                   style={{
+                    position: 'absolute',
+                    left: 0,
+                    bottom: 0,
                     width: 14,
                     height: 30,
                     background: colors.bg,
