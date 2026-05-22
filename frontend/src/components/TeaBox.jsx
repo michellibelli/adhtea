@@ -39,7 +39,10 @@ function orderedBags(tasks) {
   const capped = [...tasks]
     .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
     .slice(0, BOX_CAPACITY)
-  const untimed = capped.filter(t => !t.due_time)
+  // Untimed bags get a stable slot from their id order. Next rewrites
+  // sort_order, so ordering untimed bags by sort_order would reshuffle the
+  // whole row on every press — the box must stay put while the focus moves.
+  const untimed = capped.filter(t => !t.due_time).sort((a, b) => a.id - b.id)
   return capped
     .map(t => {
       const min = bagMinutes(t)
