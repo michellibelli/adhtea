@@ -294,11 +294,15 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
     setLeaving(true)
     setTimeout(() => {
       const updater = (prev) => {
-        // Null sort_order falls back to 999 in pickNext, so the bump target
-        // must clear 999 — otherwise the "skipped" task sorts ahead of its
-        // null-ordered peers and stays in focus.
+        // Send the skipped task to the back. sort_order alone isn't enough:
+        // pickNext ranks in_context above sort_order, so an in-context task
+        // would stay in focus however high its sort_order. Clearing
+        // in_context too drops it below the other candidates. (Null
+        // sort_order falls back to 999 in pickNext, so the bump clears 999.)
         const maxOrder = Math.max(0, ...prev.map(t => t.sort_order ?? 999))
-        return prev.map(t => t.id === task.id ? { ...t, sort_order: maxOrder + 1 } : t)
+        return prev.map(t => t.id === task.id
+          ? { ...t, sort_order: maxOrder + 1, in_context: false }
+          : t)
       }
       if (isBonusMode) setBonusTasks(updater)
       else setTasks(updater)
