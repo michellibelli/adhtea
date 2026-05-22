@@ -107,7 +107,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
     <>
       <div
         className="relative w-full select-none cursor-pointer active:scale-[0.98] transition-transform"
-        style={{ height: 58 }}
+        style={{ height: 52 }}
         onClick={onOpen}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.() } }}
         role="button"
@@ -116,10 +116,11 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
         title="Open today's list"
       >
         {/* Bags — a single packed row, no gaps, rising out of the box.
-            items-end keeps every bag on one baseline. */}
+            items-end keeps every bag on one baseline; the front panel (higher
+            z-index) covers their lower half so they sit inside the box. */}
         <div
-          className="absolute left-0 right-0 flex items-end justify-center px-3"
-          style={{ bottom: 20 }}
+          className="absolute left-0 right-0 flex items-end justify-start px-3"
+          style={{ bottom: 14 }}
         >
           {bags.map(t => {
             const isProject = !!t.project_name
@@ -172,6 +173,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
             borderTopColor: '#DDBB86',   // lit lip — the open top edge of the box
             borderBottomWidth: 3,
             boxShadow: 'inset 0 7px 9px -5px rgba(45,26,8,0.6)',
+            zIndex: 3,   // above the bags (1/2) so it covers their lower half
           }}
         />
       </div>
