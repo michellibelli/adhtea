@@ -637,7 +637,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
           style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
         >
-          <TeaBox tasks={tasks} activeTaskId={task?.id} />
+          <TeaBox tasks={tasks} activeTaskId={task?.id} onOpen={onGoToList} />
         </div>,
         document.body
       )}

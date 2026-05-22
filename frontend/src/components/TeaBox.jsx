@@ -14,11 +14,11 @@ const WOOD_BG = `
   linear-gradient(180deg, #BE9A66 0%, #A37F4C 100%)
 `
 
-// Phase 1 — static tea-box for the Focus page. 2D side profile, no lid: an
-// open box with today's tasks standing in it as bags, each tinted by task
-// type. The bag matching the current Focus pick is raised + highlighted.
-// Click handlers + animations land in later phases.
-export default function TeaBox({ tasks = [], activeTaskId = null }) {
+// Tea-box for the Focus page. 2D side profile, no lid: an open box with
+// today's tasks standing in it as bags, each tinted by task type. The bag
+// matching the current Focus pick is raised + highlighted. Clicking the box
+// opens the Today page.
+export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
   // Bags in triage priority order (same order the Focus "Next" button walks),
   // capped at the box capacity.
   const bags = [...tasks]
@@ -26,7 +26,16 @@ export default function TeaBox({ tasks = [], activeTaskId = null }) {
     .slice(0, BOX_CAPACITY)
 
   return (
-    <div className="relative w-full select-none" style={{ height: 72 }}>
+    <div
+      className="relative w-full select-none cursor-pointer active:scale-[0.98] transition-transform"
+      style={{ height: 72 }}
+      onClick={onOpen}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.() } }}
+      role="button"
+      tabIndex={0}
+      aria-label="Open today's list"
+      title="Open today's list"
+    >
       {/* Bags — stand behind the box front panel, poking up above the rim */}
       <div
         className="absolute left-0 right-0 flex items-end justify-center gap-[2px] px-3"
