@@ -11,6 +11,13 @@ const BOX_CAPACITY = 15
 const DAY_START = 8 * 60 + 30   // 8:30am, in minutes since midnight
 const DAY_SPAN  = 12 * 60       // 12 hours → 8:30pm
 
+// Shiny gold — a completed bonus task drops into the box as one of these.
+const GOLD = {
+  bg: 'linear-gradient(135deg, #F6E29A 0%, #E4B63C 38%, #F3D777 58%, #C9971F 100%)',
+  border: '#A6781C',
+  shadow: '#7C5912',
+}
+
 const TYPE_LABEL = {
   task: 'Task', appointment: 'Appointment', routine: 'Routine', note: 'Note',
 }
@@ -32,9 +39,8 @@ function fmtTime(t) {
 }
 
 // Order the bags left-to-right as a rough morning → evening run: timed items
-// sort by their actual time, untimed tasks are spread through the day in
-// triage priority order so they interleave. The result is a single packed
-// row — placement is approximate, not a precise timeline.
+// sort by their actual time, untimed tasks are spread through the day. The
+// result is a single packed row — placement is approximate, not a timeline.
 function orderedBags(tasks) {
   const capped = [...tasks]
     .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
@@ -53,6 +59,32 @@ function orderedBags(tasks) {
     })
     .sort((a, b) => a.key - b.key)
     .map(x => x.task)
+}
+
+// One bag in the box. `gold` bags are completed bonus tasks — decorative,
+// no inspect.
+function Bag({ colors, active, gold, onClick, title }) {
+  return (
+    <div
+      onClick={onClick}
+      title={title}
+      className={gold ? '' : 'cursor-pointer'}
+      style={{
+        position: 'relative',
+        width: 15,
+        height: 34,
+        background: colors.bg,
+        border: `1.5px solid ${colors.border}`,
+        borderTopWidth: 3,            // thicker top edge — the crimped teabag fold
+        borderRadius: '3px 3px 2px 2px',
+        zIndex: active ? 2 : 1,
+        boxShadow: active
+          ? `0 0 0 2px #241A0F, 0 1px 5px rgba(0,0,0,0.45)`
+          : `1px 1px 0 ${colors.shadow}`,
+        transition: 'box-shadow 200ms ease',
+      }}
+    />
+  )
 }
 
 // Inspect card — an enlarged bag that rises out of the box and turns to face
@@ -95,19 +127,30 @@ function InspectCard({ task, onClose }) {
 
 // Tea-box for the Focus page. 2D side profile, no lid: an open box holding
 // today's tasks as bags in a single packed row, ordered roughly morning →
-// evening. Each bag is tinted by task type; the bag matching the current
-// Focus pick is brightened + ringed (it does not rise). Clicking the box
-// opens Today; clicking a bag inspects that task.
-export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
+// evening. As today's tasks are completed the coloured bags drain; completed
+// bonus tasks (goldCount) refill the box as gold bags. Clicking the box opens
+// Today; clicking a bag inspects that task.
+export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, onOpen }) {
   const [inspectedId, setInspectedId] = useState(null)
 
-  const bags = orderedBags(tasks)
+  const colored = orderedBags(tasks).slice(0, BOX_CAPACITY)
+  const goldShown = Math.max(0, Math.min(goldCount, BOX_CAPACITY - colored.length))
+  const boxFull = goldCount >= BOX_CAPACITY
+
   const inspected = inspectedId != null
     ? tasks.find(t => t.id === inspectedId)
     : null
 
   return (
     <>
+      {boxFull && (
+        <p className="text-center mb-1.5">
+          <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
+            Box full — time for some well-earned self care
+          </span>
+        </p>
+      )}
+
       <div
         className="relative w-full select-none cursor-pointer active:scale-[0.98] transition-transform"
         style={{ height: 52 }}
@@ -125,37 +168,25 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
           className="absolute left-0 right-0 flex items-end justify-start px-3"
           style={{ bottom: 14 }}
         >
-          {bags.map(t => {
+          {colored.map(t => {
             const isProject = !!t.project_name
             const colors = isProject
               ? TAG_COLORS.project
               : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
             const active = activeTaskId != null && t.id === activeTaskId
             return (
-              <div
+              <Bag
                 key={t.id}
-                onClick={e => { e.stopPropagation(); setInspectedId(t.id) }}
+                colors={colors}
+                active={active}
                 title={t.title}
-                className="cursor-pointer"
-                style={{
-                  position: 'relative',
-                  width: 15,
-                  height: 34,
-                  background: colors.bg,
-                  border: `1.5px solid ${colors.border}`,
-                  borderTopWidth: 3,           // thicker top edge — the crimped teabag fold
-                  borderRadius: '3px 3px 2px 2px',
-                  zIndex: active ? 2 : 1,
-                  // Focused bag is marked by a dark ring; every bag keeps its
-                  // full type colour.
-                  boxShadow: active
-                    ? `0 0 0 2px #241A0F, 0 1px 5px rgba(0,0,0,0.45)`
-                    : `1px 1px 0 ${colors.shadow}`,
-                  transition: 'box-shadow 200ms ease',
-                }}
+                onClick={e => { e.stopPropagation(); setInspectedId(t.id) }}
               />
             )
           })}
+          {Array.from({ length: goldShown }).map((_, i) => (
+            <Bag key={`gold-${i}`} colors={GOLD} gold title="Bonus task done" />
+          ))}
         </div>
 
         {/* Box front panel — mild wood texture with a lit top lip and an inset

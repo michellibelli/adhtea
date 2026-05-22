@@ -85,6 +85,12 @@ function pickNext(tasks) {
   return copy[0] ?? null  // null means the list is empty → show "all done" celebration
 }
 
+// localStorage key for today's completed-bonus-task count — drives the gold
+// bags in the tea-box. Per-day, so it resets naturally each morning.
+function bonusKey() {
+  return 'aria_bonus_done_' + new Date().toISOString().slice(0, 10)
+}
+
 function TeaCupBack() {
   // Back of cup — renders BEHIND the bag (used during dunk animation)
   return (
@@ -188,6 +194,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
   const [showEdit,      setShowEdit]      = useState(false)
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
+  const [bonusDone,     setBonusDone]     = useState(() => {
+    const v = Number(localStorage.getItem(bonusKey()))
+    return Number.isFinite(v) && v > 0 ? v : 0
+  })
 
   const fetchAll = useCallback(async () => {
     try {
@@ -259,6 +269,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
     const taskId = task.id
     const wasBonus = isBonusMode
     completedTaskRef.current = { taskId, wasBonus }
+    // Each completed bonus task drops into the tea-box as a gold bag.
+    if (wasBonus) {
+      setBonusDone((n) => {
+        const next = n + 1
+        try { localStorage.setItem(bonusKey(), String(next)) } catch { /* ignore */ }
+        return next
+      })
+    }
     completeTask(taskId)
     setCelebrate('dunk')
     celebrationTimersRef.current.forEach(clearTimeout)
@@ -644,7 +662,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
           style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
         >
-          <TeaBox tasks={tasks} activeTaskId={task?.id} onOpen={onGoToList} />
+          <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
         </div>,
         document.body
       )}
