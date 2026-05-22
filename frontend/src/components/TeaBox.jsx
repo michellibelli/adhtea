@@ -65,7 +65,7 @@ function InspectCard({ task, onClose }) {
   const time = fmtTime(task.due_time)
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center pb-[180px] bg-black/20"
+      className="fixed inset-0 z-[60] flex items-end justify-center pb-[170px] bg-black/20"
       style={{ perspective: '700px' }}
       onClick={onClose}
     >
@@ -93,8 +93,8 @@ function InspectCard({ task, onClose }) {
 // Tea-box for the Focus page. 2D side profile, no lid: an open box holding
 // today's tasks as bags in a single packed row, ordered roughly morning →
 // evening. Each bag is tinted by task type; the bag matching the current
-// Focus pick is raised + highlighted. Clicking the box opens Today; clicking
-// a bag inspects that task.
+// Focus pick is brightened + ringed (it does not rise). Clicking the box
+// opens Today; clicking a bag inspects that task.
 export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
   const [inspectedId, setInspectedId] = useState(null)
 
@@ -107,7 +107,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
     <>
       <div
         className="relative w-full select-none cursor-pointer active:scale-[0.98] transition-transform"
-        style={{ height: 72 }}
+        style={{ height: 58 }}
         onClick={onOpen}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.() } }}
         role="button"
@@ -115,11 +115,11 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
         aria-label="Open today's list"
         title="Open today's list"
       >
-        {/* Bags — a single packed row, no gaps, standing behind the box front
-            panel. items-end keeps every bag on one baseline. */}
+        {/* Bags — a single packed row, no gaps, rising out of the box.
+            items-end keeps every bag on one baseline. */}
         <div
           className="absolute left-0 right-0 flex items-end justify-center px-3"
-          style={{ bottom: 22 }}
+          style={{ bottom: 20 }}
         >
           {bags.map(t => {
             const isProject = !!t.project_name
@@ -130,45 +130,35 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
             return (
               <div
                 key={t.id}
-                className="flex flex-col items-center cursor-pointer"
-                style={{ width: 14, zIndex: active ? 2 : 1 }}
                 onClick={e => { e.stopPropagation(); setInspectedId(t.id) }}
                 title={t.title}
-              >
-                {/* string */}
-                <div
-                  style={{
-                    width: 2,
-                    height: active ? 8 : 5,
-                    background: '#B8AE98',
-                    transition: 'height 200ms ease',
-                  }}
-                />
-                {/* bag */}
-                <div
-                  style={{
-                    width: 14,
-                    height: 30,
-                    background: colors.bg,
-                    border: `1.5px solid ${colors.border}`,
-                    borderRadius: 2.5,
-                    transform: active ? 'translateY(-6px)' : 'none',
-                    boxShadow: active
-                      ? `0 0 0 2px ${colors.border}, 0 4px 7px rgba(0,0,0,0.28)`
-                      : `1px 1px 0 ${colors.shadow}`,
-                    transition: 'transform 200ms ease, box-shadow 200ms ease',
-                  }}
-                />
-              </div>
+                className="cursor-pointer"
+                style={{
+                  position: 'relative',
+                  width: 15,
+                  height: 34,
+                  background: colors.bg,
+                  border: `1.5px solid ${colors.border}`,
+                  borderTopWidth: 3,           // thicker top edge — the crimped teabag fold
+                  borderRadius: '3px 3px 2px 2px',
+                  zIndex: active ? 2 : 1,
+                  filter: active ? 'none' : 'saturate(0.85) brightness(0.94)',
+                  boxShadow: active
+                    ? `0 0 0 2px #FFF6E4, 0 2px 7px rgba(0,0,0,0.4)`
+                    : `1px 1px 0 ${colors.shadow}`,
+                  transition: 'filter 200ms ease, box-shadow 200ms ease',
+                }}
+              />
             )
           })}
         </div>
 
-        {/* Box front panel — mild wood texture, covers the lower part of the bags */}
+        {/* Box front panel — mild wood texture with a lit top lip and an inset
+            interior shadow so the bags read as standing inside the box. */}
         <div
           className="absolute left-0 right-0 bottom-0"
           style={{
-            height: 40,
+            height: 36,
             background: `
               repeating-linear-gradient(0deg,
                 rgba(60,38,18,0) 0px,
@@ -177,9 +167,11 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
                 rgba(60,38,18,0) 11px),
               linear-gradient(180deg, #BE9A66 0%, #A37F4C 100%)
             `,
-            borderRadius: '6px 6px 7px 7px',
+            borderRadius: '5px 5px 7px 7px',
             border: '2px solid #8A6B40',
+            borderTopColor: '#DDBB86',   // lit lip — the open top edge of the box
             borderBottomWidth: 3,
+            boxShadow: 'inset 0 7px 9px -5px rgba(45,26,8,0.6)',
           }}
         />
       </div>
