@@ -4,7 +4,9 @@ import json
 from datetime import date, timedelta
 
 from models import Domain, Project, Task, TaskStatus, TaskType, User
-from routes.tasks import demote_domain_violations, promote_due_tasks
+from routes.tasks import (
+    demote_domain_violations, promote_due_tasks, count_today, DAILY_CAP,
+)
 
 
 def _mk_user(db, username="testuser"):
@@ -263,3 +265,80 @@ def test_update_task_ignores_domain_id_when_project_already_set(client, auth_hea
     body = r.json()
     assert body["domain_id"] is None              # nulled because project wins
     assert body["domain_name"] == "Work"
+
+
+# ---------------------------------------------------------------------------
+# Daily cap — at most DAILY_CAP items in Today
+# ---------------------------------------------------------------------------
+
+def _fill_today(db, user_id, n):
+    for _ in range(n):
+        _mk_task(db, user_id, status=TaskStatus.today)
+
+
+def test_create_task_due_today_snaps_when_today_full(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    _fill_today(db_session, user.id, DAILY_CAP)
+    today = date.today()
+    r = client.post(
+        "/tasks",
+        json={"title": "overflow", "task_type": "task", "due_date": today.isoformat()},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "inbox"                       # didn't land in a full Today
+    assert date.fromisoformat(body["due_date"]) > today    # snapped to a later day
+
+
+def test_create_appointment_due_today_admitted_when_today_full(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    _fill_today(db_session, user.id, DAILY_CAP)
+    today = date.today()
+    r = client.post(
+        "/tasks",
+        json={"title": "meeting", "task_type": "appointment",
+              "due_date": today.isoformat(), "due_time": "10:00"},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "today"                   # appointments bypass the cap
+
+
+def test_schedule_today_blocked_when_today_full(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    _fill_today(db_session, user.id, DAILY_CAP)
+    t = _mk_task(db_session, user.id, status=TaskStatus.inbox)
+    r = client.post(f"/tasks/{t.id}/schedule-today", headers=auth_headers)
+    assert r.status_code == 409
+
+
+def test_schedule_today_ok_when_room(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    _fill_today(db_session, user.id, DAILY_CAP - 1)
+    t = _mk_task(db_session, user.id, status=TaskStatus.inbox)
+    r = client.post(f"/tasks/{t.id}/schedule-today", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["status"] == "today"
+
+
+def test_promote_due_tasks_respects_cap(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    today = date.today()
+    _fill_today(db_session, user.id, DAILY_CAP)
+    overdue = _mk_task(db_session, user.id, due=today - timedelta(days=1), status=TaskStatus.inbox)
+    promote_due_tasks(user, db_session)
+    db_session.refresh(overdue)
+    assert overdue.status == TaskStatus.inbox              # full Today — waits in inbox
+    assert count_today(user, db_session) == DAILY_CAP
+
+
+def test_promote_due_appointment_admitted_when_today_full(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    today = date.today()
+    _fill_today(db_session, user.id, DAILY_CAP)
+    appt = _mk_task(db_session, user.id, due=today, status=TaskStatus.inbox,
+                    task_type=TaskType.appointment)
+    promote_due_tasks(user, db_session)
+    db_session.refresh(appt)
+    assert appt.status == TaskStatus.today                 # appointment bypasses the cap

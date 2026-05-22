@@ -49,6 +49,26 @@ def _day_end(user: User) -> datetime:
     return _day_start(user) + timedelta(days=1) - timedelta(seconds=1)
 
 
+# Hard cap on how many items may sit in Today. A plain task aimed at a full
+# day is snapped to the next day instead; appointments and routines are
+# time-bound and always admitted.
+DAILY_CAP = 15
+
+
+def count_today(user: User, db: Session) -> int:
+    """Number of items currently in the user's Today list."""
+    return (
+        db.query(Task)
+        .filter(Task.owner_id == user.id, Task.status == TaskStatus.today)
+        .count()
+    )
+
+
+def _exempt_from_cap(task_type) -> bool:
+    """Appointments and routines are time-bound — they bypass the daily cap."""
+    return task_type in (TaskType.appointment, TaskType.routine)
+
+
 def own_task(task_id: int, user: User, db: Session) -> Task:
     task = db.query(Task).filter(Task.id == task_id, Task.owner_id == user.id).first()
     if not task:
@@ -295,13 +315,20 @@ def promote_due_tasks(user: User, db: Session):
     # Skip tasks whose project's domain disallows today. A Work-domain task
     # due last Friday must not auto-promote to Today on Sunday.
     rules_by_domain = _domain_rules_for_tasks(due, db)
+    # Daily cap: appointments always promote (time-bound); plain tasks only
+    # promote while Today has room, otherwise they wait in the inbox.
+    room = DAILY_CAP - count_today(user, db)
     promotable = []
     for task in due:
         domain_id = task.project.domain_id if task.project else None
         rules = rules_by_domain.get(domain_id, []) if domain_id else []
         if rules and not date_allowed(today_local, rules):
             continue
-        promotable.append(task)
+        if _exempt_from_cap(task.task_type):
+            promotable.append(task)
+        elif room > 0:
+            promotable.append(task)
+            room -= 1
     if not promotable:
         return
 
@@ -480,22 +507,23 @@ def create_task(
 
     due_today = due_date is not None and due_date <= today_local
 
-    existing_count = 0
-    if due_today:
-        existing_count = (
-            db.query(Task)
-            .filter(Task.owner_id == current_user.id, Task.status == TaskStatus.today)
-            .count()
-        )
+    # Daily cap: a plain task aimed at a full Today is snapped to the next
+    # day instead. Appointments and routines are time-bound — always admitted.
+    today_count = count_today(current_user, db)
+    place_today = due_today
+    if due_today and not _exempt_from_cap(body.task_type) and today_count >= DAILY_CAP:
+        place_today = False
+        base = today_local + timedelta(days=1)
+        due_date = next_allowed_date(base, domain_rules) if domain_rules else base
 
     task = Task(
         owner_id=current_user.id,
         title=body.title.strip(),
         notes=body.notes,
         task_type=body.task_type,
-        status=TaskStatus.today if due_today else TaskStatus.inbox,
-        scheduled_date=_day_start(current_user) if due_today else None,
-        sort_order=float(existing_count) if due_today else None,
+        status=TaskStatus.today if place_today else TaskStatus.inbox,
+        scheduled_date=_day_start(current_user) if place_today else None,
+        sort_order=float(today_count) if place_today else None,
         actuator_category_id=body.actuator_category_id,
         project_id=body.project_id,
         domain_id=task_domain_id,
@@ -760,6 +788,17 @@ def schedule_today(
     db: Session = Depends(get_db),
 ):
     task = own_task(task_id, current_user, db)
+    # Daily cap: block a plain task from entering a full Today. Appointments
+    # and routines are exempt; a task already in Today isn't a new arrival.
+    if (
+        task.status != TaskStatus.today
+        and not _exempt_from_cap(task.task_type)
+        and count_today(current_user, db) >= DAILY_CAP
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Today is full ({DAILY_CAP} items) — finish one first.",
+        )
     task.status = TaskStatus.today
     task.scheduled_date = _day_start(current_user)
     task.snooze_until = None
