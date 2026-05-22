@@ -180,3 +180,41 @@ def test_promote_moves_overdue_inbox_to_today(db_session):
     db_session.refresh(future)
     assert overdue.status == TaskStatus.today
     assert future.status == TaskStatus.inbox
+
+
+# ---------------------------------------------------------------------------
+# Appointments: a missed (past-dated) appointment must not resurface in Today.
+# It belongs in Today only on its exact due_date.
+# ---------------------------------------------------------------------------
+
+def test_promote_skips_past_appointments(db_session):
+    user = _user(db_session)
+    today = _app_today(user)
+    missed = _mk_task(db_session, user.id, status=TaskStatus.inbox,
+                      task_type=TaskType.appointment,
+                      due_date=today - timedelta(days=3))
+    due_today = _mk_task(db_session, user.id, status=TaskStatus.inbox,
+                         task_type=TaskType.appointment, due_date=today)
+
+    promote_due_tasks(user, db_session)
+    db_session.refresh(missed)
+    db_session.refresh(due_today)
+    assert missed.status == TaskStatus.inbox       # missed — stays out of Today
+    assert due_today.status == TaskStatus.today    # today's appointment promoted
+
+
+def test_demote_removes_past_appointments_from_today(db_session):
+    user = _user(db_session)
+    today = _app_today(user)
+    stale_appt = _mk_task(db_session, user.id, status=TaskStatus.today,
+                          task_type=TaskType.appointment,
+                          due_date=today - timedelta(days=2))
+    todays_appt = _mk_task(db_session, user.id, status=TaskStatus.today,
+                           task_type=TaskType.appointment, due_date=today)
+
+    moved = demote_misclassified_today(user, db_session)
+    assert moved == 1
+    db_session.refresh(stale_appt)
+    db_session.refresh(todays_appt)
+    assert stale_appt.status == TaskStatus.inbox
+    assert todays_appt.status == TaskStatus.today

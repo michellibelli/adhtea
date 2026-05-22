@@ -175,9 +175,10 @@ def carry_forward(user: User, db: Session):
 
 
 # ---------------------------------------------------------------------------
-# Demote stale Today tasks whose due_date is in the future.
-# Fixes a class of bug where tasks got status=today (drag, batch, old code paths)
-# but their due_date stayed in the future. They should not appear in Today.
+# Demote misclassified Today tasks:
+#   - any non-routine whose due_date is in the future (drag, batch, old paths)
+#   - appointments whose due_date is in the past — a missed appointment is over
+#     and must not keep reappearing in Today.
 # ---------------------------------------------------------------------------
 
 def demote_misclassified_today(user: User, db: Session):
@@ -188,8 +189,14 @@ def demote_misclassified_today(user: User, db: Session):
             Task.owner_id == user.id,
             Task.status == TaskStatus.today,
             Task.task_type != TaskType.routine,
-            Task.due_date != None,            # noqa: E711
-            Task.due_date > today_local,
+            Task.due_date.isnot(None),
+            or_(
+                Task.due_date > today_local,
+                and_(
+                    Task.task_type == TaskType.appointment,
+                    Task.due_date < today_local,
+                ),
+            ),
         )
         .all()
     )
@@ -264,6 +271,10 @@ def promote_due_tasks(user: User, db: Session):
     rules_by_domain = _domain_rules_for_tasks(due, db)
     promotable = []
     for task in due:
+        # A missed appointment (due before today) is over — never resurface it.
+        # Appointments belong in Today only on their exact due_date.
+        if task.task_type == TaskType.appointment and task.due_date < today_local:
+            continue
         domain_id = task.project.domain_id if task.project else None
         rules = rules_by_domain.get(domain_id, []) if domain_id else []
         if rules and not date_allowed(today_local, rules):
