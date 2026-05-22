@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import { logout } from '../api/auth'
@@ -357,7 +358,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[150px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[170px] md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -626,16 +627,20 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           )}
         </div>
 
-        {/* Tea-box — today's tasks as bags; the active bag is highlighted.
-            Fixed above the nav on mobile so it's always in frame; in-flow on desktop. */}
+      </div>
+
+      {/* Tea-box — today's tasks as bags; the active bag is highlighted.
+          Portaled to <body> so no transformed page ancestor can break its
+          fixed positioning. Pinned above the nav, always in frame. */}
+      {createPortal(
         <div
-          className="fixed left-0 right-0 mx-auto max-w-[300px] z-30 px-4 md:static md:max-w-none md:px-0 md:mt-3"
+          className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
           style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
         >
           <TeaBox tasks={tasks} activeTaskId={task?.id} />
-        </div>
-
-      </div>
+        </div>,
+        document.body
+      )}
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task?.domain_name} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
