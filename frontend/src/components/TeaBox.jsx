@@ -6,6 +6,10 @@ import { TAG_COLORS } from '../utils/taskColors'
 // max_total_per_day cap, so this is also the natural display limit.
 const BOX_CAPACITY = 15
 
+// The box is a time axis: 8:30am on the left, 8:30pm on the right.
+const AXIS_START = 8 * 60 + 30   // 510  (minutes since midnight)
+const AXIS_SPAN  = 12 * 60       // 720  (12 hours → 8:30pm)
+
 // Mild wood texture — warm-brown base + faint horizontal grain streaks.
 const WOOD_BG = `
   repeating-linear-gradient(0deg,
@@ -18,6 +22,18 @@ const WOOD_BG = `
 
 const TYPE_LABEL = {
   task: 'Task', appointment: 'Appointment', routine: 'Routine', note: 'Note',
+}
+
+// "14:30" -> minutes since midnight, or null when the task has no time.
+function bagMinutes(t) {
+  if (!t.due_time) return null
+  const [h, m] = t.due_time.split(':').map(Number)
+  return h * 60 + m
+}
+
+// minutes -> 0..1 position along the 8:30a–8:30p axis (clamped).
+function axisPos(min) {
+  return Math.min(1, Math.max(0, (min - AXIS_START) / AXIS_SPAN))
 }
 
 // "14:30" -> "2:30p"
@@ -67,18 +83,28 @@ function InspectCard({ task, onClose }) {
   )
 }
 
-// Tea-box for the Focus page. 2D side profile, no lid: an open box with
-// today's tasks standing in it as bags, each tinted by task type. The bag
-// matching the current Focus pick is raised + highlighted. Clicking the box
-// opens the Today page; clicking a bag inspects that task.
+// Tea-box for the Focus page. 2D side profile, no lid: an open box whose
+// horizontal span is the day, 8:30am → 8:30pm. Timed items (appointments,
+// timed routines) sit at their exact time; untimed tasks are spread evenly
+// across the axis in triage priority order. Each bag is tinted by task type;
+// the bag matching the current Focus pick is raised + highlighted. Clicking
+// the box opens Today; clicking a bag inspects that task.
 export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
   const [inspectedId, setInspectedId] = useState(null)
 
-  // Bags in triage priority order (same order the Focus "Next" button walks),
-  // capped at the box capacity.
-  const bags = [...tasks]
+  // Cap at the box capacity, in triage priority order.
+  const capped = [...tasks]
     .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
     .slice(0, BOX_CAPACITY)
+
+  // Untimed bags share the axis evenly; timed bags snap to their time.
+  const untimed = capped.filter(t => !t.due_time)
+  const bags = capped.map(t => {
+    const min = bagMinutes(t)
+    if (min != null) return { task: t, pos: axisPos(min) }
+    const i = untimed.indexOf(t)
+    return { task: t, pos: (i + 0.5) / untimed.length }
+  })
 
   const inspected = inspectedId != null
     ? tasks.find(t => t.id === inspectedId)
@@ -96,12 +122,10 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
         aria-label="Open today's list"
         title="Open today's list"
       >
-        {/* Bags — stand behind the box front panel, poking up above the rim */}
-        <div
-          className="absolute left-0 right-0 flex items-end justify-center gap-[2px] px-3"
-          style={{ bottom: 22 }}
-        >
-          {bags.map(t => {
+        {/* Bag layer — positioned context, inset so end-of-axis bags don't
+            overflow the box. Each bag is placed by its position on the axis. */}
+        <div className="absolute" style={{ left: 12, right: 12, bottom: 22, height: 44 }}>
+          {bags.map(({ task: t, pos }) => {
             const isProject = !!t.project_name
             const colors = isProject
               ? TAG_COLORS.project
@@ -110,8 +134,14 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
             return (
               <div
                 key={t.id}
-                className="flex flex-col items-center cursor-pointer"
-                style={{ width: 14 }}
+                className="absolute flex flex-col items-center cursor-pointer"
+                style={{
+                  left: `${pos * 100}%`,
+                  bottom: 0,
+                  width: 14,
+                  transform: 'translateX(-50%)',
+                  zIndex: active ? 2 : 1,
+                }}
                 onClick={e => { e.stopPropagation(); setInspectedId(t.id) }}
                 title={t.title}
               >
@@ -144,7 +174,8 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
           })}
         </div>
 
-        {/* Box front panel — mild wood texture, covers the lower part of the bags */}
+        {/* Box front panel — mild wood texture, covers the lower part of the
+            bags. Carries the axis end-times. */}
         <div
           className="absolute left-0 right-0 bottom-0"
           style={{
@@ -154,7 +185,16 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
             border: '2px solid #8A6B40',
             borderBottomWidth: 3,
           }}
-        />
+        >
+          <span
+            className="absolute"
+            style={{ left: 7, bottom: 4, fontSize: 8, fontWeight: 700, color: '#5E4628' }}
+          >8:30a</span>
+          <span
+            className="absolute"
+            style={{ right: 7, bottom: 4, fontSize: 8, fontWeight: 700, color: '#5E4628' }}
+          >8:30p</span>
+        </div>
       </div>
 
       {inspected && (
