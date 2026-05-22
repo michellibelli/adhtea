@@ -108,6 +108,13 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* Tea-box bag inspect — the bag rises out of the box edge-on, then turns
+   to face the viewer so its label can be read. */
+@keyframes bag-inspect-in {
+  from { opacity: 0; transform: translateY(38px) rotateY(78deg) scale(0.72); }
+  to   { opacity: 1; transform: translateY(0) rotateY(0deg) scale(1); }
+}
+
 .aria-page {
   min-height: 100dvh;
   animation: page-in 300ms ease-out both;
