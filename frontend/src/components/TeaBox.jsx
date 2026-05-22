@@ -143,9 +143,11 @@ export default function TeaBox({ tasks = [], activeTaskId = null, onOpen }) {
                   borderTopWidth: 3,           // thicker top edge — the crimped teabag fold
                   borderRadius: '3px 3px 2px 2px',
                   zIndex: active ? 2 : 1,
-                  filter: active ? 'none' : 'saturate(0.85) brightness(0.94)',
+                  // Focused bag pops by contrast: full colour + a dark ring,
+                  // while every other bag is clearly dimmed back.
+                  filter: active ? 'none' : 'saturate(0.5) brightness(0.72)',
                   boxShadow: active
-                    ? `0 0 0 2px #FFF6E4, 0 2px 7px rgba(0,0,0,0.4)`
+                    ? `0 0 0 2px #241A0F, 0 1px 5px rgba(0,0,0,0.45)`
                     : `1px 1px 0 ${colors.shadow}`,
                   transition: 'filter 200ms ease, box-shadow 200ms ease',
                 }}
