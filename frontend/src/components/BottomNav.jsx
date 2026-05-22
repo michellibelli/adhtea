@@ -85,6 +85,7 @@ const DESKTOP_NAV_ITEMS = [
 ]
 
 const MOBILE_BOTTOM_ITEMS = [
+  { id: 'projects', label: 'Projects', Icon: SproutIcon },
   { id: 'routines', label: 'Routines', Icon: MoonIcon },
   { id: 'selfcare', label: 'Log',      Icon: HeartSparkleIcon },
   { id: 'settings', label: 'Menu',     Icon: FlowerIcon },
