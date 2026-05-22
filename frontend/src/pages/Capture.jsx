@@ -135,6 +135,7 @@ export default function Capture({ onNavigate }) {
   const [form, setForm]         = useState(BLANK)
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(null)
+  const [savedDate, setSavedDate] = useState(null)
   const [error, setError]       = useState(null)
   const [domains, setDomains]   = useState([])
   const titleRef = useRef(null)
@@ -198,8 +199,16 @@ export default function Capture({ onNavigate }) {
           tags: form.tags.trim() || undefined,
           domain_id: form.domain_id ?? undefined,
         }
-        await createTask(payload)
-        setSaved(dueToday ? 'today' : taskType)
+        const created = await createTask(payload)
+        if (created.status === 'today') {
+          setSaved('today')
+        } else if (dueToday) {
+          // Aimed for today but rescheduled — today is full, or domain rules.
+          setSavedDate(created.due_date)
+          setSaved('snapped')
+        } else {
+          setSaved(taskType)
+        }
         reset()
       }
       setTimeout(() => setSaved(null), 2500)
@@ -214,10 +223,15 @@ export default function Capture({ onNavigate }) {
   const needsDays = form.frequency === 'weekly' || form.frequency === 'custom'
   const valid = isValid(taskType, form)
 
+  const savedDateLabel = savedDate
+    ? new Date(savedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : 'later'
   const successMsg = saved === 'routine'
     ? '↻ Routine saved — appears in your daily tasks'
     : saved === 'today'
     ? '✦ Added to today — go to Focus to see it'
+    : saved === 'snapped'
+    ? `✦ Rescheduled to ${savedDateLabel} — see your inbox`
     : saved
     ? '✦ Captured — in your inbox for triage'
     : ''
