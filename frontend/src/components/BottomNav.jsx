@@ -110,7 +110,10 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
               className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-opacity"
               style={{ opacity: isActive ? 1 : 0.55 }}
             >
-              <span style={{ display: 'flex', transform: 'scale(0.62)', transformOrigin: 'center' }}>
+              <span
+                className="flex items-center justify-center [&_svg]:!w-full [&_svg]:!h-full"
+                style={{ width: 26, height: 26 }}
+              >
                 <Icon active={isActive} />
               </span>
               <span
