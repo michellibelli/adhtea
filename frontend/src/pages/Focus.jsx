@@ -677,9 +677,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
             <button
               onClick={handleComplete}
               aria-label="Done"
-              className="h-12 w-12 flex items-center justify-center rounded-md pixel-btn-rainbow active:scale-95"
+              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </button>
