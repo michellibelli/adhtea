@@ -46,6 +46,7 @@ import AllTasks from './pages/AllTasks'
 import Projects from './pages/Projects'
 import OnboardingWelcome from './pages/OnboardingWelcome'
 import BottomNav from './components/BottomNav'
+import Logo from './components/Logo'
 import PageProgress from './components/PageProgress'
 import './App.css'
 
@@ -172,7 +173,7 @@ function AppShell() {
             className="flex-shrink-0 hover:opacity-80 transition-opacity"
             aria-label="Home"
           >
-            <img src="/adhTeaLogo.png" alt="adhTea" className="h-8 w-8 object-contain rounded-lg" />
+            <Logo size={32} />
           </button>
           <div className="flex-1 min-w-0">
             <CapacityBar capacity={capacity} compact hideLabels className="" />
