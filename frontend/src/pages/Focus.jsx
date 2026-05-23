@@ -657,13 +657,16 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
           style={{ bottom: 'calc(148px + env(safe-area-inset-bottom))' }}
         >
-          <div className="flex gap-2 items-stretch">
+          {/* Three matching 48x48 icon buttons. Capture + Next read as
+              ghost outlines (hairline ink border), Done fills amber via
+              pixel-btn-rainbow. Hierarchy by fill, not by shape or size. */}
+          <div className="flex gap-3 justify-center items-center">
             <button
               onClick={() => onNavigate?.('capture')}
               aria-label="Capture"
-              className="px-2 text-ui-subtext hover:text-ui-accent active:text-ui-text transition-colors flex items-center justify-center flex-shrink-0"
+              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
                 <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
                 <line x1="6" y1="2" x2="6" y2="5"/>
@@ -671,12 +674,25 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                 <line x1="14" y1="2" x2="14" y2="5"/>
               </svg>
             </button>
-            <Button size="lg" onClick={handleComplete} className="flex-1 pixel-btn-rainbow">
-              Done ✓
-            </Button>
-            {isBonusMode
-              ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
-              : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
+            <button
+              onClick={handleComplete}
+              aria-label="Done"
+              className="h-12 w-12 flex items-center justify-center rounded-md pixel-btn-rainbow active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+            <button
+              onClick={isBonusMode ? handleBonusSkip : handleNext}
+              aria-label={isBonusMode ? 'Skip' : 'Next'}
+              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </button>
           </div>
         </div>,
         document.body
