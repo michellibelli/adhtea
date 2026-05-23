@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="340" viewBox="0 0 480 340">
+  <g opacity="0.22">
+
+    <!-- ============ Shelf 1 (top) ============ -->
+    <rect x="0" y="110" width="480" height="6" fill="#7A5A30"/>
+    <rect x="0" y="110" width="480" height="1" fill="#B89060"/>
+
+    <!-- Books shelf 1 left cluster -->
+    <rect x="14" y="52" width="14" height="58" fill="#586E75"/>
+    <rect x="30" y="45" width="17" height="65" fill="#B04A1D"/>
+    <rect x="49" y="60" width="11" height="50" fill="#2076B0"/>
+    <rect x="62" y="38" width="17" height="72" fill="#1F857D"/>
+    <rect x="81" y="55" width="13" height="55" fill="#A07A20"/>
+    <rect x="96" y="48" width="15" height="62" fill="#5F62A8"/>
+    <rect x="113" y="52" width="12" height="58" fill="#6A7838"/>
+
+    <!-- Teacup curio -->
+    <path d="M 135 86 L 156 86 L 152 108 L 139 108 Z" fill="none" stroke="#586E75" stroke-width="1.2"/>
+    <path d="M 156 90 q 6 1 5 8 q -1 6 -7 5" fill="none" stroke="#586E75" stroke-width="1.2"/>
+    <ellipse cx="145.5" cy="86" rx="11" ry="1.6" fill="none" stroke="#586E75" stroke-width="1"/>
+
+    <!-- Books shelf 1 mid cluster -->
+    <rect x="172" y="50" width="15" height="60" fill="#586E75"/>
+    <rect x="189" y="38" width="18" height="72" fill="#B04A1D"/>
+    <rect x="209" y="55" width="13" height="55" fill="#2076B0"/>
+    <rect x="224" y="48" width="16" height="62" fill="#A07A20"/>
+    <rect x="242" y="42" width="14" height="68" fill="#1F857D"/>
+
+    <!-- Small plant curio -->
+    <rect x="265" y="95" width="14" height="15" fill="#A07A20" opacity="0.7"/>
+    <path d="M 272 95 Q 268 80 266 70 M 272 95 Q 277 82 281 72 M 272 95 Q 270 78 274 65" stroke="#1F857D" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+
+    <!-- Stacked books curio -->
+    <rect x="293" y="92" width="32" height="5" fill="#B04A1D"/>
+    <rect x="296" y="97" width="29" height="5" fill="#5F62A8"/>
+    <rect x="294" y="102" width="32" height="5" fill="#A07A20"/>
+    <rect x="297" y="107" width="29" height="3" fill="#1F857D"/>
+
+    <!-- Books shelf 1 right cluster -->
+    <rect x="342" y="48" width="13" height="62" fill="#586E75"/>
+    <rect x="357" y="55" width="15" height="55" fill="#1F857D"/>
+    <rect x="374" y="42" width="17" height="68" fill="#B04A1D"/>
+    <rect x="393" y="50" width="12" height="60" fill="#2076B0"/>
+    <rect x="407" y="38" width="16" height="72" fill="#5F62A8"/>
+    <rect x="425" y="55" width="13" height="55" fill="#A07A20"/>
+    <rect x="440" y="48" width="14" height="62" fill="#6A7838"/>
+    <rect x="456" y="52" width="15" height="58" fill="#B04A1D"/>
+
+    <!-- ============ Shelf 2 (bottom) ============ -->
+    <rect x="0" y="260" width="480" height="6" fill="#7A5A30"/>
+    <rect x="0" y="260" width="480" height="1" fill="#B89060"/>
+
+    <!-- Books shelf 2 left cluster -->
+    <rect x="12" y="205" width="15" height="55" fill="#B04A1D"/>
+    <rect x="29" y="198" width="17" height="62" fill="#586E75"/>
+    <rect x="48" y="210" width="13" height="50" fill="#A07A20"/>
+    <rect x="63" y="190" width="18" height="70" fill="#1F857D"/>
+
+    <!-- Candle curio -->
+    <rect x="95" y="225" width="10" height="35" fill="#FDF6E3" stroke="#586E75" stroke-width="0.9"/>
+    <path d="M 100 218 Q 98 213 100 211 Q 102 213 100 218 Z" fill="#D89A40" opacity="0.85"/>
+    <line x1="100" y1="225" x2="100" y2="221" stroke="#586E75" stroke-width="0.7"/>
+
+    <!-- Books shelf 2 mid cluster -->
+    <rect x="118" y="195" width="14" height="65" fill="#5F62A8"/>
+    <rect x="134" y="208" width="12" height="52" fill="#2076B0"/>
+    <rect x="148" y="198" width="16" height="62" fill="#6A7838"/>
+    <rect x="166" y="190" width="15" height="70" fill="#B04A1D"/>
+
+    <!-- Small vase curio -->
+    <path d="M 198 230 L 198 252 Q 198 258 204 258 L 214 258 Q 220 258 220 252 L 220 230 Z" fill="none" stroke="#586E75" stroke-width="1.2"/>
+    <ellipse cx="209" cy="230" rx="11" ry="2" fill="none" stroke="#586E75" stroke-width="1"/>
+    <!-- single sprig in vase -->
+    <path d="M 209 230 Q 209 220 211 215 Q 211 220 213 222" stroke="#1F857D" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+    <!-- Books shelf 2 right-mid cluster -->
+    <rect x="234" y="200" width="17" height="60" fill="#A07A20"/>
+    <rect x="253" y="192" width="15" height="68" fill="#586E75"/>
+    <rect x="270" y="205" width="13" height="55" fill="#1F857D"/>
+    <rect x="285" y="198" width="16" height="62" fill="#B04A1D"/>
+
+    <!-- Clock/picture frame curio -->
+    <rect x="313" y="208" width="30" height="36" fill="none" stroke="#586E75" stroke-width="1.2"/>
+    <circle cx="328" cy="226" r="9" fill="none" stroke="#586E75" stroke-width="0.9"/>
+    <line x1="328" y1="226" x2="328" y2="219" stroke="#586E75" stroke-width="0.9" stroke-linecap="round"/>
+    <line x1="328" y1="226" x2="333" y2="228" stroke="#586E75" stroke-width="0.9" stroke-linecap="round"/>
+
+    <!-- Books shelf 2 right cluster -->
+    <rect x="354" y="200" width="14" height="60" fill="#2076B0"/>
+    <rect x="370" y="192" width="17" height="68" fill="#5F62A8"/>
+    <rect x="389" y="208" width="13" height="52" fill="#A07A20"/>
+    <rect x="404" y="198" width="16" height="62" fill="#1F857D"/>
+    <rect x="422" y="205" width="14" height="55" fill="#B04A1D"/>
+    <rect x="438" y="192" width="15" height="68" fill="#586E75"/>
+    <rect x="455" y="200" width="17" height="60" fill="#6A7838"/>
+
+  </g>
+</svg>
