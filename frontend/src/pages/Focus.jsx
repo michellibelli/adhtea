@@ -379,7 +379,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[170px] md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[210px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
