@@ -1,5 +1,5 @@
 // Icon stroke color reads from the active theme so nav icons recolor with the palette.
-const S = 'var(--aria-primary-text)'
+const S = 'var(--aria-nav-text)'
 
 const anim = (name, dur, delay = '0s', extra = '') =>
   `${name} ${dur} ease-in-out infinite ${delay} ${extra}`.trim()
@@ -94,9 +94,11 @@ const MOBILE_BOTTOM_ITEMS = [
 export default function BottomNav({ active, onNavigate, onCapture }) {
   return (
     <>
-      {/* Mobile bottom nav bar */}
+      {/* Mobile bottom nav bar — hairline divider, icons honor --aria-nav-text
+          so paper themes (cafe) render ink labels and dark themes render
+          cream labels. Active label uses theme accent. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch bg-ui-nav border-t-4 border-ui-nav-border"
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch bg-ui-nav border-t border-ui-nav-border"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {MOBILE_BOTTOM_ITEMS.map(({ id, label, Icon }) => {
@@ -105,13 +107,19 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className="flex-1 flex flex-col items-center justify-center gap-1 py-2 transition-opacity"
-              style={{ opacity: isActive ? 1 : 0.62 }}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-opacity"
+              style={{ opacity: isActive ? 1 : 0.55 }}
             >
-              <span style={{ display: 'flex', transform: 'scale(0.78)', transformOrigin: 'center' }}>
+              <span style={{ display: 'flex', transform: 'scale(0.62)', transformOrigin: 'center' }}>
                 <Icon active={isActive} />
               </span>
-              <span className={`text-[10px] font-bold ${isActive ? 'text-ui-surface' : 'text-ui-subtext'}`}>{label}</span>
+              <span
+                className="text-[10px] font-medium"
+                style={{
+                  color: isActive ? 'var(--aria-accent)' : 'var(--aria-nav-text)',
+                  letterSpacing: '0.04em',
+                }}
+              >{label}</span>
             </button>
           )
         })}

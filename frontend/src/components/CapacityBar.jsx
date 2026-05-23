@@ -38,7 +38,10 @@ export default function CapacityBar({ capacity, compact = false, hideLabels = fa
 
   if (compact) {
     const pct = capacity.overall
-    const color = pct >= 70 ? 'bg-emerald-400' : pct >= 45 ? 'bg-blue-400' : pct >= 25 ? 'bg-amber-400' : 'bg-red-400'
+    // Single muted amber fill — capacity is information, not an alarm.
+    // The pct value already drives bar width; loud color shifts at
+    // thresholds add a second redundant signal that competes with the
+    // task itself for attention.
     return (
       <div className={className ?? 'mb-4'}>
         {!hideLabels && (
@@ -46,8 +49,11 @@ export default function CapacityBar({ capacity, compact = false, hideLabels = fa
             <span className="text-sm text-ui-subtext">Focus</span>
           </div>
         )}
-        <div className="h-2.5 rounded-full bg-ui-border overflow-hidden">
-          <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'color-mix(in srgb, var(--aria-subtext) 18%, transparent)' }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: 'var(--aria-accent)', opacity: 0.85 }}
+          />
         </div>
         {!hideLabels && note && <p className="text-[13px] text-ui-subtext mt-1 px-0.5">{note}</p>}
       </div>

@@ -15,8 +15,8 @@ function FallingLeaves() {
     <div className="falling-leaves" aria-hidden="true">
       {[1, 2, 3, 4, 5, 6].map(i => (
         <svg key={i} className={`falling-leaf falling-leaf-${i}`} viewBox="0 0 12 24">
-          <path d="M 6 0 C 13 5 13 18 6 22 C -1 18 -1 5 6 0 Z" fill="rgba(24,59,78,0.45)" />
-          <line x1="6" y1="2" x2="6" y2="20" stroke="rgba(24,59,78,0.65)" strokeWidth="0.6" strokeLinecap="round" />
+          <path d="M 6 0 C 13 5 13 18 6 22 C -1 18 -1 5 6 0 Z" fill="rgba(88,110,117,0.28)" />
+          <line x1="6" y1="2" x2="6" y2="20" stroke="rgba(88,110,117,0.40)" strokeWidth="0.5" strokeLinecap="round" />
         </svg>
       ))}
     </div>
@@ -162,15 +162,17 @@ function AppShell() {
   return (
     <div className="min-h-screen">
       <PageProgress trigger={screen} />
-      {/* Mobile top bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden bg-ui-nav border-b-4 border-ui-nav-border">
-        <div className="pride-stripe" />
-        <div className="flex items-center gap-3 px-4 h-[84px]">
+      {/* Mobile top bar — slim paper strip. Logo shrunk to wordmark-sized
+          chip, capacity bar inline. Border is a hairline so the bar reads
+          as a calm separator, not a dark slab. */}
+      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden bg-ui-nav border-b border-ui-nav-border">
+        <div className="flex items-center gap-3 px-4 h-[52px]">
           <button
             onClick={() => setScreen('focus')}
             className="flex-shrink-0 hover:opacity-80 transition-opacity"
+            aria-label="Home"
           >
-            <img src="/adhTeaLogo.png" alt="adhTea" className="h-16 w-16 object-contain rounded-xl" />
+            <img src="/adhTeaLogo.png" alt="adhTea" className="h-8 w-8 object-contain rounded-lg" />
           </button>
           <div className="flex-1 min-w-0">
             <CapacityBar capacity={capacity} compact hideLabels className="" />
@@ -178,7 +180,7 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="pt-[88px] md:pt-0">
+      <main className="pt-[56px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('tournament')} onNavigate={setScreen} />}
@@ -260,14 +262,12 @@ export default function App() {
       <FallingLeaves />
       {showChip && (
         <div style={{
-          position: 'fixed', top: 4, right: 4, zIndex: 9999,
-          background: 'rgba(74,50,96,0.85)', color: '#F5E6D3', fontWeight: 600,
-          padding: '2px 7px', fontSize: 10, fontFamily: 'monospace',
-          borderRadius: 4, pointerEvents: 'none', textAlign: 'right', lineHeight: '1.5',
-          border: '1px solid rgba(245,230,211,0.25)',
+          position: 'fixed', bottom: 'calc(96px + env(safe-area-inset-bottom))', right: 6, zIndex: 9999,
+          background: 'transparent', color: 'var(--aria-subtext)', fontWeight: 500,
+          padding: 0, fontSize: 9, fontFamily: 'monospace',
+          pointerEvents: 'none', textAlign: 'right', lineHeight: '1.3', opacity: 0.55,
         }}>
-          <div>build {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
-          <div style={{fontWeight:400, opacity:0.75}}>{new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit'})}</div>
+          <div>{typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
         </div>
       )}
       {authed

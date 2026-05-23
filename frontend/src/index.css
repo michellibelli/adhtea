@@ -35,6 +35,29 @@
    primary-hover, primary-text, nav, nav-border, input-border, badge-text.
    ============================================================================= */
 
+/* Cafe — Solarized Light. Cream paper everywhere, ink text, amber/rust
+   accents. Nav is paper too, not a dark slab. */
+[data-theme="aria-cafe"] {
+  --aria-surface:       #FAF6E8;
+  --aria-text:          #002B36;
+  --aria-subtext:       #586E75;
+  --aria-border:        color-mix(in srgb, #586E75 30%, #FDF6E3);
+  --aria-accent:        #B58900;
+  --aria-primary:       #CB4B16;
+  --aria-primary-hover: color-mix(in srgb, #CB4B16 85%, #002B36);
+  --aria-primary-text:  #FDF6E3;
+  --aria-nav:           #EEE8D5;
+  --aria-nav-border:    color-mix(in srgb, #586E75 22%, #FDF6E3);
+  --aria-nav-text:      #002B36;
+  --aria-input:         #FDF6E3;
+  --aria-input-border:  color-mix(in srgb, #586E75 22%, #FDF6E3);
+  --aria-input-focus:   #B58900;
+  --aria-badge:         #EEE8D5;
+  --aria-badge-text:    #002B36;
+  --aria-shadow:        #586E75;
+  --aria-body-bg:       #FDF6E3;
+}
+
 [data-theme="aria-berries"] {
   --aria-surface:       #FFF1CB;
   --aria-text:          #4A2D5C;
@@ -46,6 +69,7 @@
   --aria-primary-text:  #4A2D5C;
   --aria-nav:           #4A2D5C;
   --aria-nav-border:    color-mix(in srgb, #B7A3E3 50%, #4A2D5C);
+  --aria-nav-text:      #FFF1CB;
   --aria-input:         color-mix(in srgb, #FFF1CB 80%, #FFFBF0);
   --aria-input-border:  color-mix(in srgb, #4A2D5C 30%, #FFF1CB);
   --aria-input-focus:   #FF8F8F;
@@ -66,6 +90,7 @@
   --aria-primary-text:  #F3F3E0;
   --aria-nav:           #183B4E;
   --aria-nav-border:    color-mix(in srgb, #27548A 50%, #183B4E);
+  --aria-nav-text:      #F3F3E0;
   --aria-input:         #F3F3E0;
   --aria-input-border:  color-mix(in srgb, #183B4E 28%, #F3F3E0);
   --aria-input-focus:   #DDA853;
@@ -86,6 +111,7 @@
   --aria-primary-text:  #4A2D1A;
   --aria-nav:           #4A2D1A;
   --aria-nav-border:    color-mix(in srgb, #E2A16F 50%, #4A2D1A);
+  --aria-nav-text:      #FFF0DD;
   --aria-input:         color-mix(in srgb, #FFF0DD 85%, #E2A16F);
   --aria-input-border:  color-mix(in srgb, #4A2D1A 30%, #FFF0DD);
   --aria-input-focus:   #86B0BD;
@@ -246,6 +272,15 @@ body {
 
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
+
+/* Cafe page bg — flat Solarized base3 paper with the same subtle dot grain
+   that gives the page texture without competing with the cards. */
+[data-theme="aria-cafe"] {
+  --aria-page-bg:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='rgba(88,110,117,0.18)'%3E%3Ccircle cx='110' cy='25' r='1'/%3E%3Ccircle cx='55' cy='95' r='1.1'/%3E%3Ccircle cx='195' cy='80' r='1'/%3E%3Ccircle cx='30' cy='180' r='1'/%3E%3Ccircle cx='150' cy='195' r='1.1'/%3E%3Ccircle cx='220' cy='35' r='0.9'/%3E%3Ccircle cx='90' cy='225' r='1'/%3E%3C/g%3E%3C/svg%3E"),
+    #FDF6E3;
+  --aria-page-bg-size: 240px 240px, 100%;
+}
 
 /* =============================================================================
    Pixel UI utilities — Stardew-style offset borders (doubled)
@@ -591,37 +626,28 @@ body {
   box-shadow: 0 0 1px rgba(60, 40, 20, 0.18);
 }
 
-/* Repurposed: warm amber-wood done button (was a pride-rainbow border).
-   Gradient runs honey → amber → deep oak; hover adds a dusty-rose glow
-   ring as the feminine accent (subtle, only on intent-to-click). */
+/* Done button — flat amber paper card, rust ink, hairline border. The
+   previous version had a gold gradient + drop shadow + dusty-rose halo
+   that competed with the focus bag itself. This reads quieter: a printed
+   stamp on cream, not a video-game button. */
 .pixel-btn-rainbow {
-  background: linear-gradient(180deg,
-    #EFC988 0%,
-    #DDA853 45%,
-    #9F6E2D 100%) !important;
-  border: 1.5px solid #6B4A2C !important;
+  background: var(--aria-accent) !important;
+  border: 1px solid color-mix(in srgb, var(--aria-text) 35%, transparent) !important;
   border-radius: 8px !important;
-  color: #2D1F12 !important;
-  font-weight: 700 !important;
-  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.55) !important;
+  color: var(--aria-text) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  text-shadow: none !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 245, 200, 0.80),
-    inset 0 -1px 0 rgba(80, 50, 20, 0.40),
-    0 2px 4px rgba(70, 45, 20, 0.18),
-    0 4px 10px -2px rgba(70, 45, 20, 0.20) !important;
+    0 1px 2px rgba(60, 40, 20, 0.10),
+    0 3px 8px -2px rgba(60, 40, 20, 0.10) !important;
   transition: box-shadow 160ms ease-out, transform 120ms ease-out !important;
 }
 .pixel-btn-rainbow:hover {
-  background: linear-gradient(180deg,
-    #F4D49C 0%,
-    #E6B567 45%,
-    #B8823C 100%) !important;
+  background: color-mix(in srgb, var(--aria-accent) 88%, var(--aria-text)) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 245, 200, 0.90),
-    inset 0 -1px 0 rgba(80, 50, 20, 0.40),
-    0 0 0 1px rgba(216, 160, 154, 0.60),
-    0 0 12px rgba(216, 160, 154, 0.30),
-    0 4px 12px -2px rgba(70, 45, 20, 0.22) !important;
+    0 1px 2px rgba(60, 40, 20, 0.10),
+    0 5px 14px -3px rgba(60, 40, 20, 0.18) !important;
   transform: translateY(-1px);
 }
 .pixel-btn-rainbow:active { transform: translateY(1px); }

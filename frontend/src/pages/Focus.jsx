@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
-import { getTodayCapacity } from '../api/selfcare'
 import { logout } from '../api/auth'
 import SnoozeSheet from '../components/SnoozeSheet'
-import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import HamburgerMenu from '../components/HamburgerMenu'
@@ -182,7 +180,6 @@ function EditTaskSheet({ task, onSave, onClose }) {
 export default function Focus({ onGoToList, onTriage, onNavigate }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
-  const [capacity,    setCapacity]    = useState(null)
   const [loading,     setLoading]     = useState(true)
   const [leaving,     setLeaving]     = useState(false)
   const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'p1' | 'p2' | 'p3'
@@ -205,11 +202,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
       // a non-empty today list can still have nothing visible (timed routines
       // more than 5 min out are hidden), so deciding bonus-fetch from
       // list.length missed the case "no visible task but list has a hidden routine".
-      const [list, cap, done, bonus] = await Promise.all([
-        getToday(), getTodayCapacity(), getDoneToday(), getBonusTasks(),
+      const [list, done, bonus] = await Promise.all([
+        getToday(), getDoneToday(), getBonusTasks(),
       ])
       setTasks(list)
-      setCapacity(cap)
       setDoneTodayBase(done.length)
       setLocalDone(0)
       setBonusTasks(bonus)
@@ -439,20 +435,21 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           </div>
         ) : celebrate !== 'dunk' ? (
           <>
-            <div className={`bg-ui-surface/70 rounded-2xl px-3 py-1.5 md:py-3 mb-1 md:mb-4 backdrop-blur-sm border border-ui-border/40 ${isBonusMode ? 'focus-bar-bonus' : ''}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <h1 className={`text-[10px] font-pixel ${
-                    isBonusMode ? 'text-amber-900' : 'text-ui-subtext'
-                  }`}>
-                    {isBonusMode ? 'Bonus' : 'Now'}
-                  </h1>
-                </div>
+            {/* Header — inline labels on paper, no card chrome. CapacityBar
+                lives in the App.jsx top strip; duplicating it here added
+                a second progress bar competing with the bag below. */}
+            <div className={`px-1 py-1 mb-2 md:mb-4 ${isBonusMode ? 'focus-bar-bonus rounded-xl px-3 py-1.5' : ''}`}>
+              <div className="flex items-center justify-between">
+                <h1 className={`text-[11px] font-pixel tracking-[0.18em] uppercase ${
+                  isBonusMode ? 'text-amber-900' : 'text-ui-subtext'
+                }`}>
+                  {isBonusMode ? 'Bonus' : 'Now'}
+                </h1>
                 <div className="flex items-center gap-3">
                   {totalDone > 0 && (
-                    <span className={`text-xs ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>{totalDone} done</span>
+                    <span className={`text-[11px] ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>{totalDone} done</span>
                   )}
-                  <span className={`text-xs ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>
+                  <span className={`text-[11px] ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>
                     {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
                   </span>
                   {onNavigate && (
@@ -468,7 +465,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                   )}
                 </div>
               </div>
-              <CapacityBar capacity={capacity} compact className="" />
             </div>
           </>
         ) : null}
