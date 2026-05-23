@@ -279,13 +279,23 @@ body {
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
 
-/* Cafe page bg — flat Solarized base3 paper with the same subtle dot grain
-   that gives the page texture without competing with the cards. */
+/* Cafe page bg — three stacked layers:
+   1. SVG fractal-noise linen grain (very low opacity ink) for paper
+      texture across the whole page.
+   2. Warm radial vignette anchored top-left, suggesting sunlight
+      pooling through a cafe window onto the notebook page.
+   3. Solid Solarized base3 cream as the underlying paper colour.
+   Static; no motion. */
 [data-theme="aria-cafe"] {
   --aria-page-bg:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='rgba(88,110,117,0.18)'%3E%3Ccircle cx='110' cy='25' r='1'/%3E%3Ccircle cx='55' cy='95' r='1.1'/%3E%3Ccircle cx='195' cy='80' r='1'/%3E%3Ccircle cx='30' cy='180' r='1'/%3E%3Ccircle cx='150' cy='195' r='1.1'/%3E%3Ccircle cx='220' cy='35' r='0.9'/%3E%3Ccircle cx='90' cy='225' r='1'/%3E%3C/g%3E%3C/svg%3E"),
-    #FDF6E3;
-  --aria-page-bg-size: 240px 240px, 100%;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.30 0 0 0 0 0.38 0 0 0 0 0.42 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 75% 60% at 12% 0%,
+      #FFEFC8 0%,
+      #FCEBC0 15%,
+      #FBE9BD 30%,
+      #FDF6E3 60%,
+      #FDF6E3 100%);
+  --aria-page-bg-size: 220px 220px, 100%;
 }
 
 /* =============================================================================
