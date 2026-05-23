@@ -58,7 +58,12 @@ export default function Inbox({ onCountChange }) {
         {notice && (
           <div
             onClick={() => setNotice(null)}
-            className="mb-4 px-3 py-2 rounded-xl bg-amber-400/15 border border-amber-400/40 text-sm text-amber-700 cursor-pointer"
+            className="mb-4 px-3 py-2 rounded-xl text-sm cursor-pointer"
+            style={{
+              background: 'rgba(181,137,0,0.12)',
+              border: '1px solid rgba(181,137,0,0.35)',
+              color: '#7A5C00',
+            }}
           >
             {notice}
           </div>

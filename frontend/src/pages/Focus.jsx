@@ -25,8 +25,8 @@ const TEA_PUNS = [
 ]
 
 const PRIORITY_BADGE = {
-  urgent: 'bg-red-500/20 text-red-400',
-  high:   'bg-amber-500/20 text-amber-400',
+  urgent: { background: 'rgba(176,74,29,0.18)', color: '#8C3010' },
+  high:   { background: 'rgba(181,137,0,0.22)', color: '#7A5C00' },
 }
 const TAG_NAMES = {
   task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note', project: 'Project',
@@ -517,7 +517,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                       cursor: celebrate ? 'default' : 'pointer',
                     }}
                   >
-                    <span style={{ color: '#fff', lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                    <span style={{ color: colors.text, lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                       {isProject ? (
                         <>
                           <span style={{ fontSize: 16 }}>Project</span>
@@ -568,7 +568,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
                 <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 !h-[230px] md:!h-auto md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
+                    <span
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2"
+                      style={PRIORITY_BADGE[task.priority]}
+                    >
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                     </span>
                   )}
@@ -664,7 +667,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             <button
               onClick={() => onNavigate?.('capture')}
               aria-label="Capture"
-              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
+              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
@@ -677,7 +680,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             <button
               onClick={handleComplete}
               aria-label="Done"
-              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
+              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <polyline points="20 6 9 17 4 12"/>
@@ -686,7 +689,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             <button
               onClick={isBonusMode ? handleBonusSkip : handleNext}
               aria-label={isBonusMode ? 'Skip' : 'Next'}
-              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
+              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                 <line x1="5" y1="12" x2="19" y2="12"/>

@@ -113,10 +113,10 @@ function InspectCard({ task, onClose }) {
           animation: 'bag-inspect-in 360ms cubic-bezier(0.34,1.2,0.64,1) both',
         }}
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: colors.text, opacity: 0.75 }}>
           {label}{time ? ` · ${time}` : ''}
         </p>
-        <p className="text-base font-bold text-white leading-snug break-words">
+        <p className="text-base font-bold leading-snug break-words" style={{ color: colors.text }}>
           {task.title}
         </p>
       </div>
@@ -189,26 +189,33 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
           ))}
         </div>
 
-        {/* Box front panel — mild wood texture with a lit top lip and an inset
-            interior shadow so the bags read as standing inside the box. */}
+        {/* Box front panel — layered wood-grain texture (fine + coarse
+            stripes at slight angles) on a warm oak gradient. Top lip
+            softened to a warm cream-tan instead of the prior bright
+            highlight; borders thinned for a less video-game-y look. */}
         <div
           className="absolute left-0 right-0 bottom-0"
           style={{
             height: 36,
             background: `
+              repeating-linear-gradient(1.5deg,
+                rgba(50,30,10,0) 0px,
+                rgba(50,30,10,0.06) 2px,
+                rgba(50,30,10,0) 4px),
               repeating-linear-gradient(0deg,
                 rgba(60,38,18,0) 0px,
-                rgba(60,38,18,0.07) 3px,
-                rgba(255,240,214,0.05) 6px,
-                rgba(60,38,18,0) 11px),
-              linear-gradient(180deg, #BE9A66 0%, #A37F4C 100%)
+                rgba(60,38,18,0.11) 1px,
+                rgba(60,38,18,0) 5px,
+                rgba(255,238,206,0.09) 9px,
+                rgba(60,38,18,0) 14px),
+              linear-gradient(180deg, #C49A66 0%, #A57A48 100%)
             `,
-            borderRadius: '5px 5px 7px 7px',
-            border: '2px solid #8A6B40',
-            borderTopColor: '#DDBB86',   // lit lip — the open top edge of the box
-            borderBottomWidth: 3,
-            boxShadow: 'inset 0 7px 9px -5px rgba(45,26,8,0.6)',
-            zIndex: 3,   // above the bags (1/2) so it covers their lower half
+            borderRadius: '4px 4px 7px 7px',
+            border: '1.5px solid #7A5A30',
+            borderTopColor: '#C9A26E',
+            borderBottomWidth: 2,
+            boxShadow: 'inset 0 5px 7px -4px rgba(45,26,8,0.5)',
+            zIndex: 3,
           }}
         />
       </div>

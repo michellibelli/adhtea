@@ -49,10 +49,20 @@ export default function CapacityBar({ capacity, compact = false, hideLabels = fa
             <span className="text-sm text-ui-subtext">Focus</span>
           </div>
         )}
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'color-mix(in srgb, var(--aria-subtext) 18%, transparent)' }}>
+        <div
+          className="h-2 rounded-full overflow-hidden"
+          style={{
+            background: 'color-mix(in srgb, var(--aria-subtext) 22%, transparent)',
+            boxShadow: 'inset 0 1px 1.5px rgba(60,40,20,0.12)',
+          }}
+        >
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: 'var(--aria-accent)', opacity: 0.85 }}
+            style={{
+              width: `${pct}%`,
+              background: 'linear-gradient(90deg, color-mix(in srgb, var(--aria-accent) 85%, var(--aria-text)) 0%, var(--aria-accent) 100%)',
+              boxShadow: '0 0 5px color-mix(in srgb, var(--aria-accent) 45%, transparent)',
+            }}
           />
         </div>
         {!hideLabels && note && <p className="text-[13px] text-ui-subtext mt-1 px-0.5">{note}</p>}

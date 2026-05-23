@@ -27,12 +27,14 @@ import { isTimedVisible } from '../utils/timing'
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
 
 function computeLoad(tasks) {
-  if (!tasks.length) return { label: 'All clear', color: 'text-emerald-400', bar: 'bg-emerald-400', pct: 0, level: 'clear' }
+  // Muted Solarized-ish tones — earth/printed-label feel rather than the
+  // prior bright dashboard rainbow (emerald/blue/amber/red Tailwind 400).
+  if (!tasks.length) return { label: 'All clear',  color: '#6A7838', pct: 0,   level: 'clear' }
   const sum = tasks.reduce((a, t) => a + (WEIGHTS[t.weight] || 2), 0)
-  if (sum <= 6)  return { label: 'Light day',  color: 'text-emerald-400', bar: 'bg-emerald-400', pct: 25,  level: 'light' }
-  if (sum <= 12) return { label: 'Manageable', color: 'text-blue-400',    bar: 'bg-blue-400',    pct: 55,  level: 'manageable' }
-  if (sum <= 18) return { label: 'Heavy day',  color: 'text-amber-400',   bar: 'bg-amber-400',   pct: 80,  level: 'heavy' }
-  return              { label: 'Overloaded',  color: 'text-red-400',     bar: 'bg-red-400',     pct: 100, level: 'overloaded' }
+  if (sum <= 6)  return { label: 'Light day',   color: '#6A7838', pct: 25,  level: 'light' }
+  if (sum <= 12) return { label: 'Manageable',  color: '#5B7A9C', pct: 55,  level: 'manageable' }
+  if (sum <= 18) return { label: 'Heavy day',   color: '#A07A20', pct: 80,  level: 'heavy' }
+  return              { label: 'Overloaded',   color: '#B04A1D', pct: 100, level: 'overloaded' }
 }
 
 const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3 }
@@ -223,10 +225,10 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
           <div className="mb-4">
             <div className="flex items-center justify-between text-xs mb-1 px-0.5">
               <span className="text-ui-subtext">Load</span>
-              <span className={`font-medium ${load.color}`}>{load.label}</span>
+              <span className="font-medium" style={{ color: load.color }}>{load.label}</span>
             </div>
             <div className="h-1 rounded-full bg-ui-border overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-500 ${load.bar}`} style={{ width: `${load.pct}%` }} />
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${load.pct}%`, background: load.color }} />
             </div>
           </div>
         )}
@@ -240,9 +242,15 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
 
         {/* Overloaded prompt */}
         {load.level === 'overloaded' && !dismissOverload && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between gap-3">
-            <p className="text-sm text-red-400">You have more than a full day here. What moves?</p>
-            <button onClick={() => setDismissOverload(true)} className="text-red-400/60 hover:text-red-400 text-xs flex-shrink-0">✕</button>
+          <div
+            className="mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3"
+            style={{
+              background: 'rgba(176,74,29,0.10)',
+              border: '1px solid rgba(176,74,29,0.30)',
+            }}
+          >
+            <p className="text-sm" style={{ color: '#B04A1D' }}>You have more than a full day here. What moves?</p>
+            <button onClick={() => setDismissOverload(true)} className="text-xs flex-shrink-0" style={{ color: 'rgba(176,74,29,0.7)' }}>✕</button>
           </div>
         )}
 

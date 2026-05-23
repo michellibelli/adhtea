@@ -93,12 +93,12 @@ function EditForm({ task, onSave, onCancel }) {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <p className="text-[10px] text-ui-subtext mb-1">
-              Date{(isTask || isAppt) && <span className="text-red-400 ml-0.5">*</span>}
+              Date{(isTask || isAppt) && <span className="ml-0.5" style={{ color: '#B04A1D' }}>*</span>}
             </p>
             <Input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
           </div>
           <div>
-            <p className="text-[10px] text-ui-subtext mb-1">Time{isAppt && <span className="text-red-400 ml-0.5">*</span>}</p>
+            <p className="text-[10px] text-ui-subtext mb-1">Time{isAppt && <span className="ml-0.5" style={{ color: '#B04A1D' }}>*</span>}</p>
             <Input type="time" value={form.due_time} onChange={(e) => set('due_time', e.target.value)} />
           </div>
         </div>
@@ -315,10 +315,16 @@ export default function TaskCard({
                   )}
 
                   {task.priority === 'urgent' && (
-                    <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-medium">Urgent</span>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: 'rgba(176,74,29,0.18)', color: '#8C3010' }}
+                    >Urgent</span>
                   )}
                   {task.is_critical && task.priority !== 'urgent' && (
-                    <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-medium">Critical</span>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: 'rgba(181,137,0,0.22)', color: '#7A5C00' }}
+                    >Critical</span>
                   )}
                 </div>
               </div>
@@ -335,7 +341,7 @@ export default function TaskCard({
                     onClick={() => setShowSnooze(true)}
                     title="Snooze"
                     aria-label="Snooze"
-                    className="p-1 text-ui-subtext/40 hover:text-amber-400 transition-colors"
+                    className="p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
                       <circle cx="12" cy="12" r="9" />
@@ -358,7 +364,9 @@ export default function TaskCard({
                   onClick={() => onDelete?.(task.id)}
                   title="Delete"
                   aria-label="Delete"
-                  className="p-1 text-ui-subtext/40 hover:text-red-400 transition-colors"
+                  className="p-1 text-ui-subtext/40 transition-colors"
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#B04A1D' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '' }}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
                     <polyline points="3 6 5 6 21 6" />
