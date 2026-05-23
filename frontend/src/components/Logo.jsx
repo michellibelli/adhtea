@@ -19,34 +19,27 @@ export default function Logo({ size = 32 }) {
         fill="none"
         aria-hidden="true"
       >
-        {/* Lanceolate (lance-shaped) tea leaf — pointed tip, tapered
-            base, ~3:1 length-to-width ratio. Matches the real shape
-            of Camellia sinensis leaves rather than a generic oval. */}
+        {/* Pointed-oval leaf, top-stemmed. */}
         <path
-          d="M 12 1.5 C 15.5 5 16 14 12 22.5 C 8 14 8.5 5 12 1.5 Z"
+          d="M 12 2 C 18 6 18 18 12 22 C 6 18 6 6 12 2 Z"
           fill="#859900"
-          fillOpacity="0.78"
+          fillOpacity="0.75"
         />
-        {/* Strong central midrib running the full length. */}
+        {/* Midrib — single stroke down the middle so the leaf reads
+            as a real leaf at small sizes, not just a green blob. */}
         <path
-          d="M 12 3 L 12 21"
-          stroke="#3F5520"
-          strokeWidth="0.85"
-          strokeOpacity="0.65"
+          d="M 12 4 L 12 20"
+          stroke="#586E75"
+          strokeWidth="0.9"
+          strokeOpacity="0.55"
           strokeLinecap="round"
         />
-        {/* Five pairs of side veins, angling outward and downward
-            from the midrib in a V-pattern — the signature look of
-            a tea leaf at glance. */}
+        {/* Two thin veins on each side for hand-drawn detail. */}
         <path
-          d="M 12 5.5  L 10.5 6.5  M 12 5.5  L 13.5 6.5
-             M 12 8.5  L 9.8  10   M 12 8.5  L 14.2 10
-             M 12 11.5 L 9.5  13.2 M 12 11.5 L 14.5 13.2
-             M 12 14.5 L 9.8  15.8 M 12 14.5 L 14.2 15.8
-             M 12 17.5 L 10.6 18.4 M 12 17.5 L 13.4 18.4"
-          stroke="#3F5520"
+          d="M 12 9 L 9 11 M 12 9 L 15 11 M 12 14 L 9 16 M 12 14 L 15 16"
+          stroke="#586E75"
           strokeWidth="0.5"
-          strokeOpacity="0.5"
+          strokeOpacity="0.4"
           strokeLinecap="round"
         />
       </svg>
