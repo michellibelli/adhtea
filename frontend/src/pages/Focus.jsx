@@ -557,11 +557,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                   text inside the safe band so the clip-path's chamfered top
                   corners never clip the text. */}
               <div
-                className={`w-full max-w-[260px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
-                style={!isBonusMode ? { filter: 'drop-shadow(3px 3px 0 #7A5090)' } : undefined}
+                className={`w-full max-w-[200px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
+                style={!isBonusMode ? { filter: 'drop-shadow(2px 3px 0 rgba(60,40,20,0.25))' } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-9 py-4 md:py-8 min-h-[190px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 min-h-[260px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
@@ -620,11 +620,25 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
           </div>{/* end relative wrapper */}
 
-          {/* Actions — hidden during dunk */}
+          {/* Actions — hidden during dunk. Mobile row absorbs the Capture
+              FAB so all three controls sit together below the bag. */}
           {celebrate !== 'dunk' && (
-            <div className="mt-2 md:mt-4">
-              {/* Mobile: single row */}
-              <div className="flex gap-2 md:hidden">
+            <div className="mt-auto pt-5 md:mt-4 md:pt-0">
+              {/* Mobile: capture + done + next, centred + narrower */}
+              <div className="flex gap-2 md:hidden max-w-[300px] mx-auto items-stretch">
+                <button
+                  onClick={() => onNavigate?.('capture')}
+                  aria-label="Capture"
+                  className="px-3 rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent transition-colors flex items-center justify-center flex-shrink-0"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                    <line x1="6" y1="2" x2="6" y2="5"/>
+                    <line x1="10" y1="2" x2="10" y2="5"/>
+                    <line x1="14" y1="2" x2="14" y2="5"/>
+                  </svg>
+                </button>
                 <Button size="lg" onClick={handleComplete} className="flex-1 pixel-btn-rainbow">
                   Done ✓
                 </Button>
