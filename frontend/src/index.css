@@ -142,10 +142,23 @@
 }
 
 .aria-page {
-  min-height: 100dvh;
+  /* Mobile: subtract the 56px top-bar offset so the page fits exactly
+     in the viewport (main has pt-[56px] on mobile). Without this, the
+     page is 100dvh tall + 56px main padding = document is 56px taller
+     than viewport, breaking any fixed-positioning math that mixes
+     flow elements with viewport-anchored ones (action row, tea-box). */
+  min-height: calc(100dvh - 56px);
   animation: page-in 300ms ease-out both;
   /* Background moved to .aria-page-bg layer (rendered once in App.jsx)
      so the fixed falling-leaves overlay can sit between bg and content. */
+}
+
+@media (min-width: 768px) {
+  .aria-page {
+    /* Desktop has no top-bar offset (sidebar nav instead), so the page
+       fills the full viewport. */
+    min-height: 100dvh;
+  }
 }
 
 /* Fixed page-background layer — z-index -1 keeps it behind everything

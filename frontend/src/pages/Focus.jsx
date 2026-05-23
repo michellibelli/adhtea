@@ -378,7 +378,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
   }
 
   return (
-    <div className="aria-page flex flex-col h-[calc(100dvh_-_56px)] max-h-[calc(100dvh_-_56px)] min-h-[calc(100dvh_-_56px)] md:h-auto md:max-h-none md:min-h-[100dvh] overflow-hidden md:overflow-visible">
+    <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
       <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(222px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
