@@ -661,9 +661,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
             <button
               onClick={() => onNavigate?.('capture')}
               aria-label="Capture"
-              className="px-3 rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent transition-colors flex items-center justify-center flex-shrink-0"
+              className="px-2 text-ui-subtext hover:text-ui-accent active:text-ui-text transition-colors flex items-center justify-center flex-shrink-0"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
                 <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
                 <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
                 <line x1="6" y1="2" x2="6" y2="5"/>
