@@ -62,8 +62,11 @@ function orderedBags(tasks) {
 }
 
 // One bag in the box. `gold` bags are completed bonus tasks — decorative,
-// no inspect.
+// no inspect. Each bag renders as a tag + string + body stack so the box
+// reads as teabags, not as a row of tiny books (the bookshelf backdrop
+// has narrow rectangles of similar muted colours).
 function Bag({ colors, active, gold, onClick, title }) {
+  const stringColor = '#3F2F1A'
   return (
     <div
       onClick={onClick}
@@ -71,19 +74,42 @@ function Bag({ colors, active, gold, onClick, title }) {
       className={gold ? '' : 'cursor-pointer'}
       style={{
         position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         width: 15,
-        height: 34,
+        zIndex: active ? 2 : 1,
+      }}
+    >
+      {/* Paper tag — small square cap at the top of the string */}
+      <div style={{
+        width: 7,
+        height: 4,
+        background: colors.bg,
+        border: `0.6px solid ${colors.border}`,
+        borderRadius: 1,
+      }} />
+      {/* String connecting tag to bag body */}
+      <div style={{
+        width: 1,
+        height: 5,
+        background: stringColor,
+        opacity: 0.65,
+      }} />
+      {/* Bag body — the bulk of the teabag */}
+      <div style={{
+        width: 15,
+        height: 28,
         background: colors.bg,
         border: `1.5px solid ${colors.border}`,
-        borderTopWidth: 3,            // thicker top edge — the crimped teabag fold
+        borderTopWidth: 2.5,           // crimped fold
         borderRadius: '3px 3px 2px 2px',
-        zIndex: active ? 2 : 1,
         boxShadow: active
           ? `0 0 0 2px #241A0F, 0 1px 5px rgba(0,0,0,0.45)`
           : `1px 1px 0 ${colors.shadow}`,
         transition: 'box-shadow 200ms ease',
-      }}
-    />
+      }} />
+    </div>
   )
 }
 
