@@ -224,64 +224,57 @@ body {
    Each leaf is assigned one behavior so the six together read as
    a mix of leaf types/conditions, not one uniform sweep. */
 
+/* Smooth pendulum-like fall — leaves arc through a few wide waypoints
+   instead of zig-zagging through many. Combined with ease-in-out
+   per-segment timing, the motion decelerates as the leaf nears each
+   waypoint and accelerates away from it — natural gravity + drag
+   feel, no metronome bounce. */
+
 @keyframes leaf-flutter {
-  0%   { transform: translate(0, 0)         rotate3d(0,0,1,0deg);          opacity: 0; }
-  5%   { opacity: 0.65; }
-  15%  { transform: translate(45px, 12vh)   rotate3d(1,0.4,0.6,180deg); }
-  28%  { transform: translate(-55px, 24vh)  rotate3d(0.5,1,0.3,360deg); }
-  42%  { transform: translate(60px, 38vh)   rotate3d(0.3,0.5,1,540deg); }
-  58%  { transform: translate(-45px, 52vh)  rotate3d(1,0.3,0.6,720deg); }
-  72%  { transform: translate(55px, 68vh)   rotate3d(0.5,1,0.3,900deg); }
-  86%  { transform: translate(-35px, 84vh)  rotate3d(0.3,0.5,1,1080deg); }
-  95%  { opacity: 0.65; }
-  100% { transform: translate(20px, 108vh)  rotate3d(1,1,0.5,1260deg);     opacity: 0; }
+  0%   { transform: translate(0, 0)        rotate3d(1,0.4,0.6,0deg);     opacity: 0; }
+  6%   { opacity: 0.6; }
+  35%  { transform: translate(50px, 32vh)  rotate3d(1,0.4,0.6,420deg); }
+  70%  { transform: translate(-40px, 70vh) rotate3d(0.6,1,0.4,840deg); }
+  94%  { opacity: 0.6; }
+  100% { transform: translate(20px, 110vh) rotate3d(0.5,0.7,1,1080deg);  opacity: 0; }
 }
 
 @keyframes leaf-glide-r {
   0%   { transform: translate(0, 0)         rotate(-12deg); opacity: 0; }
-  7%   { opacity: 0.6; }
-  35%  { transform: translate(35px, 35vh)   rotate(8deg); }
-  70%  { transform: translate(80px, 70vh)   rotate(25deg); }
-  93%  { opacity: 0.6; }
-  100% { transform: translate(120px, 108vh) rotate(38deg);  opacity: 0; }
+  8%   { opacity: 0.55; }
+  50%  { transform: translate(55px, 50vh)   rotate(14deg); }
+  92%  { opacity: 0.55; }
+  100% { transform: translate(110px, 110vh) rotate(35deg);  opacity: 0; }
 }
 
 @keyframes leaf-glide-l {
   0%   { transform: translate(0, 0)          rotate(12deg);  opacity: 0; }
-  7%   { opacity: 0.6; }
-  35%  { transform: translate(-35px, 35vh)   rotate(-8deg); }
-  70%  { transform: translate(-80px, 70vh)   rotate(-25deg); }
-  93%  { opacity: 0.6; }
-  100% { transform: translate(-120px, 108vh) rotate(-38deg); opacity: 0; }
+  8%   { opacity: 0.55; }
+  50%  { transform: translate(-55px, 50vh)   rotate(-14deg); }
+  92%  { opacity: 0.55; }
+  100% { transform: translate(-110px, 110vh) rotate(-35deg); opacity: 0; }
 }
 
 @keyframes leaf-drop {
-  0%   { transform: translate(0, 0)        rotate(0deg);   opacity: 0; }
-  6%   { opacity: 0.55; }
-  18%  { transform: translate(7px, 18vh)   rotate(14deg); }
-  36%  { transform: translate(-6px, 36vh)  rotate(-11deg); }
-  54%  { transform: translate(8px, 54vh)   rotate(16deg); }
-  72%  { transform: translate(-5px, 72vh)  rotate(-9deg); }
-  90%  { transform: translate(4px, 90vh)   rotate(12deg); opacity: 0.55; }
-  100% { transform: translate(0, 108vh)    rotate(0deg);  opacity: 0; }
+  0%   { transform: translate(0, 0)       rotate(0deg);  opacity: 0; }
+  7%   { opacity: 0.5; }
+  40%  { transform: translate(10px, 40vh) rotate(18deg); }
+  75%  { transform: translate(-8px, 78vh) rotate(-12deg); }
+  93%  { opacity: 0.5; }
+  100% { transform: translate(3px, 110vh) rotate(8deg);  opacity: 0; }
 }
 
-/* Behavior mix across the six leaves. Timing per the physics:
-   - Symmetric leaves (the "drop" cohort) are aerodynamically efficient
-     and reach a higher terminal velocity → SHORTER durations (10–11s).
-   - Asymmetric leaves (the "flutter" cohort) generate uneven drag and
-     whirl much more slowly → LONGER durations (16–18s).
-   - Gliders sit in between (13–14s).
-   Timing function is `linear`: CSS applies the per-segment easing
-   *between every keyframe pair*, so a non-linear curve makes each leaf
-   pause briefly at every keyframe (the "sticking" effect). The gravity
-   feel comes from the keyframe spacing inside @keyframes leaf-* instead. */
-.falling-leaf-1 { left: 8%;  width: 19px; animation: leaf-glide-r 13s linear infinite; animation-delay: 0s; }
-.falling-leaf-2 { left: 24%; width: 23px; animation: leaf-flutter 17s linear infinite; animation-delay: -5s; }
-.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-drop    10s linear infinite; animation-delay: -4s; }
-.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-glide-l 14s linear infinite; animation-delay: -3s; }
-.falling-leaf-5 { left: 78%; width: 22px; animation: leaf-flutter 18s linear infinite; animation-delay: -10s; }
-.falling-leaf-6 { left: 91%; width: 18px; animation: leaf-drop    11s linear infinite; animation-delay: -6s; }
+/* Slow pendulum drift. Durations ~2x slower than the prior pass.
+   Timing function is `ease-in-out` so the leaf decelerates as it
+   approaches each keyframe waypoint and accelerates away — the
+   natural gravity + drag pattern of a real leaf drifting down,
+   no metronome back-and-forth. */
+.falling-leaf-1 { left: 8%;  width: 19px; animation: leaf-glide-r 28s ease-in-out infinite; animation-delay: 0s; }
+.falling-leaf-2 { left: 24%; width: 23px; animation: leaf-flutter 34s ease-in-out infinite; animation-delay: -10s; }
+.falling-leaf-3 { left: 44%; width: 20px; animation: leaf-drop    24s ease-in-out infinite; animation-delay: -8s; }
+.falling-leaf-4 { left: 60%; width: 19px; animation: leaf-glide-l 30s ease-in-out infinite; animation-delay: -6s; }
+.falling-leaf-5 { left: 78%; width: 22px; animation: leaf-flutter 36s ease-in-out infinite; animation-delay: -20s; }
+.falling-leaf-6 { left: 91%; width: 18px; animation: leaf-drop    26s ease-in-out infinite; animation-delay: -14s; }
 
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
