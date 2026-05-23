@@ -114,10 +114,15 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
                 <Icon active={isActive} />
               </span>
               <span
-                className="text-[10px] font-medium"
                 style={{
                   color: isActive ? 'var(--aria-accent)' : 'var(--aria-nav-text)',
-                  letterSpacing: '0.04em',
+                  fontFamily: 'var(--font-pixel)',
+                  fontWeight: isActive ? 600 : 500,
+                  fontSize: '9.5px',
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                  paddingLeft: '0.22em',
                 }}
               >{label}</span>
             </button>
