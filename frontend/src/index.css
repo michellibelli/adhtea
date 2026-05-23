@@ -279,23 +279,33 @@ body {
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
 
-/* Cafe page bg — three stacked layers:
-   1. SVG fractal-noise linen grain (very low opacity ink) for paper
-      texture across the whole page.
-   2. Warm radial vignette anchored top-left, suggesting sunlight
-      pooling through a cafe window onto the notebook page.
-   3. Solid Solarized base3 cream as the underlying paper colour.
-   Static; no motion. */
+/* Cafe page bg — multi-layer cafe-table-with-notebook backdrop. Order
+   from front to back (top of stack renders over the next):
+   1. Stronger linen / coffee-paper grain (fractalNoise, ~14% ink).
+   2. Faint ink dot constellation — sparse specks like pencil marks
+      or paper specks. Big tile so they look random, not repeated.
+   3. Coffee-cup ring stains, scattered. Two rings per ~700px tile,
+      stroke at very low opacity so they read as ghosted residue.
+   4. Warm radial vignette anchored top-left — sunlight through
+      a cafe window pooling on the page.
+   5. Solid Solarized base3 cream as the underlying paper.
+   All static; no animation. */
 [data-theme="aria-cafe"] {
   --aria-page-bg:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.30 0 0 0 0 0.38 0 0 0 0 0.42 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.30 0 0 0 0 0.38 0 0 0 0 0.42 0 0 0 0.14 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cg fill='rgba(88,110,117,0.22)'%3E%3Ccircle cx='34' cy='62' r='0.8'/%3E%3Ccircle cx='112' cy='28' r='0.7'/%3E%3Ccircle cx='198' cy='104' r='0.9'/%3E%3Ccircle cx='268' cy='44' r='0.7'/%3E%3Ccircle cx='358' cy='128' r='0.8'/%3E%3Ccircle cx='76' cy='168' r='0.7'/%3E%3Ccircle cx='154' cy='232' r='0.9'/%3E%3Ccircle cx='240' cy='198' r='0.8'/%3E%3Ccircle cx='322' cy='266' r='0.7'/%3E%3Ccircle cx='44' cy='314' r='0.8'/%3E%3Ccircle cx='178' cy='348' r='0.7'/%3E%3Ccircle cx='298' cy='372' r='0.9'/%3E%3Ccircle cx='384' cy='312' r='0.8'/%3E%3Ccircle cx='128' cy='400' r='0.7'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='720' fill='none'%3E%3Cg stroke='rgba(120,85,40,0.09)' stroke-width='1.6'%3E%3Ccircle cx='130' cy='560' r='52'/%3E%3Cpath d='M 117 552 q 13 -8 26 0' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='540' cy='180' r='44'/%3E%3Cpath d='M 528 174 q 12 -7 24 0' stroke-width='1' opacity='0.6'/%3E%3C/g%3E%3C/svg%3E"),
     radial-gradient(ellipse 75% 60% at 12% 0%,
       #FFEFC8 0%,
       #FCEBC0 15%,
       #FBE9BD 30%,
       #FDF6E3 60%,
       #FDF6E3 100%);
-  --aria-page-bg-size: 220px 220px, 100%;
+  --aria-page-bg-size:
+    220px 220px,
+    420px 420px,
+    720px 720px,
+    100% 100%;
 }
 
 /* =============================================================================

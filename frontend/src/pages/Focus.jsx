@@ -541,14 +541,13 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               })()}
             </div>
 
-            {/* Sway wrapper — string + bag pivot together from top center.
-                Disabled during dunk so the descent reads cleanly. */}
+            {/* String + bag wrapper. Pendulum sway removed — the bag
+                hangs still. The wrapper is kept so the descent during
+                dunk still drives off the same node. */}
             <div
               className="flex flex-col items-center"
               style={{
                 marginTop: -1, position: 'relative', zIndex: 1,
-                transformOrigin: 'top center',
-                animation: celebrate === 'dunk' ? 'none' : 'teabag-sway 10s ease-in-out infinite',
               }}
             >
               <div style={{
