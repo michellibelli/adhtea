@@ -72,6 +72,10 @@ function AppShell() {
   const [showCheckIn, setShowCheckIn]         = useState(false)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
+  // Headline stats pushed up from <Focus /> so the mobile top bar can
+  // render "Now / X done / Y left" beneath the capacity bar. Null when
+  // Focus isn't mounted or its data hasn't loaded yet.
+  const [focusStats, setFocusStats]           = useState(null)
 
   useEffect(() => {
     getMe()
@@ -163,9 +167,10 @@ function AppShell() {
   return (
     <div className="min-h-screen">
       <PageProgress trigger={screen} />
-      {/* Mobile top bar — slim paper strip. Logo shrunk to wordmark-sized
-          chip, capacity bar inline. Border is a hairline so the bar reads
-          as a calm separator, not a dark slab. */}
+      {/* Mobile top bar — slim paper strip. Logo on the left, capacity
+          bar + Focus stats stacked on the right inside the same 52px
+          frame. Stats only show when on the Focus screen and Focus has
+          pushed up its current Now/done/left labels. */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden bg-ui-nav border-b border-ui-nav-border">
         <div className="flex items-center gap-3 px-4 h-[52px]">
           <button
@@ -175,8 +180,27 @@ function AppShell() {
           >
             <Logo size={32} />
           </button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <CapacityBar capacity={capacity} compact hideLabels className="" />
+            {screen === 'focus' && focusStats && (
+              <div
+                className="flex items-center justify-between"
+                style={{
+                  fontFamily: 'var(--font-pixel)',
+                  fontSize: '9.5px',
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                  color: focusStats.isBonus ? '#92400e' : 'var(--aria-subtext)',
+                }}
+              >
+                <span>{focusStats.label}</span>
+                <span className="flex gap-2">
+                  {focusStats.done && <span>{focusStats.done}</span>}
+                  <span>{focusStats.remaining}</span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -184,7 +208,7 @@ function AppShell() {
       <main className="pt-[56px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('tournament')} onNavigate={setScreen} />}
+        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('tournament')} onNavigate={setScreen} onStatsChange={setFocusStats} />}
         {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTournament={() => setScreen('tournament')} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}

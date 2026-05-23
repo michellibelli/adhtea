@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
-import { logout } from '../api/auth'
 import SnoozeSheet from '../components/SnoozeSheet'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import HamburgerMenu from '../components/HamburgerMenu'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
 import { TAG_COLORS } from '../utils/taskColors'
 import TeaBox from '../components/TeaBox'
@@ -177,7 +175,7 @@ function EditTaskSheet({ task, onSave, onClose }) {
   )
 }
 
-export default function Focus({ onGoToList, onTriage, onNavigate }) {
+export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -187,7 +185,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
   const completedTaskRef     = useRef(null)  // { taskId, wasBonus }
   const celebrationTimersRef = useRef([])
   const [showSnooze,    setShowSnooze]    = useState(false)
-  const [showMenu,      setShowMenu]      = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
@@ -225,6 +222,21 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
   const task         = pickNext(activeList)
   const remaining   = activeList.length
   const totalDone   = doneTodayBase + localDone
+
+  // Push the page's headline stats up to App.jsx so the mobile top bar
+  // can render "Now / X done / Y left" under the capacity bar. Clear
+  // them on unmount so the slot doesn't leak Focus state into other
+  // screens that don't own the data.
+  useEffect(() => {
+    if (!onStatsChange) return
+    onStatsChange({
+      label: isBonusMode ? 'Bonus' : 'Now',
+      done: totalDone > 0 ? `${totalDone} done` : null,
+      remaining: isBonusMode ? `${remaining} bonus` : `${remaining} left`,
+      isBonus: isBonusMode,
+    })
+    return () => onStatsChange(null)
+  }, [onStatsChange, isBonusMode, totalDone, remaining])
 
   async function advance(fn) {
     setLeaving(true)
@@ -435,10 +447,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           </div>
         ) : celebrate !== 'dunk' ? (
           <>
-            {/* Header — inline labels on paper, no card chrome. CapacityBar
-                lives in the App.jsx top strip; duplicating it here added
-                a second progress bar competing with the bag below. */}
-            <div className={`px-1 py-1 mb-2 md:mb-4 ${isBonusMode ? 'focus-bar-bonus rounded-xl px-3 py-1.5' : ''}`}>
+            {/* Header — desktop only. Mobile renders the same stats up
+                in the App.jsx top bar (below the capacity bar) so the
+                page content area has more room for the bag itself. */}
+            <div className={`hidden md:block px-1 py-1 md:mb-4 ${isBonusMode ? 'focus-bar-bonus rounded-xl px-3 py-1.5' : ''}`}>
               <div className="flex items-center justify-between">
                 <h1 className={`text-[11px] font-pixel tracking-[0.18em] uppercase ${
                   isBonusMode ? 'text-amber-900' : 'text-ui-subtext'
@@ -452,17 +464,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                   <span className={`text-[11px] ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>
                     {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
                   </span>
-                  {onNavigate && (
-                    <button
-                      onClick={() => setShowMenu(true)}
-                      className={`${isBonusMode ? 'text-amber-900 hover:text-amber-950' : 'text-ui-subtext hover:text-ui-text'} transition-colors p-1 md:hidden`}
-                      aria-label="Menu"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-                        <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-                      </svg>
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -713,13 +714,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task?.domain_name} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
-      {showMenu && onNavigate && (
-        <HamburgerMenu
-          onNavigate={onNavigate}
-          onClose={() => setShowMenu(false)}
-          onLogout={() => logout().then(() => window.location.reload())}
-        />
-      )}
     </div>
   )
 }
