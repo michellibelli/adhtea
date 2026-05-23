@@ -379,7 +379,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[280px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[222px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -469,9 +469,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           </>
         ) : null}
 
-        {/* Card */}
+        {/* Card — bag pinned to the bottom of the column on mobile so it
+            sits right above the fixed action row. Desktop keeps top-pinned
+            because the actions stack in flow below it. */}
         <div
-          className={`flex-1 min-h-0 flex flex-col justify-start pt-2 md:pt-5 ${
+          className={`flex-1 min-h-0 flex flex-col justify-end md:justify-start pt-2 md:pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate
@@ -561,7 +563,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                 style={!isBonusMode ? { filter: 'drop-shadow(2px 3px 0 rgba(60,40,20,0.25))' } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 min-h-[260px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 min-h-[220px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
@@ -620,49 +622,62 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
           </div>{/* end relative wrapper */}
 
-          {/* Actions — hidden during dunk. Mobile row absorbs the Capture
-              FAB so all three controls sit together below the bag. */}
+          {/* Desktop actions — stacked in flow below the bag. The mobile
+              action row is portaled below (fixed-position) so it stays
+              equidistant between bag bottom and tea-box bag tops on every
+              viewport. */}
           {celebrate !== 'dunk' && (
-            <div className="mt-auto pt-5 md:mt-4 md:pt-0">
-              {/* Mobile: capture + done + next, centred + narrower */}
-              <div className="flex gap-2 md:hidden max-w-[300px] mx-auto items-stretch">
-                <button
-                  onClick={() => onNavigate?.('capture')}
-                  aria-label="Capture"
-                  className="px-3 rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent transition-colors flex items-center justify-center flex-shrink-0"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-                    <line x1="6" y1="2" x2="6" y2="5"/>
-                    <line x1="10" y1="2" x2="10" y2="5"/>
-                    <line x1="14" y1="2" x2="14" y2="5"/>
-                  </svg>
-                </button>
-                <Button size="lg" onClick={handleComplete} className="flex-1 pixel-btn-rainbow">
-                  Done ✓
-                </Button>
+            <div className="mt-4 hidden md:flex md:flex-col gap-2">
+              <Button size="lg" onClick={handleComplete} className="w-full pixel-btn-rainbow">
+                Done ✓
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>Snooze</Button>
                 {isBonusMode
                   ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
                   : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
-              </div>
-              {/* Desktop: stacked */}
-              <div className="hidden md:flex md:flex-col gap-2">
-                <Button size="lg" onClick={handleComplete} className="w-full pixel-btn-rainbow">
-                  Done ✓
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>Snooze</Button>
-                  {isBonusMode
-                    ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
-                    : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
-                </div>
               </div>
             </div>
           )}
         </div>
 
       </div>
+
+      {/* Mobile action row — portaled to <body>, fixed-positioned so it sits
+          at a consistent distance above the tea-box regardless of bag size
+          or viewport height. Hidden during dunk and when no task exists.
+          The gap below the row (row-bottom → tea-box bag-tops) equals the
+          gap above the row (row-top → bag-bottom) because the page column's
+          pb-[222px] anchors the bag's bottom to the matching distance. */}
+      {celebrate !== 'dunk' && createPortal(
+        <div
+          className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
+          style={{ bottom: 'calc(148px + env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex gap-2 items-stretch">
+            <button
+              onClick={() => onNavigate?.('capture')}
+              aria-label="Capture"
+              className="px-3 rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent transition-colors flex items-center justify-center flex-shrink-0"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                <line x1="6" y1="2" x2="6" y2="5"/>
+                <line x1="10" y1="2" x2="10" y2="5"/>
+                <line x1="14" y1="2" x2="14" y2="5"/>
+              </svg>
+            </button>
+            <Button size="lg" onClick={handleComplete} className="flex-1 pixel-btn-rainbow">
+              Done ✓
+            </Button>
+            {isBonusMode
+              ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
+              : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Tea-box — today's tasks as bags; the active bag is highlighted.
           Portaled to <body> so no transformed page ancestor can break its
