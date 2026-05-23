@@ -378,7 +378,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
   }
 
   return (
-    <div className="aria-page flex flex-col">
+    <div className="aria-page flex flex-col h-[calc(100dvh-56px)] md:h-auto md:min-h-[100dvh] overflow-hidden md:overflow-visible">
       <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[222px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
@@ -563,7 +563,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                 style={!isBonusMode ? { filter: 'drop-shadow(2px 3px 0 rgba(60,40,20,0.25))' } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 min-h-[220px] md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 h-[clamp(140px,calc(100dvh-322px),360px)] md:h-auto md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
