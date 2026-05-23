@@ -379,7 +379,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
 
   return (
     <div className="aria-page flex flex-col">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[210px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[230px] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -670,7 +670,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
       {createPortal(
         <div
           className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
-          style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(72px + env(safe-area-inset-bottom))' }}
         >
           <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
         </div>,
