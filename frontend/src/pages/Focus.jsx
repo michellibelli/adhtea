@@ -469,11 +469,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
           </>
         ) : null}
 
-        {/* Card — bag pinned to the bottom of the column on mobile so it
-            sits right above the fixed action row. Desktop keeps top-pinned
-            because the actions stack in flow below it. */}
+        {/* Card — bag pinned to the TOP of the card area (justify-start)
+            so its bottom position is determined by its own h (200px on
+            mobile) added to the card area's top, NOT by the card area's
+            bottom. This makes the bag immune to any column-height bugs
+            from .aria-page cascade weirdness — bag bottom is always
+            `top + 200` regardless of how tall the column ends up being. */}
         <div
-          className={`flex-1 min-h-0 flex flex-col justify-end md:justify-start pt-2 md:pt-5 ${
+          className={`flex-1 min-h-0 flex flex-col justify-start pt-2 md:pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate
@@ -559,11 +562,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate }) {
                   text inside the safe band so the clip-path's chamfered top
                   corners never clip the text. */}
               <div
-                className={`w-full max-w-[200px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
+                className={`w-full max-w-[180px] md:max-w-[260px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
                 style={!isBonusMode ? { filter: 'drop-shadow(2px 3px 0 rgba(60,40,20,0.25))' } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 h-[clamp(140px,calc(100dvh_-_334px_-_env(safe-area-inset-bottom)),360px)] md:h-auto md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 !h-[200px] md:!h-auto md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 ${PRIORITY_BADGE[task.priority]}`}>
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
