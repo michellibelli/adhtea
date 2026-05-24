@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-20 (BUILD 4.0.1)*
+*Last updated: 2026-05-23 (BUILD 4.0.61)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -37,9 +37,45 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
-## Current status — Phases 1–3 complete + Triage redesign closed ✅
+## Current status — Phases 1–3 complete + Cafe visual pass shipped ✅
 
 Everything below is shipped and live on adh-tea.fun.
+
+### BUILDs 4.0.21–4.0.61 completed (2026-05-23) — cafe overhaul
+
+Deep visual + structural pass toward the cozy-cafe / tea-shop direction the user requested. 40+ pushes in one session.
+
+**Theme**
+- New `aria-cafe` theme (Solarized Light, paper + ink + amber/rust) made default. One-time migration from `aria-americano` via `aria_theme_migrated_cafe` flag.
+- Theme-scoped Tailwind retints (`[data-theme="aria-cafe"]`) mute saturated 400/500 utility colours across the app — Tournament, Capture, Settings, Login, TaskCard all retint without per-file edits.
+
+**Background**
+- `frontend/public/bookshelf-bg.svg` tiled at 540x420 — two shelves of muted books + eclectic curios (hourglass, crystal ball, glass dome with mushroom, skull, brass telescope, pinned butterfly).
+- Each curio gets a staggered CSS keyframe animation (30s cycle, ~2.4s active window per curio, negative delays) so only one or two curios are moving at any moment.
+- Linen grain (fractalNoise) + warm radial-gradient window vignette layered on the Solarized base3 cream.
+- Previous falling-leaves animation dropped — component + render removed.
+
+**Focus page restructure**
+- Bag + action row + tea-box now a single in-flow stack inside the card area, anchored to the **top** of the column directly under the focus bar (justify-start, items-center, gap-3).
+- Bag h fixed at **230px** (max-w 180 mobile / 260 desktop). Pendulum sway removed; bag hangs still. Drop shadow expanded to a layered soft + hard stack for "lifted paper" feel.
+- Action row: three matching **48x48 ghost icon buttons** — Capture / Done / Next — same shape, same border, same `bg-ui-surface/20 backdrop-blur-sm` fill so they read against the bookshelf bg. Done's check stroke a touch heavier for hierarchy.
+- Tea-box bags now render as **paper tag + 1x5 string + 15x28 body** (per-bag) — shape disambiguates them from the bookshelf books once both share muted Solarized colours. Bags also get `filter: saturate(1.25)` in TeaBox only so they pop on the wood plank without globally re-saturating the muted palette.
+- Hamburger menu removed on mobile; `HamburgerMenu` import + render gone. Focus pushes its Now / X done / Y left stats up to the App.jsx top bar via a new `onStatsChange` callback prop.
+
+**Top bar + chrome**
+- Mobile top bar: logo (new inline-SVG `<Logo />` — pointed-oval tea leaf + Lora italic "adhTea" wordmark) + capacity track + Focus stats stacked in the 52px frame.
+- Desktop focus bar (Focus.jsx inline header) wrapped in a visible paper-card box (full cream surface, 25% ink border, lift shadow + inset highlight).
+- Empty capacity track (no morning log yet) renders a visible 32% subtext trough instead of returning null.
+- Bottom-nav labels in Lora UPPERCASE with 0.22em tracking + active accent underline. Icon wrappers normalised to 26x26 so labels align across all items.
+- WakeScreen dropped — keep-alive bot handles Render warm-up. `!ready` placeholder replaced with Logo + "brewing…" splash.
+
+**Cards + inputs**
+- `.pixel-card` shadow stack expanded — border 95% + short/mid/long shadows + inset top-edge highlight.
+- `.pixel-input-lift` utility added; applied to Input/Textarea base. Focus state adds a soft 2px amber ring.
+- Capacity card in SelfCare/Log full mode now uses `.pixel-card`.
+
+**Behaviour fixes**
+- Morning check-in only gates before 14:00. Past 2pm with no log → skip gate. EOD gate still pops in evening if morning log exists.
 
 ### BUILD 4.0.1 completed (2026-05-20)
 

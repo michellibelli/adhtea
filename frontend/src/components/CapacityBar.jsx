@@ -86,7 +86,7 @@ export default function CapacityBar({ capacity, compact = false, hideLabels = fa
   }
 
   return (
-    <div className="px-4 py-3 rounded-2xl bg-ui-surface border border-ui-border">
+    <div className="pixel-card px-4 py-3 rounded-2xl">
       <div className="space-y-2">
         {SOURCES.map(({ key, label, color }) => (
           <div key={key} className="flex items-center gap-2">
