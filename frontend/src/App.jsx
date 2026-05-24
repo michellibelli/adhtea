@@ -180,9 +180,9 @@ function AppShell() {
           <div
             className="flex-1 min-w-0 flex flex-col justify-center gap-1 px-3 py-1.5 rounded-lg"
             style={{
-              background: 'color-mix(in srgb, var(--aria-surface) 70%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--aria-border) 95%, transparent)',
-              boxShadow: '0 1px 2px rgba(60,40,20,0.08), inset 0 1px 0 rgba(255,248,224,0.45)',
+              background: 'var(--aria-surface)',
+              border: '1px solid color-mix(in srgb, var(--aria-text) 28%, transparent)',
+              boxShadow: '0 1px 2px rgba(60,40,20,0.14), 0 2px 6px -2px rgba(60,40,20,0.16), inset 0 1px 0 rgba(255,248,224,0.55)',
             }}
           >
             <CapacityBar capacity={capacity} compact hideLabels className="" />
