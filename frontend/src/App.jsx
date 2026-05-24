@@ -82,14 +82,18 @@ function AppShell() {
         // Morning check-in hard gate: every day, the user logs once before
         // touching the rest of the app. Confidence in "do this next" requires
         // knowing today's capacity — without a log the bin-pack budget is a
-        // guess. Gate is dismissed the moment a log exists.
+        // guess. Gate only applies in the morning window (before 14:00) —
+        // if the user opens the app later in the day with no log yet, just
+        // let them in instead of forcing a stale "morning" check-in.
         try {
           const log = await getTodayLog()
-          if (!log) {
+          const hour = new Date().getHours()
+          const isMorningWindow = hour < 14
+          if (!log && isMorningWindow) {
             setShowCheckIn(true)
-          } else if (isEODWindow(u)) {
-            // Already checked in this morning; still pop the EOD gate in the
-            // evening if there's no closing entry.
+          } else if (log && isEODWindow(u)) {
+            // Morning log exists; still pop the EOD gate in the evening
+            // if there's no closing entry.
             setShowEOD(true)
           }
         } catch { /* non-blocking */ }
