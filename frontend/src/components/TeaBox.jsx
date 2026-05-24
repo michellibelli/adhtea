@@ -79,6 +79,11 @@ function Bag({ colors, active, gold, onClick, title }) {
         alignItems: 'center',
         width: 15,
         zIndex: active ? 2 : 1,
+        // Bag colours pull from the same muted TAG_COLORS used by the
+        // Focus tag + bookshelf, which made the bags too pale in the
+        // tea-box. Re-saturate by 25% here only — keeps the rest of
+        // the app calm but lets the bags pop against the wood + bg.
+        filter: gold ? undefined : 'saturate(1.25)',
       }}
     >
       {/* Paper tag — small square cap at the top of the string */}
