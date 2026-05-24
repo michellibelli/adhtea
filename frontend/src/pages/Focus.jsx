@@ -391,7 +391,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(202px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(238px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -683,7 +683,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       {celebrate !== 'dunk' && createPortal(
         <div
           className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
-          style={{ bottom: 'calc(134px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(170px + env(safe-area-inset-bottom))' }}
         >
           {/* Three matching 48x48 icon buttons. Capture + Next read as
               ghost outlines (hairline ink border), Done fills amber via
@@ -732,7 +732,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       {createPortal(
         <div
           className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
-          style={{ bottom: 'calc(68px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(100px + env(safe-area-inset-bottom))' }}
         >
           <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
         </div>,

@@ -26,7 +26,22 @@ function execNote(val) {
 // compact=false: full source breakdown (for SelfCare page)
 export default function CapacityBar({ capacity, compact = false, hideLabels = false, className }) {
   if (!capacity) {
-    if (hideLabels) return null
+    // hideLabels (top-bar variant): render an empty track so the bar
+    // slot stays visually present even before the morning log exists.
+    // Full variant: show the prompt card as before.
+    if (hideLabels) {
+      return (
+        <div className={className ?? 'mb-4'}>
+          <div
+            className="h-2 rounded-full overflow-hidden"
+            style={{
+              background: 'color-mix(in srgb, var(--aria-subtext) 22%, transparent)',
+              boxShadow: 'inset 0 1px 1.5px rgba(60,40,20,0.12)',
+            }}
+          />
+        </div>
+      )
+    }
     return (
       <div className="px-4 py-2.5 rounded-2xl bg-ui-surface border border-ui-border">
         <p className="text-xs text-ui-subtext">Log your morning to see today's capacity</p>
