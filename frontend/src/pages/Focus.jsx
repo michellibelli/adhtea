@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
 import CapacityBar from '../components/CapacityBar'
@@ -392,7 +391,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(238px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(70px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -474,14 +473,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
           </>
         ) : null}
 
-        {/* Card — bag pinned to the BOTTOM of the card area on mobile so
-            its bottom edge sits at exactly `pb` distance from viewport
-            bottom (matched to the fixed action-row + tea-box stack
-            below). On tiny viewports the bag wrapper will overflow
-            above the card area, with the tag + string clipped by the
-            top bar — acceptable trade-off for symmetric gaps. */}
+        {/* Card area — bag + action row + tea-box stack together at the
+            bottom of the column on every breakpoint. justify-end +
+            items-center pins them as a contiguous unit so the tea-box
+            visually anchors to the action row's bottom edge. */}
         <div
-          className={`flex-1 min-h-0 flex flex-col justify-end md:justify-start pt-2 md:pt-5 ${
+          className={`flex-1 min-h-0 flex flex-col justify-end items-center gap-3 pt-2 md:pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate
@@ -489,8 +486,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                 : ''
           }`}
         >
-          {/* Relative wrapper — mx-14 narrows bag on mobile without affecting focus box */}
-          <div className="relative mx-14 md:mx-0">
+          {/* Relative wrapper — width via max-w-* on the inner bag div;
+              card area's items-center centers this horizontally. */}
+          <div className="relative w-full flex justify-center">
 
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
@@ -634,12 +632,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
 
           </div>{/* end relative wrapper */}
 
-          {/* Desktop actions — same 3-icon-button row as mobile. The
-              mobile action row is portaled and fixed; desktop renders
-              in-flow under the bag (sidebar nav lives at the left so
-              no fixed-position is needed). */}
+          {/* Shared 3-icon action row — same on mobile + desktop. Sits
+              directly under the bag, with the tea-box directly under it.
+              Spacing controlled by the card area's gap-3. */}
           {celebrate !== 'dunk' && (
-            <div className="mt-4 hidden md:flex gap-3 justify-center items-center">
+            <div className="flex gap-3 justify-center items-center">
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
@@ -675,82 +672,16 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             </div>
           )}
 
-          {/* Desktop tea-box — in-flow directly below the action row so
-              it sits anchored to the buttons. Mobile renders the tea-box
-              via the fixed portal below. */}
+          {/* Shared tea-box — in-flow directly below the action row on
+              both mobile and desktop. Sized 260px wide centered. */}
           {celebrate !== 'dunk' && (
-            <div className="hidden md:block mt-4 mx-auto" style={{ maxWidth: 260 }}>
+            <div className="w-full mx-auto" style={{ maxWidth: 260 }}>
               <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
             </div>
           )}
         </div>
 
       </div>
-
-      {/* Mobile action row — portaled to <body>, fixed-positioned so it sits
-          at a consistent distance above the tea-box regardless of bag size
-          or viewport height. Hidden during dunk and when no task exists.
-          The gap below the row (row-bottom → tea-box bag-tops) equals the
-          gap above the row (row-top → bag-bottom) because the page column's
-          pb-[222px] anchors the bag's bottom to the matching distance. */}
-      {celebrate !== 'dunk' && createPortal(
-        <div
-          className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
-          style={{ bottom: 'calc(170px + env(safe-area-inset-bottom))' }}
-        >
-          {/* Three matching 48x48 icon buttons. Capture + Next read as
-              ghost outlines (hairline ink border), Done fills amber via
-              pixel-btn-rainbow. Hierarchy by fill, not by shape or size. */}
-          <div className="flex gap-3 justify-center items-center">
-            <button
-              onClick={() => onNavigate?.('capture')}
-              aria-label="Capture"
-              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-                <line x1="6" y1="2" x2="6" y2="5"/>
-                <line x1="10" y1="2" x2="10" y2="5"/>
-                <line x1="14" y1="2" x2="14" y2="5"/>
-              </svg>
-            </button>
-            <button
-              onClick={handleComplete}
-              aria-label="Done"
-              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </button>
-            <button
-              onClick={isBonusMode ? handleBonusSkip : handleNext}
-              aria-label={isBonusMode ? 'Skip' : 'Next'}
-              className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Mobile tea-box — portaled + fixed above the bottom nav. Desktop
-          renders the tea-box in-flow below the action row (see card-area
-          block above), so this portal is mobile-only. */}
-      {createPortal(
-        <div
-          className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
-          style={{ bottom: 'calc(100px + env(safe-area-inset-bottom))' }}
-        >
-          <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
-        </div>,
-        document.body
-      )}
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task?.domain_name} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
