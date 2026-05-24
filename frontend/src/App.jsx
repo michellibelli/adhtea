@@ -164,12 +164,11 @@ function AppShell() {
   return (
     <div className="min-h-screen">
       <PageProgress trigger={screen} />
-      {/* Mobile top bar — logo on the left, "focus bar" card on the right
-          containing the capacity track + Now/done/left stats inside a
-          paper-like box. The card border makes the focus bar pop against
-          the bookshelf backdrop instead of floating bare on the page. */}
+      {/* Mobile top bar — logo on the left, capacity track + stats stacked
+          on the right inside the same 52px frame. Stats only show on the
+          Focus screen once Focus pushes them up. */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden bg-ui-nav border-b border-ui-nav-border">
-        <div className="flex items-center gap-3 px-3 h-[52px]">
+        <div className="flex items-center gap-3 px-4 h-[52px]">
           <button
             onClick={() => setScreen('focus')}
             className="flex-shrink-0 hover:opacity-80 transition-opacity"
@@ -177,14 +176,7 @@ function AppShell() {
           >
             <Logo size={32} />
           </button>
-          <div
-            className="flex-1 min-w-0 flex flex-col justify-center gap-1 px-3 py-1.5 rounded-lg"
-            style={{
-              background: 'var(--aria-surface)',
-              border: '1px solid color-mix(in srgb, var(--aria-text) 28%, transparent)',
-              boxShadow: '0 1px 2px rgba(60,40,20,0.14), 0 2px 6px -2px rgba(60,40,20,0.16), inset 0 1px 0 rgba(255,248,224,0.55)',
-            }}
-          >
+          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <CapacityBar capacity={capacity} compact hideLabels className="" />
             {screen === 'focus' && focusStats && (
               <div

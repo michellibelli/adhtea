@@ -448,11 +448,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
         ) : celebrate !== 'dunk' ? (
           <>
             {/* Header — desktop only. Mobile renders the same stats up
-                in the App.jsx top bar (below the capacity bar) so the
-                page content area has more room for the bag itself.
-                On desktop we render the capacity bar here too since
-                there's no top app bar. */}
-            <div className={`hidden md:block px-1 py-1 md:mb-4 ${isBonusMode ? 'focus-bar-bonus rounded-xl px-3 py-1.5' : ''}`}>
+                in the App.jsx top bar. On desktop the capacity bar +
+                stats sit here inside a visible paper-card box so the
+                focus bar reads as a distinct element on the page. */}
+            <div
+              className={`hidden md:block md:mb-4 rounded-lg ${isBonusMode ? 'focus-bar-bonus' : ''}`}
+              style={!isBonusMode ? {
+                background: 'var(--aria-surface)',
+                border: '1px solid color-mix(in srgb, var(--aria-text) 25%, transparent)',
+                padding: '8px 12px',
+                boxShadow: '0 1px 2px rgba(60,40,20,0.10), 0 3px 8px -2px rgba(60,40,20,0.12), inset 0 1px 0 rgba(255,248,224,0.55)',
+              } : { padding: '6px 12px' }}
+            >
               <div className="flex items-center justify-between">
                 <h1 className={`text-[11px] font-pixel tracking-[0.18em] uppercase ${
                   isBonusMode ? 'text-amber-900' : 'text-ui-subtext'
