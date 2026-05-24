@@ -474,11 +474,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
         ) : null}
 
         {/* Card area — bag + action row + tea-box stack together at the
-            bottom of the column on every breakpoint. justify-end +
-            items-center pins them as a contiguous unit so the tea-box
-            visually anchors to the action row's bottom edge. */}
+            TOP of the column (justify-start) so the whole unit sits
+            directly under the focus bar / top header instead of
+            floating at the bottom of the page. */}
         <div
-          className={`flex-1 min-h-0 flex flex-col justify-end items-center gap-3 pt-2 md:pt-5 ${
+          className={`flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate

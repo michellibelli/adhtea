@@ -35,8 +35,8 @@ export default function CapacityBar({ capacity, compact = false, hideLabels = fa
           <div
             className="h-2 rounded-full overflow-hidden"
             style={{
-              background: 'color-mix(in srgb, var(--aria-subtext) 22%, transparent)',
-              boxShadow: 'inset 0 1px 1.5px rgba(60,40,20,0.12)',
+              background: 'color-mix(in srgb, var(--aria-subtext) 32%, transparent)',
+              boxShadow: 'inset 0 1px 2px rgba(60,40,20,0.18)',
             }}
           />
         </div>
