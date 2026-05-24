@@ -7,8 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, likelySleeping } from './api/client'
-import WakeScreen from './components/WakeScreen'
+import { isLoggedIn } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import CapacityBar from './components/CapacityBar'
@@ -110,7 +109,17 @@ function AppShell() {
   }
 
   if (!ready) {
-    return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">…</p></div>
+    return (
+      <div className="aria-page flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 -mt-12">
+          <Logo size={56} />
+          <p
+            className="text-sm text-ui-subtext"
+            style={{ fontFamily: 'var(--font-pixel)', fontStyle: 'italic', letterSpacing: '0.04em' }}
+          >brewing…</p>
+        </div>
+      </div>
+    )
   }
 
   if (needsAlphaChallenge) {
@@ -223,7 +232,6 @@ function AppShell() {
 
 export default function App() {
   const [authed, setAuthed]           = useState(isLoggedIn())
-  const [warming, setWarming]         = useState(() => isLoggedIn() && likelySleeping())
   const [preAuthScreen, setPreAuthScreen] = useState(
     () => window.location.pathname === '/signup' ? 'signup' : 'login'
   )
@@ -238,16 +246,7 @@ export default function App() {
 
   function handleAuthed() {
     window.history.replaceState({}, '', '/')
-    setWarming(true)
     setAuthed(true)
-  }
-
-  if (warming) {
-    return (
-      <ThemeProvider>
-        <WakeScreen onReady={() => setWarming(false)} />
-      </ThemeProvider>
-    )
   }
 
   if (!authed && inviteToken) {

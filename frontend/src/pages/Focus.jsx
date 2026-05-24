@@ -391,7 +391,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(222px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(202px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
         {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
         {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
@@ -470,14 +470,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
           </>
         ) : null}
 
-        {/* Card — bag pinned to the TOP of the card area (justify-start)
-            so its bottom position is determined by its own h (200px on
-            mobile) added to the card area's top, NOT by the card area's
-            bottom. This makes the bag immune to any column-height bugs
-            from .aria-page cascade weirdness — bag bottom is always
-            `top + 200` regardless of how tall the column ends up being. */}
+        {/* Card — bag pinned to the BOTTOM of the card area on mobile so
+            its bottom edge sits at exactly `pb` distance from viewport
+            bottom (matched to the fixed action-row + tea-box stack
+            below). On tiny viewports the bag wrapper will overflow
+            above the card area, with the tag + string clipped by the
+            top bar — acceptable trade-off for symmetric gaps. */}
         <div
-          className={`flex-1 min-h-0 flex flex-col justify-start pt-2 md:pt-5 ${
+          className={`flex-1 min-h-0 flex flex-col justify-end md:justify-start pt-2 md:pt-5 ${
             celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
               ? 'opacity-0 pointer-events-none'
               : !celebrate
@@ -563,7 +563,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                   corners never clip the text. */}
               <div
                 className={`w-full max-w-[180px] md:max-w-[260px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
-                style={!isBonusMode ? { filter: 'drop-shadow(2px 3px 0 rgba(60,40,20,0.25))' } : undefined}
+                style={!isBonusMode ? {
+                  filter: 'drop-shadow(3px 5px 6px rgba(60,40,20,0.32)) drop-shadow(0 1px 0 rgba(60,40,20,0.20))',
+                } : undefined}
               >
                 <div style={{ clipPath: 'polygon(22% 0%, 78% 0%, 100% 24%, 100% 94%, 93% 100%, 7% 100%, 0% 94%, 0% 24%)' }}>
                 <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 md:py-8 !h-[230px] md:!h-auto md:min-h-[340px] flex flex-col items-center justify-center text-center`} style={{ borderRadius: 0, boxShadow: 'none' }}>
@@ -628,21 +630,44 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
           </div>{/* end relative wrapper */}
 
-          {/* Desktop actions — stacked in flow below the bag. The mobile
-              action row is portaled below (fixed-position) so it stays
-              equidistant between bag bottom and tea-box bag tops on every
-              viewport. */}
+          {/* Desktop actions — same 3-icon-button row as mobile. The
+              mobile action row is portaled and fixed; desktop renders
+              in-flow under the bag (sidebar nav lives at the left so
+              no fixed-position is needed). */}
           {celebrate !== 'dunk' && (
-            <div className="mt-4 hidden md:flex md:flex-col gap-2">
-              <Button size="lg" onClick={handleComplete} className="w-full pixel-btn-rainbow">
-                Done ✓
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setShowSnooze(true)}>Snooze</Button>
-                {isBonusMode
-                  ? <Button variant="ghost" className="flex-1" onClick={handleBonusSkip}>Skip</Button>
-                  : <Button variant="ghost" className="flex-1" onClick={handleNext}>Next</Button>}
-              </div>
+            <div className="mt-4 hidden md:flex gap-3 justify-center items-center">
+              <button
+                onClick={() => onNavigate?.('capture')}
+                aria-label="Capture"
+                className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                  <line x1="6" y1="2" x2="6" y2="5"/>
+                  <line x1="10" y1="2" x2="10" y2="5"/>
+                  <line x1="14" y1="2" x2="14" y2="5"/>
+                </svg>
+              </button>
+              <button
+                onClick={handleComplete}
+                aria-label="Done"
+                className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+              <button
+                onClick={isBonusMode ? handleBonusSkip : handleNext}
+                aria-label={isBonusMode ? 'Skip' : 'Next'}
+                className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </button>
             </div>
           )}
         </div>
@@ -658,7 +683,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       {celebrate !== 'dunk' && createPortal(
         <div
           className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
-          style={{ bottom: 'calc(148px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(134px + env(safe-area-inset-bottom))' }}
         >
           {/* Three matching 48x48 icon buttons. Capture + Next read as
               ghost outlines (hairline ink border), Done fills amber via
@@ -707,7 +732,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       {createPortal(
         <div
           className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
-          style={{ bottom: 'calc(72px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(68px + env(safe-area-inset-bottom))' }}
         >
           <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
         </div>,
