@@ -107,8 +107,8 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-opacity"
-              style={{ opacity: isActive ? 1 : 0.55 }}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-opacity relative"
+              style={{ opacity: isActive ? 1 : 0.7 }}
             >
               <span
                 className="flex items-center justify-center [&_svg]:!w-full [&_svg]:!h-full"
@@ -120,7 +120,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
                 style={{
                   color: isActive ? 'var(--aria-accent)' : 'var(--aria-nav-text)',
                   fontFamily: 'var(--font-pixel)',
-                  fontWeight: isActive ? 600 : 500,
+                  fontWeight: isActive ? 700 : 500,
                   fontSize: '9.5px',
                   letterSpacing: '0.22em',
                   textTransform: 'uppercase',
@@ -128,6 +128,22 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
                   paddingLeft: '0.22em',
                 }}
               >{label}</span>
+              {isActive && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 22,
+                    height: 2,
+                    borderRadius: 1,
+                    background: 'var(--aria-accent)',
+                    opacity: 0.9,
+                  }}
+                />
+              )}
             </button>
           )
         })}
