@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
+import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
@@ -175,7 +176,7 @@ function EditTaskSheet({ task, onSave, onClose }) {
   )
 }
 
-export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange }) {
+export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange, capacity }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -449,7 +450,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
           <>
             {/* Header — desktop only. Mobile renders the same stats up
                 in the App.jsx top bar (below the capacity bar) so the
-                page content area has more room for the bag itself. */}
+                page content area has more room for the bag itself.
+                On desktop we render the capacity bar here too since
+                there's no top app bar. */}
             <div className={`hidden md:block px-1 py-1 md:mb-4 ${isBonusMode ? 'focus-bar-bonus rounded-xl px-3 py-1.5' : ''}`}>
               <div className="flex items-center justify-between">
                 <h1 className={`text-[11px] font-pixel tracking-[0.18em] uppercase ${
@@ -466,6 +469,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                   </span>
                 </div>
               </div>
+              <CapacityBar capacity={capacity} compact hideLabels className="mt-2" />
             </div>
           </>
         ) : null}
@@ -670,6 +674,15 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               </button>
             </div>
           )}
+
+          {/* Desktop tea-box — in-flow directly below the action row so
+              it sits anchored to the buttons. Mobile renders the tea-box
+              via the fixed portal below. */}
+          {celebrate !== 'dunk' && (
+            <div className="hidden md:block mt-4 mx-auto" style={{ maxWidth: 260 }}>
+              <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
+            </div>
+          )}
         </div>
 
       </div>
@@ -726,12 +739,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
         document.body
       )}
 
-      {/* Tea-box — today's tasks as bags; the active bag is highlighted.
-          Portaled to <body> so no transformed page ancestor can break its
-          fixed positioning. Pinned above the nav, always in frame. */}
+      {/* Mobile tea-box — portaled + fixed above the bottom nav. Desktop
+          renders the tea-box in-flow below the action row (see card-area
+          block above), so this portal is mobile-only. */}
       {createPortal(
         <div
-          className="fixed z-30 left-0 right-0 md:left-20 mx-auto max-w-[300px] px-4"
+          className="fixed z-30 left-0 right-0 mx-auto max-w-[300px] px-4 md:hidden"
           style={{ bottom: 'calc(100px + env(safe-area-inset-bottom))' }}
         >
           <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
