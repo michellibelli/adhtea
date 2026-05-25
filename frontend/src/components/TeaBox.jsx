@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { TAG_COLORS } from '../utils/taskColors'
 
 // The box holds at most 15 bags — a fully-triaged day never exceeds the
@@ -18,24 +16,11 @@ const GOLD = {
   shadow: '#7C5912',
 }
 
-const TYPE_LABEL = {
-  task: 'Task', appointment: 'Appointment', routine: 'Routine', note: 'Note',
-}
-
 // "14:30" -> minutes since midnight, or null when the task has no time.
 function bagMinutes(t) {
   if (!t.due_time) return null
   const [h, m] = t.due_time.split(':').map(Number)
   return h * 60 + m
-}
-
-// "14:30" -> "2:30p"
-function fmtTime(t) {
-  if (!t) return null
-  const [h, m] = t.split(':').map(Number)
-  const ampm = h >= 12 ? 'p' : 'a'
-  const hour = h % 12 || 12
-  return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`
 }
 
 // Order the bags left-to-right as a rough morning → evening run: timed items
@@ -62,7 +47,7 @@ function orderedBags(tasks) {
 }
 
 // One bag in the box. `gold` bags are completed bonus tasks — decorative,
-// no inspect. Each bag renders as a tag + string + body stack so the box
+// not selectable. Each bag renders as a tag + string + body stack so the box
 // reads as teabags, not as a row of tiny books (the bookshelf backdrop
 // has narrow rectangles of similar muted colours).
 function Bag({ colors, active, gold, onClick, title }) {
@@ -118,59 +103,17 @@ function Bag({ colors, active, gold, onClick, title }) {
   )
 }
 
-// Inspect card — an enlarged bag that rises out of the box and turns to face
-// the viewer. Portaled to <body> with a tap-anywhere backdrop to dismiss.
-function InspectCard({ task, onClose }) {
-  const isProject = !!task.project_name
-  const colors = isProject
-    ? TAG_COLORS.project
-    : (TAG_COLORS[task.task_type] || TAG_COLORS.task)
-  const label = isProject
-    ? `Project · ${task.project_name}`
-    : (TYPE_LABEL[task.task_type] || 'Task')
-  const time = fmtTime(task.due_time)
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center pb-[170px] bg-black/20"
-      style={{ perspective: '700px' }}
-      onClick={onClose}
-    >
-      <div
-        className="w-[78vw] max-w-[280px] rounded-xl px-5 py-4 text-center"
-        style={{
-          background: colors.bg,
-          border: `2px solid ${colors.border}`,
-          boxShadow: `3px 5px 0 ${colors.shadow}, 0 10px 24px rgba(0,0,0,0.3)`,
-          animation: 'bag-inspect-in 360ms cubic-bezier(0.34,1.2,0.64,1) both',
-        }}
-      >
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: colors.text, opacity: 0.75 }}>
-          {label}{time ? ` · ${time}` : ''}
-        </p>
-        <p className="text-base font-bold leading-snug break-words" style={{ color: colors.text }}>
-          {task.title}
-        </p>
-      </div>
-    </div>,
-    document.body
-  )
-}
-
 // Tea-box for the Focus page. 2D side profile, no lid: an open box holding
 // today's tasks as bags in a single packed row, ordered roughly morning →
 // evening. As today's tasks are completed the coloured bags drain; completed
 // bonus tasks (goldCount) refill the box as gold bags. Clicking the box opens
-// Today; clicking a bag inspects that task.
-export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, onOpen }) {
-  const [inspectedId, setInspectedId] = useState(null)
-
+// Today; clicking a bag focuses that task on the Focus card (via onSelectTask)
+// so the user can act on a specific item — e.g. an 8am routine done at 9am
+// that the time-of-day window would otherwise keep off the card.
+export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, onOpen, onSelectTask }) {
   const colored = orderedBags(tasks).slice(0, BOX_CAPACITY)
   const goldShown = Math.max(0, Math.min(goldCount, BOX_CAPACITY - colored.length))
   const boxFull = goldCount >= BOX_CAPACITY
-
-  const inspected = inspectedId != null
-    ? tasks.find(t => t.id === inspectedId)
-    : null
 
   return (
     <>
@@ -211,7 +154,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
                 colors={colors}
                 active={active}
                 title={t.title}
-                onClick={e => { e.stopPropagation(); setInspectedId(t.id) }}
+                onClick={e => { e.stopPropagation(); onSelectTask?.(t.id) }}
               />
             )
           })}
@@ -250,10 +193,6 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
           }}
         />
       </div>
-
-      {inspected && (
-        <InspectCard task={inspected} onClose={() => setInspectedId(null)} />
-      )}
     </>
   )
 }

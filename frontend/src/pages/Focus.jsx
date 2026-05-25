@@ -186,6 +186,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   const celebrationTimersRef = useRef([])
   const [showSnooze,    setShowSnooze]    = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
+  const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
   const [bonusDone,     setBonusDone]     = useState(() => {
@@ -206,6 +207,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
       setDoneTodayBase(done.length)
       setLocalDone(0)
       setBonusTasks(bonus)
+      // No need to clear selectedId here: a refetched list that no longer
+      // contains the selected task makes `tasks.find(selectedId)` undefined,
+      // so focus falls back to pickNext on its own.
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }, [])
@@ -216,10 +220,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
 
   // Bonus mode triggers when no visible today-task exists. pickNext filters
   // routines that aren't yet within 5 min — those don't count as "anything to do".
+  // A bag tapped in the tea-box manually focuses that task, overriding the
+  // pickNext ranking. Lets the user act on a specific item the time-of-day
+  // window would otherwise hide — e.g. an 8am routine completed at 9am.
+  const selectedTask = selectedId != null ? tasks.find(t => t.id === selectedId) : null
   const todayVisible = pickNext(tasks) !== null
-  const isBonusMode  = !todayVisible && bonusTasks.length > 0
+  const isBonusMode  = !selectedTask && !todayVisible && bonusTasks.length > 0
   const activeList   = isBonusMode ? bonusTasks : tasks
-  const task         = pickNext(activeList)
+  const task         = selectedTask ?? pickNext(activeList)
   const remaining   = activeList.length
   const totalDone   = doneTodayBase + localDone
 
@@ -332,6 +340,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
       }
       if (isBonusMode) setBonusTasks(updater)
       else setTasks(updater)
+      setSelectedId(null)  // skipping returns focus to the pickNext ranking
       setLeaving(false)
     }, 300)
   }
@@ -683,7 +692,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               both mobile and desktop. Sized 260px wide centered. */}
           {celebrate !== 'dunk' && (
             <div className="w-full mx-auto" style={{ maxWidth: 260 }}>
-              <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} />
+              <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} />
             </div>
           )}
         </div>
