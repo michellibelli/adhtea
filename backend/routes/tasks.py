@@ -185,7 +185,12 @@ def carry_forward(user: User, db: Session):
     )
     for task in stale:
         if task.task_type == TaskType.routine and task.routine_id:
-            task.status = TaskStatus.deleted
+            # A missed routine stays completable — unlike an appointment, it can
+            # still be checked off after its day. Drop it to inbox but KEEP its
+            # scheduled_date so it surfaces in /routines/missed and stays out of
+            # today's Focus (the inbox list already excludes routine-type tasks).
+            task.status = TaskStatus.inbox
+            task.sort_order = None
         else:
             task.status = TaskStatus.inbox
             task.scheduled_date = None

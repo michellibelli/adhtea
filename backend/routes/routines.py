@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,7 @@ from database import get_db
 from models import Routine, Task, TaskType, TaskStatus, utcnow
 from schemas import RoutineCreate, RoutineUpdate, RoutineResponse, TaskResponse
 from routes.auth import get_current_user
+from routes.tasks import _app_today
 from models import User
 
 router = APIRouter()
@@ -88,7 +89,7 @@ def get_missed_routines(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    today = date.today()
+    today = _app_today(current_user)
     today_dt = datetime(today.year, today.month, today.day)
     return (
         db.query(Task)

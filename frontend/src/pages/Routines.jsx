@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
 import { getRoutines, createRoutine, updateRoutine, deleteRoutine, getMissedRoutines } from '../api/routines'
+import { completeTask, deleteTask } from '../api/tasks'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
+
+// "Tue May 20" — short label for when a missed routine was originally due.
+function missedDateLabel(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d)) return ''
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+}
 
 const FREQ_LABELS  = { daily: 'Daily', weekdays: 'Weekdays', weekends: 'Weekends', weekly: 'Weekly', custom: 'Custom' }
 const TIME_LABELS  = { anytime: 'Anytime', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' }
@@ -152,7 +161,7 @@ function RoutineItem({ routine, onEdit, onDeactivate }) {
 
 export default function Routines() {
   const [routines, setRoutines] = useState([])
-  const [missedCount, setMissedCount] = useState(0)
+  const [missed, setMissed]     = useState([])
   const [loading, setLoading]   = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -160,9 +169,19 @@ export default function Routines() {
 
   useEffect(() => {
     Promise.all([getRoutines(), getMissedRoutines()])
-      .then(([r, m]) => { setRoutines(r); setMissedCount(m.length) })
+      .then(([r, m]) => { setRoutines(r); setMissed(m) })
       .finally(() => setLoading(false))
   }, [])
+
+  async function completeMissed(id) {
+    setMissed(prev => prev.filter(t => t.id !== id))  // optimistic
+    try { await completeTask(id) } catch (err) { console.error(err); getMissedRoutines().then(setMissed) }
+  }
+
+  async function dismissMissed(id) {
+    setMissed(prev => prev.filter(t => t.id !== id))  // optimistic
+    try { await deleteTask(id) } catch (err) { console.error(err); getMissedRoutines().then(setMissed) }
+  }
 
   async function handleSave() {
     const data = {
@@ -227,12 +246,28 @@ export default function Routines() {
           </Button>
         </div>
 
-        {missedCount > 0 && (
-          <Card variant="flat" className="mb-4 px-4 py-2.5">
-            <p className="text-xs text-ui-subtext">
-              {missedCount} routine{missedCount !== 1 ? 's' : ''} missed from previous days
+        {missed.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-ui-subtext uppercase tracking-wider mb-2">
+              Missed — {missed.length} from previous days
             </p>
-          </Card>
+            <div className="space-y-2">
+              {missed.map(t => (
+                <Card key={t.id} variant="flat" className="px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm text-ui-text leading-snug truncate">{t.title}</p>
+                      <p className="text-[10px] text-ui-subtext mt-0.5">{missedDateLabel(t.scheduled_date)}</p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <Button size="sm" onClick={() => completeMissed(t.id)}>✓ Done</Button>
+                      <Button size="sm" variant="secondary" onClick={() => dismissMissed(t.id)}>Dismiss</Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
 
         {showForm && (
