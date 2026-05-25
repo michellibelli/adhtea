@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { register } from '../api/auth'
 import { Input } from '../components/Input'
 import Button from '../components/Button'
+import Logo from '../components/Logo'
 
 export default function Register({ inviteToken, onRegister }) {
   const [form,  setForm]  = useState({ name: '', username: '', password: '' })
@@ -26,7 +27,7 @@ export default function Register({ inviteToken, onRegister }) {
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/adhTeaLogo.png" alt="adhTea" className="h-16 w-16 mx-auto mb-4 rounded-xl object-contain" />
+          <div className="flex justify-center mb-4"><Logo size={56} /></div>
           <h1 className="text-2xl font-semibold text-ui-text">Create your account</h1>
           <p className="text-sm text-ui-subtext mt-1">You've been invited to adhTea</p>
         </div>

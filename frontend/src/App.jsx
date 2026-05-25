@@ -112,7 +112,14 @@ function AppShell() {
     return (
       <div className="aria-page flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 -mt-12">
-          <Logo size={56} />
+          {/* Logo with three warm steam wisps rising off the tea leaf so the
+              wake splash reads as "brewing" instead of a blank hold. */}
+          <div className="relative">
+            <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.4s', '--steam-delay': '0s' }} />
+            <span className="steam-wisp" style={{ left: 26, bottom: '92%', height: 22, background: 'rgba(120,110,90,0.40)', '--steam-dur': '2.8s', '--steam-delay': '0.6s' }} />
+            <span className="steam-wisp" style={{ left: 17, bottom: '90%', height: 20, background: 'rgba(120,110,90,0.42)', '--steam-dur': '2.6s', '--steam-delay': '1.2s' }} />
+            <Logo size={56} />
+          </div>
           <p
             className="text-sm text-ui-subtext"
             style={{ fontFamily: 'var(--font-pixel)', fontStyle: 'italic', letterSpacing: '0.04em' }}

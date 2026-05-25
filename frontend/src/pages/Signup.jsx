@@ -36,7 +36,7 @@ export default function Signup({ onLogin, onGoLogin }) {
 
   return (
     <AuthPage>
-      <p className="text-sm text-center text-white/80 mb-6">Create your account</p>
+      <p className="text-sm text-center text-ui-subtext mb-6">Create your account</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required autoComplete="name" />
@@ -60,8 +60,8 @@ export default function Signup({ onLogin, onGoLogin }) {
         )}
 
         {error && (
-          <div className="bg-red-500/20 border border-red-300/40 rounded-xl px-4 py-3 text-center">
-            <p className="text-red-200 text-sm font-medium">{error}</p>
+          <div className="bg-red-500/10 border border-red-400/30 rounded-xl px-4 py-3 text-center">
+            <p className="text-red-500 text-sm font-medium">{error}</p>
           </div>
         )}
 
@@ -71,7 +71,7 @@ export default function Signup({ onLogin, onGoLogin }) {
       </form>
 
       <button
-        className="w-full mt-5 text-sm text-white/70 hover:text-white transition-colors text-center"
+        className="w-full mt-5 text-sm text-ui-subtext hover:text-ui-text transition-colors text-center"
         onClick={onGoLogin}
       >
         Already have an account? Sign in

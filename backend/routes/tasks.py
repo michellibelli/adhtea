@@ -580,7 +580,7 @@ def get_bonus_tasks(
     db: Session = Depends(get_db),
 ):
     """Future-dated inbox tasks + snoozed items — shown in Focus when today's list clears."""
-    today = date.today()
+    today = _app_today(current_user)
     tasks = (
         db.query(Task)
         .options(joinedload(Task.project))
@@ -670,7 +670,7 @@ def get_inbox(
     generate_routine_instances(current_user, db)
     # Lazy gcal sync if token exists and not synced today
     _maybe_sync_gcal(current_user.id, db)
-    today = date.today()
+    today = _app_today(current_user)
     tasks = (
         db.query(Task)
         .filter(
@@ -933,7 +933,7 @@ def update_task(
     if "due_date" in patch and task.due_date is not None and domain_rules:
         task.due_date = next_allowed_date(task.due_date, domain_rules)
 
-    today = date.today()
+    today = _app_today(current_user)
     # If a Today-list task gets pushed to a future due_date, demote it back to inbox
     # so it leaves the Today view automatically.
     if (
