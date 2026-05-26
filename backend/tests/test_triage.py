@@ -23,6 +23,7 @@ from routes.triage import (
     PROJECT_STALL_DAYS_THRESHOLD,
     PUSH_PENALTY_PER_COUNT,
     INBOX_AGE_CAP,
+    SAME_DAY_CREATE_BONUS,
 )
 
 
@@ -428,5 +429,63 @@ def test_run_overflow_clears_due_date(client, auth_headers, db_session):
     overflow_task = db_session.query(Task).get(overflow_id)
     assert overflow_task.due_date is None
     assert overflow_task.status == TaskStatus.inbox
+
+
+# ---------------------------------------------------------------------------
+# Same-day deadline lever — "I made it and it's due today" must outrank all
+# other levers so deliberate same-day picks can't be lost in the list.
+# ---------------------------------------------------------------------------
+
+def test_same_day_create_lever_fires(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(
+        db_session, user.id,
+        created_at=datetime(TODAY.year, TODAY.month, TODAY.day, 9, 0),
+        due_date=TODAY,
+    )
+    r = compute_score(t, today_local=TODAY, now_local=NOON)
+    assert r["components"].get("same_day_create") == SAME_DAY_CREATE_BONUS
+
+
+def test_same_day_create_lever_does_not_fire_when_different_days(client, auth_headers, db_session):
+    user = _user(db_session)
+    yesterday_morning = datetime.combine(TODAY - timedelta(days=1), datetime.min.time()) + timedelta(hours=9)
+    t = _mk_task(
+        db_session, user.id,
+        created_at=yesterday_morning,
+        due_date=TODAY,
+    )
+    r = compute_score(t, today_local=TODAY, now_local=NOON)
+    assert "same_day_create" not in r["components"]
+
+
+def test_same_day_create_lever_no_due_date(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(
+        db_session, user.id,
+        created_at=datetime(TODAY.year, TODAY.month, TODAY.day, 9, 0),
+        due_date=None,
+    )
+    r = compute_score(t, today_local=TODAY, now_local=NOON)
+    assert "same_day_create" not in r["components"]
+
+
+def test_same_day_create_outranks_loaded_non_urgent(client, auth_headers, db_session):
+    """Sanity check: a same-day item with normal priority beats a maxed-out
+    non-urgent item (urgent + critical + project_stall + age_boost)."""
+    user = _user(db_session)
+    same_day = _mk_task(
+        db_session, user.id,
+        created_at=datetime(TODAY.year, TODAY.month, TODAY.day, 9, 0),
+        due_date=TODAY,
+    )
+    overloaded = _mk_task(
+        db_session, user.id,
+        priority="urgent", is_critical=True,
+        # No due_date — purely "important", not "urgent" by time.
+    )
+    s_same = compute_score(same_day, today_local=TODAY, now_local=NOON)
+    s_over = compute_score(overloaded, today_local=TODAY, now_local=NOON)
+    assert s_same["total"] > s_over["total"]
 
 

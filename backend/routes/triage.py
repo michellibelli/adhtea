@@ -12,8 +12,9 @@ Levers (each contributes a signed integer; total is the sum):
   priority         user's explicit priority enum (urgent/high/normal/low)
   critical_bonus   +50 when `is_critical` is true
   overdue_boost    capped boost for past-due items (won't infinitely dominate)
-  due_today        flat +50 for items due today
+  due_today        flat +100 for items due today
   due_soon         decaying boost for items 1-7 days out
+  same_day_create  +300 when created_at == due_date — "I just decided this matters"
   project_stall    +20 when project hasn't seen a completion in N+ days
   in_context       +10 when the user's current time-bucket fits the domain
   age_boost        slow creep for items sitting in the inbox a long time
@@ -58,14 +59,18 @@ INBOX_AGE_BUCKET_DAYS = 7         # one age tick per week
 INBOX_AGE_PER_BUCKET = 3
 INBOX_AGE_CAP = 15
 OVERDUE_PER_DAY = 4
-OVERDUE_CAP = 40
-DUE_TODAY_BONUS = 50
+OVERDUE_CAP = 80                  # bumped from 40 — time-pressure must outrank stalled-but-non-urgent project items
+DUE_TODAY_BONUS = 100             # bumped from 50 — same reason as OVERDUE_CAP
 DUE_SOON_BASELINE = 50
 DUE_SOON_PER_DAY_DECAY = 7
 CRITICAL_BONUS = 50
 PROJECT_STALL_BONUS = 20
 IN_CONTEXT_BONUS = 10
 PUSH_PENALTY_PER_COUNT = -5
+# A task created on the same day it's due is a "I just decided this matters
+# today" item. Sized to outrank every other lever combination so these never
+# get lost in the list.
+SAME_DAY_CREATE_BONUS = 300
 
 
 def project_stall_map(db: Session, user_id: int, today_local: date) -> dict[int, bool]:
@@ -134,6 +139,12 @@ def compute_score(
         elif delta <= 7:
             # Linear decay: +50 at 1 day out, +1 at 7 days out
             c["due_soon"] = max(0, DUE_SOON_BASELINE - delta * DUE_SOON_PER_DAY_DECAY)
+
+    # Same-day deadline — task was created on the same day it's due. A
+    # deliberate "this matters now" pick; outranks every other lever combo
+    # so urgent items can't get drowned out by stalled-but-non-urgent ones.
+    if task.created_at and task.due_date and task.created_at.date() == task.due_date:
+        c["same_day_create"] = SAME_DAY_CREATE_BONUS
 
     # Project stall — boost when the parent project has gone quiet
     if task.project_id and stall_map and stall_map.get(task.project_id):

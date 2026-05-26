@@ -31,15 +31,16 @@ const SUGGESTED_PAGE = 25
 
 // Human-readable labels for `score_components` keys, used by WhyTooltip.
 const LEVER_LABELS = {
-  priority:       'Priority',
-  critical_bonus: 'Critical',
-  overdue_boost:  'Overdue',
-  due_today:      'Due today',
-  due_soon:       'Due soon',
-  project_stall:  'Stalling project',
-  in_context:     'Fits this time',
-  age_boost:      'Inbox age',
-  push_penalty:   'Pushed before',
+  priority:        'Priority',
+  critical_bonus:  'Critical',
+  overdue_boost:   'Overdue',
+  due_today:       'Due today',
+  due_soon:        'Due soon',
+  same_day_create: 'Same-day deadline',
+  project_stall:   'Stalling project',
+  in_context:      'Fits this time',
+  age_boost:       'Inbox age',
+  push_penalty:    'Pushed before',
 }
 
 
