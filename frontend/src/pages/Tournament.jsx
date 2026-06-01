@@ -453,7 +453,9 @@ export default function Tournament({ onDone }) {
       })
       unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       setAllTasks(unique)
-      setTriageTasks(unique.slice(0, MAX_TODAY))
+      const iso = todayIso()
+      const today = unique.filter(t => t.status === 'today' || t.due_date === iso).slice(0, MAX_TODAY)
+      setTriageTasks(today)
     } catch (e) {
       setError(e?.message || 'Could not load triage')
     } finally {
@@ -499,12 +501,21 @@ export default function Tournament({ onDone }) {
   function handlePickExisting(task) {
     if (triageTasks.length >= MAX_TODAY) return
     if (triageIds.has(task.id)) return
-    setTriageTasks(prev => [task, ...prev])
+    const iso = todayIso()
+    const updated = { ...task, due_date: iso, status: 'today' }
+    setTriageTasks(prev => [updated, ...prev])
+    setAllTasks(prev => prev.map(t => t.id === task.id ? updated : t))
+    updateTask(task.id, { due_date: iso }).catch(() => {})
   }
 
-  function handlePromote(task) {
+  async function handlePromote(task) {
     if (triageTasks.length >= MAX_TODAY) return
-    setTriageTasks(prev => [...prev, task])
+    const iso = todayIso()
+    const updated = { ...task, due_date: iso, status: 'today' }
+    setTriageTasks(prev => [...prev, updated])
+    setAllTasks(prev => prev.map(t => t.id === task.id ? updated : t))
+    try { await updateTask(task.id, { due_date: iso }) }
+    catch (e) { setError(e?.message || 'Could not update task') }
   }
 
   async function handleSnooze(taskId, isoDate) {
