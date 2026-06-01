@@ -129,15 +129,19 @@ function SortableTriageRow({ task, onSnooze, onWhy, showWhy }) {
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
+    >
       <Card className={`px-3 py-2 mb-1.5 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
         <div className="flex items-start gap-2">
-          {/* Drag handle */}
+          {/* Drag handle indicator */}
           <span
-            {...attributes}
-            {...listeners}
-            className="text-ui-subtext/40 text-[11px] flex-shrink-0 cursor-grab active:cursor-grabbing px-0.5 select-none mt-1"
-            aria-label="Drag to reorder"
+            className="text-ui-subtext/40 text-[11px] flex-shrink-0 px-0.5 select-none mt-1"
+            aria-hidden="true"
           >⋮⋮</span>
 
           <div className="flex-1 min-w-0">
