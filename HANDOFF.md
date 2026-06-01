@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-06-01 (BUILD 4.0.65 + uncommitted triage/animation rework)*
+*Last updated: 2026-06-01 (BUILD 4.0.72)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -37,36 +37,46 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
-## Current status — Phases 1–3 complete + Cafe visual pass + Triage rework ✅
+## Current status — Phases 1–3 complete + Cafe visual pass + Today/Triage rework ✅
 
-Everything below is shipped and live on adh-tea.fun (except the uncommitted 2026-06-01 session).
+Everything below is shipped and live on adh-tea.fun.
 
-### Uncommitted (2026-06-01) — triage rework + animation rework
+### BUILDs 4.0.66–4.0.72 (2026-06-01) — Triage + Today rework
 
-**Triage page rewrite (Tournament.jsx)**
+**Triage page rewrite (Tournament.jsx) [4.0.66]**
 - Old 3-slot top-3 picker replaced with full day-planning surface.
-- Flow: add new tasks (type-ahead input) → snooze unwanted (SnoozeSheet per row) → drag-to-reorder (@dnd-kit SortableContext) → Apply.
-- Apply checks capacity: tasks within budget → status=today. Over-capacity → OverflowBumper sheet (tap to bump to tomorrow, ADHD-friendly single-pass).
-- 32-task cap. Recompute resets to score order.
-- Deleted: SlotCard, CandidateRow, FullPlanView, PlanDay, PlanItem, 7-day plan disclosure, search bar.
+- Two sections: **Today** (max 15, sortable, status=today or due_date=today) / **Up Next** (remaining scored tasks, fills to 20 total) separated by horizontal divider.
+- Flow: promote from Up Next (+) → reorder in Today (drag) → Apply.
+- ⋮ action menu per row: Tomorrow, Next week, Next month (quick snooze), Edit (opens EditTaskSheet).
+- Promoting sets `due_date` to today via `updateTask` API.
+- Apply calls `POST /triage/apply-ordered` — walks ordered list against capacity budget, returns placed + overflow.
+- Over capacity → OverflowBumper sheet (tap to bump to tomorrow).
+- Recompute resets to score order. ActionMenu portaled to body (escapes `overflow:hidden`).
+- Deleted: SlotCard, CandidateRow, FullPlanView, PlanDay, PlanItem, 7-day plan disclosure, search bar, SnoozeSheet.
 
-**Backend: 2 new endpoints**
-- `POST /triage/apply-ordered` — accepts ordered task IDs, places within capacity budget, returns placed + overflow split.
-- `POST /triage/resolve-overflow` — keep_today_ids forced onto today; bump_ids → due_date=tomorrow, sort_order=0,1,2…, push_count+1.
-- Schemas: `TriageApplyRequest`, `TriageOverflowRequest` in `schemas.py`.
-- 8 new tests in `test_triage.py`. Full suite: **153 passed**.
+**Today page rework (Today.jsx) [4.0.69]**
+- Two sections: **Today** (max 15, sortable with complete/snooze/defer/delete) / **Up Next** (inbox tasks, fills to 20 total) separated by horizontal divider.
+- Up Next items have + button to promote via `scheduleToday` API.
+- Snoozing from Up Next refetches inbox to repopulate.
 
-**Completion animation rework (Focus.jsx)**
-- Dunk 15% faster (5000ms → 4250ms). Pun rises from cup simultaneously (was sequential rainbow+sparkle, ~9.5s → ~5.4s).
-- Deleted: rainbow slide-in / shrink / sparkle phases. New states: `false | 'dunk' | 'fade'`.
+**Shared EditTaskSheet [4.0.68]**
+- Extracted from Focus.jsx to `components/EditTaskSheet.jsx`. Used by Focus + Tournament.
+
+**Backend: 2 new endpoints + 2 new schemas + 8 new tests [4.0.66]**
+- `POST /triage/apply-ordered` (TriageApplyRequest) — ordered task IDs → placed + overflow split by capacity budget.
+- `POST /triage/resolve-overflow` (TriageOverflowRequest) — keep_today_ids forced onto today; bump_ids → due_date=tomorrow, sort_order=0,1,2…, push_count+1.
+- 8 new tests. Full suite: **153 passed**.
+
+**Completion animation rework (Focus.jsx) [4.0.66]**
+- Dunk 15% faster (5000ms → 4250ms). Pun rises from cup simultaneously (~5.4s total, was ~9.5s).
+- Deleted: rainbow slide-in / shrink / sparkle phases.
 - 10 new tea puns (22 total).
 
-**Today.jsx completion animation**
+**Today.jsx completion animation [4.0.66]**
 - 350ms fade+slide out on task complete (was instant disappear).
 
-**Triage navigation cleanup**
-- ConfirmModal gates removed from Today + Settings triage buttons (direct navigation).
-- `triageReturnTo` state in App.jsx — morning triage returns to Focus; Today-page triage returns to Today.
+**Triage navigation cleanup [4.0.66]**
+- ConfirmModal gates removed. `triageReturnTo` in App.jsx — morning triage returns to Focus; Today-page triage returns to Today.
 
 ### BUILDs 4.0.62–4.0.65 completed (2026-05-25–26)
 
@@ -342,7 +352,7 @@ Tournament-driven Triage at scale.
 4. **Settings page visual pass** — functional but cluttered, needs cafe theme spacing + Card consistency.
 5. **Logo/branding** — new adhTea logo + iconography still on the deferred cosmetic list.
 
-Resolved 2026-06-01: triage page rework (full day-planning surface replaces 3-slot picker); completion animation rework (dunk+pun ~5.4s, removed rainbow/sparkles); Today.jsx fade-out animation; triage navigation cleanup.
+Resolved 2026-06-01: triage rework (Today/Up Next split, action menu, EditTaskSheet, portal fix); Today page rework (Today/Up Next split, inbox promote); completion animation (dunk+pun ~5.4s); fade-out animation; triage nav cleanup.
 Resolved 2026-05-26: auth/onboarding cafe pass; server-tz date bugs in bonus/inbox/update_task (4.0.62); tap-bag-to-focus (4.0.64); triage scoring tuning (4.0.65).
 Resolved 2026-05-18: triage redesign D+F hybrid R1–R7, morning check-in gate, domain-aware snooze, modal portal positioning.
 Resolved 2026-05-19: R7 drag/pin in 7-day plan view; BUILD bumped to 4.0.0.
@@ -353,12 +363,9 @@ Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement, aesthetic 
 
 ## Next
 
-Triage rework and animation rework are done but uncommitted. Immediate next:
-
-1. **Test in browser** — full triage flow (add, snooze, reorder, apply, overflow), completion animations on Focus + Today.
-2. **Commit + push** — all current-session changes.
-3. **Settings page visual pass** — needs cafe theme spacing + Card consistency.
-4. **Logo/branding** — new adhTea logo + iconography. Current: `public/adhTeaLogo.png`.
+1. **Settings page visual pass** — needs cafe theme spacing + Card consistency.
+2. **Logo/branding** — new adhTea logo + iconography. Current: `public/adhTeaLogo.png`.
+3. **Backend warnings cleanup** — `datetime.utcnow()` deprecation (112 warnings), SQLAlchemy `Query.get()` legacy.
 
 
 **Status:** Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight.
@@ -417,8 +424,8 @@ frontend/src/
   api/client.js               singleton, warmUp(), likelySleeping(), smart retry
   pages/
     Focus.jsx                 home — pickNext(), bonus mode, dunk celebration, tap-bag-to-focus
-    Tournament.jsx            triage — add/snooze/reorder/apply, overflow bumper, 32-task cap
-    Today.jsx                 full list, drag-to-reorder, completion fade animation
+    Tournament.jsx            triage — Today(15)/Up Next(20) split, action menu, apply/overflow
+    Today.jsx                 Today(15)/Up Next(20) split, drag-to-reorder, inbox promote, fade animation
     Capture.jsx               type-aware (task/appt/routine/note)
     SelfCare.jsx              foundation log + full capacity bar
     EODGate.jsx               mood gate (required) + warm summary
@@ -432,7 +439,8 @@ frontend/src/
     BottomNav.jsx             mobile + desktop nav; uses ui-nav / ui-primary utilities
     HamburgerMenu.jsx         slide-out nav
     WakeScreen.jsx            5s splash → 60s diary + countdown + health check
-    SnoozeSheet.jsx           snooze date picker
+    EditTaskSheet.jsx         shared edit modal (title, notes, due_date, due_time)
+    SnoozeSheet.jsx           snooze date picker (used by Focus, not triage)
     DomainPicker.jsx          pills + slide-down rule editor for project domains
     DomainDateWarning.jsx     amber warning when picked date hits disallowed domain day
     PageState.jsx             PageLoading / PageError / InlineSkeletonCards
