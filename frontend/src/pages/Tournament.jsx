@@ -15,12 +15,12 @@ import { SmartPointerSensor } from '../utils/dnd'
 import {
   previewTriage, recomputeTriage, applyOrderedTriage, resolveOverflow,
 } from '../api/triage'
-import { createTask, snoozeTask, reorderTasks } from '../api/tasks'
+import { createTask, snoozeTask, updateTask, reorderTasks } from '../api/tasks'
 import { createPortal } from 'react-dom'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ProjectBadge from '../components/ProjectBadge'
-import SnoozeSheet from '../components/SnoozeSheet'
+import EditTaskSheet from '../components/EditTaskSheet'
 import { PageLoading, PageError } from '../components/PageState'
 import { markTriageDone } from '../utils/triage'
 
@@ -47,6 +47,12 @@ function todayIso() {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+function offsetDate(days) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString()
 }
 
 
@@ -117,8 +123,31 @@ function MetaBadges({ task }) {
 
 // ── Sortable triage row ─────────────────────────────────────────────────────
 
-function SortableTriageRow({ task, onSnooze, onWhy, showWhy }) {
+function ActionMenu({ onSnooze, onEdit, onClose }) {
+  return (
+    <div className="absolute right-0 top-full mt-1 z-40 bg-ui-surface border border-ui-border rounded-xl shadow-lg overflow-hidden min-w-[140px]">
+      {[
+        { label: 'Tomorrow',   action: () => onSnooze(offsetDate(1)) },
+        { label: 'Next week',  action: () => onSnooze(offsetDate(7)) },
+        { label: 'Next month', action: () => onSnooze(offsetDate(30)) },
+        { label: 'Edit…',      action: onEdit },
+      ].map(({ label, action }) => (
+        <button
+          key={label}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); action(); onClose() }}
+          className="w-full text-left text-sm px-3 py-2 text-ui-text hover:bg-ui-accent/10 transition-colors"
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function SortableTriageRow({ task, onSnooze, onEdit, onWhy, showWhy }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  const [showMenu, setShowMenu] = useState(false)
   const components = parseComponents(task.score_components)
 
   const style = {
@@ -138,7 +167,6 @@ function SortableTriageRow({ task, onSnooze, onWhy, showWhy }) {
     >
       <Card className={`px-3 py-2 mb-1.5 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
         <div className="flex items-start gap-2">
-          {/* Drag handle indicator */}
           <span
             className="text-ui-subtext/40 text-[11px] flex-shrink-0 px-0.5 select-none mt-1"
             aria-hidden="true"
@@ -153,22 +181,32 @@ function SortableTriageRow({ task, onSnooze, onWhy, showWhy }) {
 
           <ScoreChip task={task} onClick={() => onWhy(task.id)} />
 
-          {/* Snooze button */}
-          <button
-            type="button"
-            onClick={() => onSnooze(task.id)}
-            title="Snooze"
-            aria-label="Snooze"
-            className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-              <circle cx="12" cy="12" r="9" />
-              <polyline points="12 7 12 12 15.5 14" />
-            </svg>
-          </button>
+          <div className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowMenu(prev => !prev) }}
+              title="Actions"
+              aria-label="Actions"
+              className="p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+            {showMenu && (
+              <ActionMenu
+                onSnooze={(iso) => onSnooze(task.id, iso)}
+                onEdit={() => onEdit(task.id)}
+                onClose={() => setShowMenu(false)}
+              />
+            )}
+          </div>
         </div>
         {showWhy && <WhyTooltip components={components} total={task.score} />}
       </Card>
+      {showMenu && <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />}
     </div>
   )
 }
@@ -332,7 +370,7 @@ export default function Tournament({ onDone }) {
   const [error,       setError]       = useState(null)
   const [busy,        setBusy]        = useState(false)
   const [applied,     setApplied]     = useState(false)
-  const [showSnoozeFor, setShowSnoozeFor] = useState(null)
+  const [editingTask, setEditingTask]   = useState(null)
   const [overflowItems, setOverflowItems] = useState(null)
   const [showWhyId,   setShowWhyId]   = useState(null)
   const [addingTask,  setAddingTask]  = useState(false)
@@ -400,10 +438,22 @@ export default function Tournament({ onDone }) {
   }
 
   async function handleSnooze(taskId, isoDate) {
-    setShowSnoozeFor(null)
     setTriageTasks(prev => prev.filter(t => t.id !== taskId))
     try { await snoozeTask(taskId, isoDate) }
     catch (e) { setError(e?.message || 'Snooze failed') }
+  }
+
+  async function handleEditSave(patch) {
+    if (!editingTask) return
+    try {
+      await updateTask(editingTask.id, patch)
+      const updater = prev => prev.map(t => t.id === editingTask.id ? { ...t, ...patch } : t)
+      setTriageTasks(updater)
+      setAllTasks(updater)
+    } catch (e) {
+      setError(e?.message || 'Could not update task')
+    }
+    setEditingTask(null)
   }
 
   function handleDragEnd(event) {
@@ -512,7 +562,8 @@ export default function Tournament({ onDone }) {
                 <SortableTriageRow
                   key={t.id}
                   task={t}
-                  onSnooze={() => setShowSnoozeFor(t.id)}
+                  onSnooze={handleSnooze}
+                  onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
                   onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
                   showWhy={showWhyId === t.id}
                 />
@@ -534,12 +585,12 @@ export default function Tournament({ onDone }) {
         </div>
       </div>
 
-      {/* Snooze sheet */}
-      {showSnoozeFor != null && (
-        <SnoozeSheet
-          onSnooze={(isoDate) => handleSnooze(showSnoozeFor, isoDate)}
-          onClose={() => setShowSnoozeFor(null)}
-          domainName={taskMap.get(showSnoozeFor)?.domain_name}
+      {/* Edit sheet */}
+      {editingTask && (
+        <EditTaskSheet
+          task={editingTask}
+          onSave={handleEditSave}
+          onClose={() => setEditingTask(null)}
         />
       )}
 
