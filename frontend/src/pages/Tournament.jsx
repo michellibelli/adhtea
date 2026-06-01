@@ -25,7 +25,8 @@ import { PageLoading, PageError } from '../components/PageState'
 import { markTriageDone } from '../utils/triage'
 
 const STALE_PUSH_THRESHOLD = 5
-const MAX_TRIAGE_TASKS = 32
+const MAX_TODAY = 15
+const MAX_TOTAL = 20
 
 const LEVER_LABELS = {
   priority:        'Priority',
@@ -363,6 +364,65 @@ function OverflowBumper({ tasks, taskMap, onResolve, onKeepAll }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
+// Non-sortable row for Up Next section — same visual, + button instead of drag
+function UpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showWhy }) {
+  const [showMenu, setShowMenu] = useState(false)
+  const components = parseComponents(task.score_components)
+
+  return (
+    <div className="flex items-start gap-2">
+      <div className="flex-1 min-w-0">
+        <Card className={`px-3 py-2 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
+              <div className="mt-1">
+                <MetaBadges task={task} />
+              </div>
+            </div>
+
+            <ScoreChip task={task} onClick={() => onWhy(task.id)} />
+
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowMenu(prev => !prev)}
+                title="Actions"
+                aria-label="Actions"
+                className="p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                  <circle cx="12" cy="5" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="19" r="2" />
+                </svg>
+              </button>
+              {showMenu && (
+                <ActionMenu
+                  onSnooze={(iso) => { onSnooze(task.id, iso); setShowMenu(false) }}
+                  onEdit={() => { onEdit(task.id); setShowMenu(false) }}
+                  onClose={() => setShowMenu(false)}
+                />
+              )}
+            </div>
+          </div>
+          {showWhy && <WhyTooltip components={components} total={task.score} />}
+        </Card>
+        {showMenu && <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />}
+      </div>
+      {canPromote && (
+        <button
+          type="button"
+          onClick={() => onPromote(task)}
+          title="Add to today"
+          className="flex-shrink-0 mt-2 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
+        >+</button>
+      )}
+    </div>
+  )
+}
+
+
 export default function Tournament({ onDone }) {
   const [triageTasks, setTriageTasks] = useState([])
   const [allTasks,    setAllTasks]    = useState([])
@@ -370,7 +430,7 @@ export default function Tournament({ onDone }) {
   const [error,       setError]       = useState(null)
   const [busy,        setBusy]        = useState(false)
   const [applied,     setApplied]     = useState(false)
-  const [editingTask, setEditingTask]   = useState(null)
+  const [editingTask, setEditingTask] = useState(null)
   const [overflowItems, setOverflowItems] = useState(null)
   const [showWhyId,   setShowWhyId]   = useState(null)
   const [addingTask,  setAddingTask]  = useState(false)
@@ -393,8 +453,7 @@ export default function Tournament({ onDone }) {
       })
       unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       setAllTasks(unique)
-      const day0 = unique.slice(0, MAX_TRIAGE_TASKS)
-      setTriageTasks(day0)
+      setTriageTasks(unique.slice(0, MAX_TODAY))
     } catch (e) {
       setError(e?.message || 'Could not load triage')
     } finally {
@@ -407,6 +466,12 @@ export default function Tournament({ onDone }) {
 
   const triageIds = useMemo(() => new Set(triageTasks.map(t => t.id)), [triageTasks])
 
+  const upNextSlots = Math.max(0, MAX_TOTAL - triageTasks.length)
+  const upNext = useMemo(
+    () => allTasks.filter(t => !triageIds.has(t.id)).slice(0, upNextSlots),
+    [allTasks, triageIds, upNextSlots],
+  )
+
   const taskMap = useMemo(() => {
     const m = new Map()
     for (const t of allTasks) m.set(t.id, t)
@@ -417,7 +482,7 @@ export default function Tournament({ onDone }) {
   // ── Handlers ──
 
   async function handleCreateTask(title) {
-    if (addingTask || triageTasks.length >= MAX_TRIAGE_TASKS) return
+    if (addingTask || triageTasks.length >= MAX_TODAY) return
     setAddingTask(true); setError(null)
     try {
       const iso = todayIso()
@@ -432,13 +497,19 @@ export default function Tournament({ onDone }) {
   }
 
   function handlePickExisting(task) {
-    if (triageTasks.length >= MAX_TRIAGE_TASKS) return
+    if (triageTasks.length >= MAX_TODAY) return
     if (triageIds.has(task.id)) return
     setTriageTasks(prev => [task, ...prev])
   }
 
+  function handlePromote(task) {
+    if (triageTasks.length >= MAX_TODAY) return
+    setTriageTasks(prev => [...prev, task])
+  }
+
   async function handleSnooze(taskId, isoDate) {
     setTriageTasks(prev => prev.filter(t => t.id !== taskId))
+    setAllTasks(prev => prev.filter(t => t.id !== taskId))
     try { await snoozeTask(taskId, isoDate) }
     catch (e) { setError(e?.message || 'Snooze failed') }
   }
@@ -533,14 +604,13 @@ export default function Tournament({ onDone }) {
           </div>
         </div>
 
-        {/* Task count + capacity hint */}
-        <p className="text-[10px] text-ui-subtext mb-4 px-0.5">
-          {triageTasks.length} task{triageTasks.length === 1 ? '' : 's'} for today
-          {triageTasks.length >= MAX_TRIAGE_TASKS && ' (max)'}
+        {/* ── Today section ── */}
+        <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider mb-2 px-0.5">
+          Today ({triageTasks.length}/{MAX_TODAY})
         </p>
 
         {/* Add new task input */}
-        {triageTasks.length < MAX_TRIAGE_TASKS && (
+        {triageTasks.length < MAX_TODAY && (
           <NewTaskInput
             allTasks={allTasks}
             triageIds={triageIds}
@@ -550,7 +620,6 @@ export default function Tournament({ onDone }) {
           />
         )}
 
-        {/* Sortable triage list */}
         {triageTasks.length === 0 ? (
           <p className="text-xs text-ui-subtext text-center py-8">
             No tasks to triage — add one above or hit Recompute.
@@ -570,6 +639,32 @@ export default function Tournament({ onDone }) {
               ))}
             </SortableContext>
           </DndContext>
+        )}
+
+        {/* ── Divider + Up Next ── */}
+        {upNext.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 px-0.5 mt-4 mb-4">
+              <div className="flex-1 h-px bg-ui-border" />
+              <span className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Up Next</span>
+              <div className="flex-1 h-px bg-ui-border" />
+            </div>
+
+            <div className="space-y-1.5">
+              {upNext.map(t => (
+                <UpNextRow
+                  key={t.id}
+                  task={t}
+                  onSnooze={handleSnooze}
+                  onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
+                  onPromote={handlePromote}
+                  canPromote={triageTasks.length < MAX_TODAY}
+                  onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
+                  showWhy={showWhyId === t.id}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         {error && <p className="text-xs text-red-400 text-center my-3">{error}</p>}
