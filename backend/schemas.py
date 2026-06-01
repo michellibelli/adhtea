@@ -237,6 +237,15 @@ class TaskReorderRequest(BaseModel):
     ordered_ids: list[int]
 
 
+class TriageApplyRequest(BaseModel):
+    ordered_task_ids: list[int] = Field(..., max_length=32)
+
+
+class TriageOverflowRequest(BaseModel):
+    keep_today_ids: list[int] = []
+    bump_ids: list[int] = []
+
+
 # ---------------------------------------------------------------------------
 # Routine
 # ---------------------------------------------------------------------------

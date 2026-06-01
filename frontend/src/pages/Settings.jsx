@@ -6,7 +6,6 @@ import { updateSettings } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import ConfirmModal from '../components/ConfirmModal'
 import { Input } from '../components/Input'
 import { useTheme } from '../hooks/useTheme'
 
@@ -338,27 +337,12 @@ function AlphaCodeSection() {
 
 
 export default function Settings({ onNavigate, user }) {
-  const [askTriage, setAskTriage] = useState(false)
-
   function handleLogout() {
     logout().then(() => window.location.reload())
   }
 
   return (
     <div className="aria-page">
-      <ConfirmModal
-        open={askTriage}
-        emoji="🍵"
-        title="Ready to triage everything?"
-        body="I'll re-rank every incomplete task across your days using your daily caps. Current day assignments get cleared so you start fresh."
-        confirmLabel="Let's brew it"
-        cancelLabel="Not now"
-        onCancel={() => setAskTriage(false)}
-        onConfirm={() => {
-          setAskTriage(false)
-          onNavigate?.('tournament')
-        }}
-      />
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
 
         <h1 className="text-2xl font-semibold text-ui-text mb-6">Menu</h1>
@@ -366,7 +350,7 @@ export default function Settings({ onNavigate, user }) {
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Tasks</h2>
           <div className="space-y-2">
-            <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => setAskTriage(true)}>
+            <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('tournament')}>
               <p className="text-sm font-medium text-ui-text">Triage 🍵</p>
               <p className="text-xs text-ui-subtext mt-0.5">Bin-pack the next 7 days by score; pin items that must happen on a specific day</p>
             </Card>

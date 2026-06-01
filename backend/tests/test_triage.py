@@ -489,3 +489,118 @@ def test_same_day_create_outranks_loaded_non_urgent(client, auth_headers, db_ses
     assert s_same["total"] > s_over["total"]
 
 
+# ---------------------------------------------------------------------------
+# apply-ordered (new triage flow)
+# ---------------------------------------------------------------------------
+
+def test_apply_ordered_places_within_budget(client, auth_headers, db_session):
+    user = _user(db_session)
+    tasks = [_mk_task(db_session, user.id) for _ in range(3)]
+    ids = [t.id for t in tasks]
+    r = client.post("/triage/apply-ordered", json={"ordered_task_ids": ids}, headers=auth_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert set(body["placed"]) == set(ids)
+    assert body["overflow"] == []
+    for t in tasks:
+        db_session.refresh(t)
+        assert t.status == TaskStatus.today
+
+
+def test_apply_ordered_returns_overflow(client, auth_headers, db_session):
+    """Heavy tasks exceeding budget should land in overflow."""
+    user = _user(db_session)
+    tasks = [_mk_task(db_session, user.id, weight=TaskWeight.heavy) for _ in range(10)]
+    ids = [t.id for t in tasks]
+    r = client.post("/triage/apply-ordered", json={"ordered_task_ids": ids}, headers=auth_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["overflow"]) > 0
+    assert len(body["placed"]) + len(body["overflow"]) == 10
+
+
+def test_apply_ordered_sets_sort_order_by_position(client, auth_headers, db_session):
+    user = _user(db_session)
+    tasks = [_mk_task(db_session, user.id) for _ in range(3)]
+    ids = [t.id for t in tasks]
+    client.post("/triage/apply-ordered", json={"ordered_task_ids": ids}, headers=auth_headers)
+    for idx, t in enumerate(tasks):
+        db_session.refresh(t)
+        assert t.sort_order == float(idx)
+
+
+def test_apply_ordered_respects_appointment_committed_weight(client, auth_headers, db_session):
+    user = _user(db_session)
+    appt = Task(
+        owner_id=user.id, title="Big Appt", task_type=TaskType.appointment,
+        status=TaskStatus.today, due_date=date.today(),
+        scheduled_date=datetime.combine(date.today(), datetime.min.time()),
+        weight=TaskWeight.heavy,
+    )
+    db_session.add(appt)
+    db_session.commit()
+    tasks = [_mk_task(db_session, user.id, weight=TaskWeight.heavy) for _ in range(8)]
+    ids = [t.id for t in tasks]
+    r = client.post("/triage/apply-ordered", json={"ordered_task_ids": ids}, headers=auth_headers)
+    body = r.json()
+    assert body["committed"] >= 3
+
+
+def test_apply_ordered_ignores_foreign_tasks(client, auth_headers, db_session):
+    """Task IDs from a different user should be silently skipped."""
+    user = _user(db_session)
+    own = _mk_task(db_session, user.id)
+    r = client.post(
+        "/triage/apply-ordered",
+        json={"ordered_task_ids": [own.id, 99999]},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert 99999 not in body["placed"]
+
+
+# ---------------------------------------------------------------------------
+# resolve-overflow
+# ---------------------------------------------------------------------------
+
+def test_resolve_overflow_bumps_to_tomorrow(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, status=TaskStatus.today)
+    r = client.post(
+        "/triage/resolve-overflow",
+        json={"keep_today_ids": [], "bump_ids": [t.id]},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200
+    db_session.refresh(t)
+    assert t.status == TaskStatus.inbox
+    assert t.due_date == date.today() + timedelta(days=1)
+    assert t.sort_order == 0.0
+
+
+def test_resolve_overflow_increments_push_count(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, push_count=2)
+    client.post(
+        "/triage/resolve-overflow",
+        json={"keep_today_ids": [], "bump_ids": [t.id]},
+        headers=auth_headers,
+    )
+    db_session.refresh(t)
+    assert t.push_count == 3
+
+
+def test_resolve_overflow_keeps_today(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, status=TaskStatus.inbox)
+    client.post(
+        "/triage/resolve-overflow",
+        json={"keep_today_ids": [t.id], "bump_ids": []},
+        headers=auth_headers,
+    )
+    db_session.refresh(t)
+    assert t.status == TaskStatus.today
+    assert t.due_date == date.today()
+
+

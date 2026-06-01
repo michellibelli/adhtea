@@ -20,7 +20,6 @@ import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import ConfirmModal from '../components/ConfirmModal'
 import { PageLoading, PageError } from '../components/PageState'
 import { isTimedVisible } from '../utils/timing'
 
@@ -61,7 +60,7 @@ function sortTasks(tasks, sortBy) {
   return copy.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
 }
 
-function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
+function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete, completing }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
   const style = {
@@ -77,7 +76,7 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab active:cursor-grabbing"
+      className={`cursor-grab active:cursor-grabbing ${completing ? 'animate-task-complete' : ''}`}
     >
       <TaskCard
         task={task}
@@ -97,11 +96,11 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
   const [capacity, setCapacity] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [error,   setError]     = useState(null)
+  const [completingId, setCompletingId] = useState(null)
   const [showDone, setShowDone] = useState(false)
   const [expandedDoneId, setExpandedDoneId] = useState(null)
   const [sortBy, setSortBy]     = useState('manual')
   const [dismissOverload, setDismissOverload] = useState(false)
-  const [askTriage, setAskTriage] = useState(false)
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -147,13 +146,14 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
   // fails, fall back to a full refresh to restore accurate state.
 
   async function handleComplete(id) {
-    setTasks(prev => prev.filter(t => t.id !== id))  // disappears right away
-    try {
-      await completeTask(id)
-      // Refresh the completed list and capacity score without touching the main list
+    setCompletingId(id)
+    try { await completeTask(id) } catch (err) { console.error(err) }
+    setTimeout(() => {
+      setTasks(prev => prev.filter(t => t.id !== id))
+      setCompletingId(null)
       getDoneToday().then(setDone).catch(() => {})
       getTodayCapacity().then(setCapacity).catch(() => {})
-    } catch (err) { console.error(err); fetchTasks() }
+    }, 350)
   }
 
   async function handleSnooze(id, until) {
@@ -189,19 +189,6 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
 
   return (
     <div className="aria-page">
-      <ConfirmModal
-        open={askTriage}
-        emoji="🍵"
-        title="Ready to triage everything?"
-        body="I'll preview a 7-day layout — bin-packed by score, your pins respected. You can review before applying."
-        confirmLabel="Show me"
-        cancelLabel="Not now"
-        onCancel={() => setAskTriage(false)}
-        onConfirm={() => {
-          setAskTriage(false)
-          onTournament?.()
-        }}
-      />
       <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
 
         {/* Header */}
@@ -210,7 +197,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <span className="text-sm text-ui-subtext">{visible.length} of {tasks.length}</span>
             {onTournament && (
-              <Button variant="secondary" onClick={() => setAskTriage(true)}>
+              <Button variant="secondary" onClick={() => onTournament?.()}>
                 🍵 Triage
               </Button>
             )}
@@ -313,6 +300,7 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
                         <SortableTaskRow key={task.id} task={task}
                           onComplete={handleComplete} onSnooze={handleSnooze}
                           onDefer={handleDefer} onDelete={handleDelete}
+                          completing={completingId === task.id}
                         />
                       ))}
                       {queued.length > 0 && (
@@ -326,10 +314,12 @@ export default function Today({ visibleLimit = 10, carriedOver = false, onTourna
               ) : (
                 <div className="space-y-3">
                   {visible.map(task => (
-                    <TaskCard key={task.id} task={task} variant="today"
-                      onComplete={handleComplete} onSnooze={handleSnooze}
-                      onDefer={handleDefer} onDelete={handleDelete}
-                    />
+                    <div key={task.id} className={completingId === task.id ? 'animate-task-complete' : ''}>
+                      <TaskCard task={task} variant="today"
+                        onComplete={handleComplete} onSnooze={handleSnooze}
+                        onDefer={handleDefer} onDelete={handleDelete}
+                      />
+                    </div>
                   ))}
                   {queued.length > 0 && (
                     <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext">

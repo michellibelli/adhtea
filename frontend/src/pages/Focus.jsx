@@ -22,6 +22,16 @@ const TEA_PUNS = [
   "You're steep-endous! 🏆",
   "Infuse-iastic! ☕✨",
   "No steep too deep! 🌿",
+  "Kettle done, well done! 🫖",
+  "You're a cup above! ☕",
+  "Leaf it to you! 🍃",
+  "Sencha-tional work! 🌿",
+  "That's the last drop! 💧",
+  "Tisane of the times! 🌸",
+  "You've got it down to a tea! 🫖",
+  "Per-mint condition! 🌿",
+  "Darjeeling with it! 🏔️",
+  "Chamomile and chill! 🌼",
 ]
 
 const PRIORITY_BADGE = {
@@ -180,7 +190,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
   const [leaving,     setLeaving]     = useState(false)
-  const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'p1' | 'p2' | 'p3'
+  const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'fade'
   const punRef = useRef('')
   const completedTaskRef     = useRef(null)  // { taskId, wasBonus }
   const celebrationTimersRef = useRef([])
@@ -297,10 +307,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
     setCelebrate('dunk')
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = [
-      setTimeout(() => setCelebrate('p1'),  5350),
-      setTimeout(() => setCelebrate('p2'),  5350 + 720),
-      setTimeout(() => setCelebrate('p3'),  5350 + 1180),
-      setTimeout(() => skipCelebration(),   5350 + 1180 + 3000),
+      setTimeout(() => setCelebrate('fade'), 4600),
+      setTimeout(() => skipCelebration(),    5400),
     ]
   }
 
@@ -402,59 +410,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
       <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(70px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
 
-        {/* Header — normal when idle, hidden during dunk, celebration overlay for p1–p3 */}
-        {(celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3') ? (
-          <div
-            className="fixed left-0 right-0 overflow-hidden cursor-pointer select-none pointer-events-auto"
-            style={{ top: '20%', height: '90px', zIndex: 20 }}
-            onClick={skipCelebration}
-          >
-            {/* Train: cup + rainbow slide in as a unit */}
-            {celebrate !== 'p3' && (
-              <div
-                className="absolute inset-0 flex items-center px-4"
-                style={{
-                  animation: celebrate === 'p1'
-                    ? 'celebrate-slide-in 720ms ease-out forwards'
-                    : 'none',
-                  transform: celebrate === 'p2' ? 'translateX(0)' : undefined,
-                }}
-              >
-                {/* Rainbow strip */}
-                <div
-                  style={{
-                    flex: 1,
-                    height: '10px',
-                    borderRadius: '5px',
-                    background: 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)',
-                    transformOrigin: 'right center',
-                    animation: celebrate === 'p2'
-                      ? 'celebrate-rainbow-shrink 420ms ease-in forwards'
-                      : 'none',
-                  }}
-                />
-                {/* Cup — overlaps the rainbow front end */}
-                <span style={{
-                  fontSize: '3.2em', lineHeight: 1, flexShrink: 0,
-                  paddingRight: '8px', marginLeft: '-1.1em',
-                  position: 'relative', zIndex: 1,
-                }}>☕</span>
-              </div>
-            )}
-            {/* Pun text */}
-            {celebrate === 'p3' && (
-              <div
-                className="absolute inset-0 flex items-center justify-between px-6"
-                style={{ animation: 'celebrate-pun-in 280ms ease-out forwards' }}
-              >
-                <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1' }}>✨</span>
-                {/* eslint-disable-next-line react-hooks/refs -- punRef set in handleComplete before this renders */}
-                <span className="text-lg font-semibold text-center flex-1 px-3" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
-                <span className="sparkle" style={{ fontSize: '1.6em', color: '#C490D1', animationDelay: '0.5s' }}>✨</span>
-              </div>
-            )}
-          </div>
-        ) : celebrate !== 'dunk' ? (
+        {/* Header — hidden during dunk/fade, shown when idle */}
+        {!celebrate ? (
           <>
             {/* Header — desktop only. Mobile renders the same stats up
                 in the App.jsx top bar. On desktop the capacity bar +
@@ -495,11 +452,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             floating at the bottom of the page. */}
         <div
           className={`flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5 ${
-            celebrate === 'p1' || celebrate === 'p2' || celebrate === 'p3'
-              ? 'opacity-0 pointer-events-none'
-              : !celebrate
-                ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
-                : ''
+            !celebrate
+              ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
+              : ''
           }`}
         >
           {/* Relative wrapper — width via max-w-* on the inner bag div;
@@ -509,7 +464,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
                 inside the descending wrapper. */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 5000ms linear 350ms both', position: 'relative', zIndex: 1 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1 } : undefined}>
 
             {/* Tag — outside sway-wrap so it stays still (where the string meets
                 the imaginary cup rim above). String + bag swing from here. */}
@@ -623,24 +578,43 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
 
 
             {/* Teacup back — behind bag (back rim arc + tea pool) */}
-            {celebrate === 'dunk' && (
+            {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
                 width: 'fit-content', top: '100%', marginTop: '-12px',
                 zIndex: 0, pointerEvents: 'none',
-                animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
+                animation: celebrate === 'fade'
+                  ? 'cup-pun-fadeout 800ms ease-in forwards'
+                  : 'teacup-appear 400ms ease-out 800ms both, teacup-bounce 800ms ease-in-out 3570ms both',
               }}>
                 <TeaCupBack />
               </div>
             )}
 
+            {/* Pun text — rises from the cup as the bag descends */}
+            {(celebrate === 'dunk' || celebrate === 'fade') && (
+              <div style={{
+                position: 'absolute', left: 0, right: 0, margin: '0 auto',
+                top: '100%', marginTop: '40px',
+                zIndex: 4, pointerEvents: 'none', textAlign: 'center',
+                animation: celebrate === 'fade'
+                  ? 'cup-pun-fadeout 800ms ease-in forwards'
+                  : 'pun-rise-from-cup 2400ms ease-out 1200ms both',
+              }}>
+                {/* eslint-disable-next-line react-hooks/refs -- punRef set in handleComplete before this renders */}
+                <span className="text-lg font-semibold px-4" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
+              </div>
+            )}
+
             {/* Teacup front — in front of bag (body, handle, base, front rim arc) */}
-            {celebrate === 'dunk' && (
+            {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
                 width: 'fit-content', top: '100%', marginTop: '-12px',
                 zIndex: 3, pointerEvents: 'none',
-                animation: 'teacup-appear 400ms ease-out 950ms both, teacup-bounce 950ms ease-in-out 4200ms both, teacup-exit 400ms ease-in 5150ms forwards',
+                animation: celebrate === 'fade'
+                  ? 'cup-pun-fadeout 800ms ease-in forwards'
+                  : 'teacup-appear 400ms ease-out 800ms both, teacup-bounce 800ms ease-in-out 3570ms both',
               }}>
                 <TeaCupFront />
               </div>

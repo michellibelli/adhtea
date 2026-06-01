@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-05-23 (BUILD 4.0.61)*
+*Last updated: 2026-06-01 (BUILD 4.0.65 + uncommitted triage/animation rework)*
 
 > Full project documentation → see `PROJECT.md`
 
@@ -37,9 +37,43 @@ Primary user (prod): username=`demo_user`, user_id=2.
 
 ---
 
-## Current status — Phases 1–3 complete + Cafe visual pass shipped ✅
+## Current status — Phases 1–3 complete + Cafe visual pass + Triage rework ✅
 
-Everything below is shipped and live on adh-tea.fun.
+Everything below is shipped and live on adh-tea.fun (except the uncommitted 2026-06-01 session).
+
+### Uncommitted (2026-06-01) — triage rework + animation rework
+
+**Triage page rewrite (Tournament.jsx)**
+- Old 3-slot top-3 picker replaced with full day-planning surface.
+- Flow: add new tasks (type-ahead input) → snooze unwanted (SnoozeSheet per row) → drag-to-reorder (@dnd-kit SortableContext) → Apply.
+- Apply checks capacity: tasks within budget → status=today. Over-capacity → OverflowBumper sheet (tap to bump to tomorrow, ADHD-friendly single-pass).
+- 32-task cap. Recompute resets to score order.
+- Deleted: SlotCard, CandidateRow, FullPlanView, PlanDay, PlanItem, 7-day plan disclosure, search bar.
+
+**Backend: 2 new endpoints**
+- `POST /triage/apply-ordered` — accepts ordered task IDs, places within capacity budget, returns placed + overflow split.
+- `POST /triage/resolve-overflow` — keep_today_ids forced onto today; bump_ids → due_date=tomorrow, sort_order=0,1,2…, push_count+1.
+- Schemas: `TriageApplyRequest`, `TriageOverflowRequest` in `schemas.py`.
+- 8 new tests in `test_triage.py`. Full suite: **153 passed**.
+
+**Completion animation rework (Focus.jsx)**
+- Dunk 15% faster (5000ms → 4250ms). Pun rises from cup simultaneously (was sequential rainbow+sparkle, ~9.5s → ~5.4s).
+- Deleted: rainbow slide-in / shrink / sparkle phases. New states: `false | 'dunk' | 'fade'`.
+- 10 new tea puns (22 total).
+
+**Today.jsx completion animation**
+- 350ms fade+slide out on task complete (was instant disappear).
+
+**Triage navigation cleanup**
+- ConfirmModal gates removed from Today + Settings triage buttons (direct navigation).
+- `triageReturnTo` state in App.jsx — morning triage returns to Focus; Today-page triage returns to Today.
+
+### BUILDs 4.0.62–4.0.65 completed (2026-05-25–26)
+
+- **4.0.62** — Auth/onboarding cafe pass (AuthPage, Login, Signup, AlphaChallenge, Register, OnboardingWelcome). App.jsx steam-wisp splash. Backend: bonus/inbox/update_task switched from server-UTC to user-tz dates.
+- **4.0.63** — Missed routines kept completable; /routines/missed user-tz fix; Routines page missed list.
+- **4.0.64** — Tap tea-box bag to focus that task (overrides pickNext). Reverted 4.0.63 cross-day routine completion.
+- **4.0.65** — Triage scoring: DUE_TODAY_BONUS 50→100, OVERDUE_CAP 40→80, same_day_create lever (+300). +4 tests.
 
 ### BUILDs 4.0.21–4.0.61 completed (2026-05-23) — cafe overhaul
 
@@ -302,28 +336,29 @@ Tournament-driven Triage at scale.
 
 ## Known issues / small todos
 
-1. **Falling-leaf animation still needs work** — three-behavior physics pass (3.9.34) is closer but not done per user. Tunables: durations, swing magnitudes, rotation speeds, leaf-count, ease curves.
-2. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
-3. **Real human code review** — both AI passes still missed things a human would catch.
-4. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `Tournament.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
-5. **`update_task` server-tz bug** — uses `date.today()` (UTC) instead of `_app_today(user)` (user tz). Edge case near midnight in user's local zone.
+1. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
+2. **Real human code review** — both AI passes still missed things a human would catch.
+3. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
+4. **Settings page visual pass** — functional but cluttered, needs cafe theme spacing + Card consistency.
+5. **Logo/branding** — new adhTea logo + iconography still on the deferred cosmetic list.
 
-Resolved 2026-05-18: triage redesign D+F hybrid R1–R7 (replaces old tournament), morning check-in gate, domain-aware snooze, modal portal positioning.
-Resolved 2026-05-19: R7 drag/pin in 7-day plan view (final piece of the redesign); BUILD bumped to 4.0.0.
-Resolved 2026-05-20: RLS enabled on all tables (Supabase security advisor); `npm run lint` brought to 0 errors / 0 warnings (incl. the old `set-state-in-effect` items); triage check-in routing + empty slots + per-slot type-ahead. BUILD 4.0.1.
-Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement bypass on create/update/promote, aesthetic cohesion across nav + buttons + font + cards.
+Resolved 2026-06-01: triage page rework (full day-planning surface replaces 3-slot picker); completion animation rework (dunk+pun ~5.4s, removed rainbow/sparkles); Today.jsx fade-out animation; triage navigation cleanup.
+Resolved 2026-05-26: auth/onboarding cafe pass; server-tz date bugs in bonus/inbox/update_task (4.0.62); tap-bag-to-focus (4.0.64); triage scoring tuning (4.0.65).
+Resolved 2026-05-18: triage redesign D+F hybrid R1–R7, morning check-in gate, domain-aware snooze, modal portal positioning.
+Resolved 2026-05-19: R7 drag/pin in 7-day plan view; BUILD bumped to 4.0.0.
+Resolved 2026-05-20: RLS on all tables; lint clean; triage check-in routing + empty slots + per-slot type-ahead. BUILD 4.0.1.
+Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement, aesthetic cohesion.
 
 ---
 
-## Next: Focus-page tea-box redesign + new logo (in flight 2026-05-19)
+## Next
 
-Triage redesign closed at 4.0.0; Phase 4 still deferred. User has lined up the next visual overhaul, scope-locked to the Focus page + branding:
+Triage rework and animation rework are done but uncommitted. Immediate next:
 
-- **Tea-box on Focus** — visual tea box that bags emerge from. Bag count in the box = uncompleted tasks today (live). The persistent cup was removed in 3.9.31 so there's room to introduce this without colliding with anything currently on the page.
-- **Bag colors per task type** — each bag tinted by its `task_type` (the existing tag-color map already provides this palette).
-- **Bag order = day plan** — emergence order matches the prioritized task order from triage (now post-R7: top-3 first, then bin-packed today list).
-- **Bottom-nav cafe typography** — re-skin nav buttons to read like the letterpress wordmark + simple flat icons + rule lines you see on real tea boxes (Bigelow, Yogi, Harney). `frontend/src/components/BottomNav.jsx`.
-- **New logo + iconography for adhTea** — full brand pass. Current logo file: `public/adhTeaLogo.png` (consumers grepped on 2026-05-17).
+1. **Test in browser** — full triage flow (add, snooze, reorder, apply, overflow), completion animations on Focus + Today.
+2. **Commit + push** — all current-session changes.
+3. **Settings page visual pass** — needs cafe theme spacing + Card consistency.
+4. **Logo/branding** — new adhTea logo + iconography. Current: `public/adhTeaLogo.png`.
 
 
 **Status:** Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight.
@@ -361,9 +396,10 @@ backend/
     medication.py     MedicationSchedule + MedicationLog (no dose field as of 3.9.17)
     gcal.py           Google Calendar OAuth 2.0 + lazy sync
     projects.py       Project CRUD + Claude Haiku AI breakdown + sub-task date cascade
+    triage.py         scoring engine, bin-pack, pin/unpin, apply-ordered, resolve-overflow
     domains.py        Project Domain CRUD; lazy-seeds Work/Home defaults per user
     import_csv.py     Notion CSV import
-  tests/              86 pytest tests (conftest + 10 test files); see Test infra section
+  tests/              153 pytest tests (conftest + 11 test files); see Test infra section
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 
@@ -380,9 +416,9 @@ frontend/src/
   App.jsx                     routing, nav state, WakeScreen gate
   api/client.js               singleton, warmUp(), likelySleeping(), smart retry
   pages/
-    Focus.jsx                 home — pickNext(), bonus mode, isImminent() for appts
-    Triage.jsx                one-at-a-time, slide animation, defer vs snooze
-    Today.jsx                 full list, drag-to-reorder
+    Focus.jsx                 home — pickNext(), bonus mode, dunk celebration, tap-bag-to-focus
+    Tournament.jsx            triage — add/snooze/reorder/apply, overflow bumper, 32-task cap
+    Today.jsx                 full list, drag-to-reorder, completion fade animation
     Capture.jsx               type-aware (task/appt/routine/note)
     SelfCare.jsx              foundation log + full capacity bar
     EODGate.jsx               mood gate (required) + warm summary
@@ -412,7 +448,7 @@ frontend/src/
 
 ## Test infrastructure (added 2026-05-17)
 
-86 pytest tests covering every backend route. Runs locally + on CI.
+153 pytest tests covering every backend route. Runs locally + on CI.
 
 ```bash
 cd backend
@@ -433,6 +469,7 @@ python -m pytest tests/ -v
 | test_selfcare.py        |  7 | `_compute_capacity`, log upsert, snapshot recompute, daily summary |
 | test_tasks.py           |  8 | cascade date shift, `_find_target` daily caps |
 | test_tasks_lifecycle.py |  9 | `_app_today` tz, carry-forward, snoozes, demote, promote |
+| test_triage.py          | 45 | scoring levers, bin-pack, pins, apply-ordered, resolve-overflow |
 
 CI: `.github/workflows/test.yml` runs full suite on every push + PR to master (Python 3.12, ubuntu-latest, pip cache keyed off requirements-dev.txt).
 

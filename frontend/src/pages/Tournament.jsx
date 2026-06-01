@@ -1,35 +1,32 @@
-// Triage redesign R7+ — top-3 primary view with interactive 7-day plan.
+// Triage — full day-planning surface.
 //
-// Workflow target: open the page with ~10 minutes, pick the 3 tasks for
-// today, hit Apply, system bin-packs the rest into days 1–6 silently.
-// The full 7-day grid is hidden by default behind a "Show full plan"
-// disclosure. When opened: each item is draggable to any other day card,
-// and the ★ per item pins to today + drops into the next open top-3 slot.
+// Flow: add new tasks → snooze what you don't want today → drag into
+// execution order → Apply. If over capacity, an overflow bumper lets
+// you tap tasks to bump to tomorrow.
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
-  DndContext, closestCenter, useSensor, useSensors, useDraggable, useDroppable, TouchSensor,
+  DndContext, closestCenter, useSensor, useSensors, TouchSensor,
 } from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { SmartPointerSensor } from '../utils/dnd'
 import {
-  previewTriage, runTriage, recomputeTriage, pinTask, unpinTask,
+  previewTriage, recomputeTriage, applyOrderedTriage, resolveOverflow,
 } from '../api/triage'
-import { createTask, deleteTask, snoozeTask } from '../api/tasks'
+import { createTask, snoozeTask, reorderTasks } from '../api/tasks'
+import { createPortal } from 'react-dom'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import ProjectBadge from '../components/ProjectBadge'
+import SnoozeSheet from '../components/SnoozeSheet'
 import { PageLoading, PageError } from '../components/PageState'
 import { markTriageDone } from '../utils/triage'
 
-// At ≥ this many pushes, surface the archive/delete prompt instead of letting
-// the task drift through another snooze cycle.
 const STALE_PUSH_THRESHOLD = 5
+const MAX_TRIAGE_TASKS = 32
 
-// Initial suggested-candidate count before "show more". Tuned so the list
-// fits a phone viewport without scrolling.
-const SUGGESTED_INITIAL = 10
-const SUGGESTED_PAGE = 25
-
-// Human-readable labels for `score_components` keys, used by WhyTooltip.
 const LEVER_LABELS = {
   priority:        'Priority',
   critical_bonus:  'Critical',
@@ -45,20 +42,11 @@ const LEVER_LABELS = {
 
 
 function todayIso() {
-  // Local-date ISO (YYYY-MM-DD) — what the pin endpoint expects.
   const d = new Date()
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-
-function dayLabel(isoDate, offset) {
-  if (offset === 0) return 'Today'
-  if (offset === 1) return 'Tomorrow'
-  const d = new Date(isoDate + 'T00:00:00')
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 
@@ -127,92 +115,84 @@ function MetaBadges({ task }) {
 }
 
 
-function StalePrompt({ task, onAfterAction }) {
-  const [busy, setBusy] = useState(false)
-  async function handleDelete() {
-    setBusy(true)
-    try { await deleteTask(task.id); await onAfterAction() }
-    catch (e) { alert(e?.message || 'Delete failed') }
-    finally { setBusy(false) }
+// ── Sortable triage row ─────────────────────────────────────────────────────
+
+function SortableTriageRow({ task, onSnooze, onWhy, showWhy }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  const components = parseComponents(task.score_components)
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
   }
-  async function handleSnoozeMonth() {
-    setBusy(true)
-    try {
-      const until = new Date()
-      until.setDate(until.getDate() + 30)
-      until.setHours(0, 0, 0, 0)
-      await snoozeTask(task.id, until.toISOString())
-      await onAfterAction()
-    } catch (e) { alert(e?.message || 'Snooze failed') }
-    finally { setBusy(false) }
-  }
+
   return (
-    <div className="mt-2 pt-2 border-t border-amber-400/30 bg-amber-400/5 -mx-3 -mb-2 px-3 py-2 rounded-b-xl">
-      <p className="text-[10px] text-amber-500 leading-snug">
-        Pushed {task.push_count}× — keep delaying, or let it go?
-      </p>
-      <div className="flex gap-2 mt-1.5">
-        <button type="button" onClick={handleDelete} disabled={busy}
-          className="text-[10px] font-medium px-2 py-1 rounded border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors">
-          Delete
-        </button>
-        <button type="button" onClick={handleSnoozeMonth} disabled={busy}
-          className="text-[10px] font-medium px-2 py-1 rounded border border-ui-border text-ui-subtext hover:text-ui-text transition-colors">
-          Snooze 30d
-        </button>
-      </div>
-    </div>
-  )
-}
-
-
-// ── Top-3 slot card ──────────────────────────────────────────────────────────
-
-function SlotCard({ index, task, slotFilledIds, allTasks, onClear, onWhy, showWhy, onPick, onCreate, busy }) {
-  const [query, setQuery] = useState('')
-
-  // Type-ahead matches: existing tasks whose title contains the query and
-  // that aren't already in another slot. In-memory substring filter — same
-  // operation the search bar runs, capped at 6 rows.
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return []
-    return allTasks
-      .filter(t => !slotFilledIds.includes(t.id) && t.title.toLowerCase().includes(q))
-      .slice(0, 6)
-  }, [query, allTasks, slotFilledIds])
-
-  if (task) {
-    const components = parseComponents(task.score_components)
-    return (
-      <Card className="px-3 py-3 ring-1 ring-amber-400/50 bg-amber-400/5">
+    <div ref={setNodeRef} style={style}>
+      <Card className={`px-3 py-2 mb-1.5 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
         <div className="flex items-start gap-2">
-          <span className="text-base text-amber-400 flex-shrink-0 font-semibold">★{index + 1}</span>
+          {/* Drag handle */}
+          <span
+            {...attributes}
+            {...listeners}
+            className="text-ui-subtext/40 text-[11px] flex-shrink-0 cursor-grab active:cursor-grabbing px-0.5 select-none mt-1"
+            aria-label="Drag to reorder"
+          >⋮⋮</span>
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
             <div className="mt-1">
               <MetaBadges task={task} />
             </div>
           </div>
-          <ScoreChip task={task} onClick={onWhy} />
+
+          <ScoreChip task={task} onClick={() => onWhy(task.id)} />
+
+          {/* Snooze button */}
           <button
             type="button"
-            onClick={onClear}
-            title="Remove from top 3"
-            className="flex-shrink-0 text-ui-subtext/40 hover:text-red-400 transition-colors text-sm font-bold"
-          >×</button>
+            onClick={() => onSnooze(task.id)}
+            title="Snooze"
+            aria-label="Snooze"
+            className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <circle cx="12" cy="12" r="9" />
+              <polyline points="12 7 12 12 15.5 14" />
+            </svg>
+          </button>
         </div>
         {showWhy && <WhyTooltip components={components} total={task.score} />}
       </Card>
-    )
+    </div>
+  )
+}
+
+
+// ── New task input ──────────────────────────────────────────────────────────
+
+function NewTaskInput({ allTasks, triageIds, onCreated, onPick, busy }) {
+  const [query, setQuery] = useState('')
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return allTasks
+      .filter(t => !triageIds.has(t.id) && t.title.toLowerCase().includes(q))
+      .slice(0, 6)
+  }, [query, allTasks, triageIds])
+
+  async function handleCreate() {
+    const t = query.trim()
+    if (!t) return
+    setQuery('')
+    await onCreated(t)
   }
 
-  // Empty slot: a type-ahead field. Type to find an existing task (dropdown),
-  // or hit the + button to create a brand-new task from the typed text.
   return (
-    <Card className="px-3 py-3 border-dashed">
-      <div className="flex items-start gap-2">
-        <span className="text-base text-amber-400 flex-shrink-0 font-semibold">★{index + 1}</span>
+    <Card className="px-3 py-3 border-dashed mb-4">
+      <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <input
@@ -221,18 +201,18 @@ function SlotCard({ index, task, slotFilledIds, allTasks, onClear, onWhy, showWh
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => {
                 if (e.key !== 'Enter') return
-                if (matches.length > 0) onPick(matches[0].id)
-                else if (query.trim()) onCreate(query.trim())
+                if (matches.length > 0) { onPick(matches[0]); setQuery('') }
+                else if (query.trim()) handleCreate()
               }}
-              placeholder="type to find or add a task…"
+              placeholder="add a task to today…"
               disabled={busy}
               className="flex-1 min-w-0 text-sm bg-transparent text-ui-text placeholder-ui-subtext/50 outline-none"
             />
             <button
               type="button"
-              onClick={() => onCreate(query.trim())}
+              onClick={handleCreate}
               disabled={busy || !query.trim()}
-              title="Add as a new task, due today"
+              title="Add new task due today"
               className="flex-shrink-0 w-6 h-6 rounded-full border border-ui-border flex items-center justify-center text-xs font-bold text-ui-subtext hover:border-amber-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >+</button>
           </div>
@@ -242,7 +222,7 @@ function SlotCard({ index, task, slotFilledIds, allTasks, onClear, onWhy, showWh
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => onPick(t.id)}
+                  onClick={() => { onPick(t); setQuery('') }}
                   className="w-full flex items-center gap-2 text-left px-1 py-1 rounded hover:bg-ui-accent/10 transition-colors"
                 >
                   <span className="text-sm text-ui-text flex-1 truncate">{t.title}</span>
@@ -260,148 +240,81 @@ function SlotCard({ index, task, slotFilledIds, allTasks, onClear, onWhy, showWh
 }
 
 
-// ── Candidate row in the suggested / search list ─────────────────────────────
+// ── Overflow bumper sheet ────────────────────────────────────────────────────
 
-function CandidateRow({ task, onAdd, onWhy, showWhy, inSlots, slotsFull, onAfterStale }) {
-  const components = parseComponents(task.score_components)
-  const isStale  = (task.push_count || 0) >= STALE_PUSH_THRESHOLD
-  return (
-    <Card className={`px-3 py-2 mb-1.5 ${inSlots ? 'opacity-50' : ''} ${isStale ? 'border-amber-400/40' : ''}`}>
-      <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={inSlots || slotsFull}
-          title={inSlots ? 'Already in top 3' : slotsFull ? 'Clear a slot first' : 'Add to top 3'}
-          className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
-            inSlots
-              ? 'border-amber-400/60 text-amber-400'
-              : slotsFull
-                ? 'border-ui-border text-ui-subtext/30 cursor-not-allowed'
-                : 'border-ui-border text-ui-subtext hover:border-amber-400 hover:text-amber-400'
-          }`}
-        >
-          {inSlots ? '★' : '+'}
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
-          <div className="mt-1">
-            <MetaBadges task={task} />
+function OverflowBumper({ tasks, taskMap, onResolve, onKeepAll }) {
+  const [bumped, setBumped] = useState(new Set())
+
+  function toggle(id) {
+    setBumped(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function handleDone() {
+    const keepIds = tasks.filter(id => !bumped.has(id))
+    const bumpIds = tasks.filter(id => bumped.has(id))
+    onResolve(keepIds, bumpIds)
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end md:items-start md:justify-center md:pt-[15vh]">
+      <div className="fixed inset-0 bg-black/30" onClick={onKeepAll} />
+      <div className="relative bg-ui-surface rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[70vh] overflow-y-auto shadow-xl">
+        <div className="p-4">
+          <div className="w-10 h-1 rounded-full bg-ui-border mx-auto mb-3 md:hidden" />
+          <h3 className="text-base font-semibold text-ui-text mb-1">Over capacity</h3>
+          <p className="text-xs text-ui-subtext mb-4">
+            Tap tasks to bump them to tomorrow. Or keep all and power through.
+          </p>
+
+          <div className="space-y-1.5">
+            {tasks.map(id => {
+              const task = taskMap.get(id)
+              if (!task) return null
+              const isBumped = bumped.has(id)
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggle(id)}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                    isBumped
+                      ? 'border-amber-400/50 bg-amber-400/10 opacity-60'
+                      : 'border-ui-border bg-ui-input hover:bg-ui-accent/5'
+                  }`}
+                >
+                  <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] transition-colors ${
+                    isBumped ? 'border-amber-400 bg-amber-400 text-white' : 'border-ui-border'
+                  }`}>
+                    {isBumped && '→'}
+                  </span>
+                  <span className={`text-sm flex-1 truncate ${isBumped ? 'line-through text-ui-subtext' : 'text-ui-text'}`}>
+                    {task.title}
+                  </span>
+                  {task.weight && (
+                    <span className="text-[9px] text-ui-subtext flex-shrink-0">{task.weight}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button variant="ghost" className="flex-1" onClick={onKeepAll}>
+              Keep all
+            </Button>
+            <Button className="flex-1" onClick={handleDone} disabled={bumped.size === 0}>
+              Bump {bumped.size} to tomorrow
+            </Button>
           </div>
         </div>
-        <ScoreChip task={task} onClick={onWhy} />
       </div>
-      {showWhy && <WhyTooltip components={components} total={task.score} />}
-      {isStale && <StalePrompt task={task} onAfterAction={onAfterStale} />}
-    </Card>
-  )
-}
-
-
-// ── Full plan view (collapsible 7-column grid) ───────────────────────────────
-
-function CapacityBar({ used, committed, budget }) {
-  const total = used + committed
-  const pct   = budget > 0 ? Math.min(100, (total / budget) * 100) : 0
-  const over  = total > budget
-  return (
-    <div className="mb-2">
-      <div className="flex items-center justify-between text-[10px] text-ui-subtext mb-1">
-        <span>{total.toFixed(0)} / {budget.toFixed(0)} units</span>
-        {over && <span className="text-red-400 font-medium">over capacity</span>}
-      </div>
-      <div className="h-1 rounded-full bg-ui-border overflow-hidden">
-        <div className={`h-full transition-all duration-300 ${over ? 'bg-red-400' : 'bg-ui-accent'}`}
-          style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  )
-}
-
-
-function PlanItem({ task, isToday, onPinToday }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `plan-item-${task.id}`,
-    data: { taskId: task.id },
-  })
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 50 : undefined }
-    : undefined
-  const starTitle = isToday ? 'Add to top 3' : 'Pin to today'
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-1 py-1 border-b border-ui-border/30 last:border-0 touch-none"
-    >
-      <span
-        {...attributes}
-        {...listeners}
-        className="text-ui-subtext/40 text-[11px] flex-shrink-0 cursor-grab active:cursor-grabbing px-0.5 select-none"
-        aria-label="Drag to move"
-      >⋮⋮</span>
-      <span className="text-xs text-ui-text flex-1 truncate">{task.title}</span>
-      <button
-        type="button"
-        onClick={() => onPinToday(task.id)}
-        title={starTitle}
-        className="text-[11px] text-ui-subtext/60 hover:text-amber-400 transition-colors px-1 flex-shrink-0"
-      >★</button>
-    </div>
-  )
-}
-
-
-function PlanDay({ day, offset, children }) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: `plan-day-${day.date}`,
-    data: { date: day.date },
-  })
-  return (
-    <div
-      ref={setNodeRef}
-      className={`rounded-sm bg-ui-surface pixel-card px-3 py-3 transition-colors ${isOver ? 'ring-2 ring-amber-400 bg-amber-400/10' : ''}`}
-    >
-      <div className="flex items-baseline justify-between mb-1.5">
-        <h3 className="text-sm font-semibold text-ui-text">{dayLabel(day.date, offset)}</h3>
-        <span className="text-[10px] text-ui-subtext">
-          {day.items.length} task{day.items.length === 1 ? '' : 's'}
-        </span>
-      </div>
-      <CapacityBar used={day.used} committed={day.committed} budget={day.budget} />
-      {children}
-    </div>
-  )
-}
-
-
-function FullPlanView({ layout, onPinToday }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
-      {layout.days.map((day, i) => (
-        <PlanDay key={day.date} day={day} offset={i}>
-          {day.items.length === 0 ? (
-            <p className="text-[10px] text-ui-subtext/60 italic text-center py-3">empty — drop a task here</p>
-          ) : (
-            day.items.map(t => (
-              <PlanItem key={t.id} task={t} isToday={i === 0} onPinToday={onPinToday} />
-            ))
-          )}
-        </PlanDay>
-      ))}
-      {layout.overflow.length > 0 && (
-        <Card className="px-3 py-3 md:col-span-2 xl:col-span-3">
-          <h3 className="text-sm font-semibold text-ui-text mb-2">
-            The pile — {layout.overflow.length} task{layout.overflow.length === 1 ? '' : 's'} beyond the window
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-3">
-            {layout.overflow.map(t => (
-              <PlanItem key={t.id} task={t} isToday={false} onPinToday={onPinToday} />
-            ))}
-          </div>
-        </Card>
-      )}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -409,20 +322,16 @@ function FullPlanView({ layout, onPinToday }) {
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function Tournament({ onDone }) {
-  const [layout, setLayout] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(null)
-  const [busy,    setBusy]    = useState(false)
-  const [applied, setApplied] = useState(false)
-
-  // [taskId, taskId, taskId] — null in empty slots.
-  const [slots, setSlots] = useState([null, null, null])
-  const [search, setSearch] = useState('')
-  const [showWhyId, setShowWhyId] = useState(null)
-  const [suggestedShown, setSuggestedShown] = useState(SUGGESTED_INITIAL)
-  const [showFullPlan, setShowFullPlan] = useState(false)
-  const [planError, setPlanError] = useState(null)
-  const [addingTask, setAddingTask] = useState(false)
+  const [triageTasks, setTriageTasks] = useState([])
+  const [allTasks,    setAllTasks]    = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState(null)
+  const [busy,        setBusy]        = useState(false)
+  const [applied,     setApplied]     = useState(false)
+  const [showSnoozeFor, setShowSnoozeFor] = useState(null)
+  const [overflowItems, setOverflowItems] = useState(null)
+  const [showWhyId,   setShowWhyId]   = useState(null)
+  const [addingTask,  setAddingTask]  = useState(false)
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -433,7 +342,17 @@ export default function Tournament({ onDone }) {
     setLoading(true); setError(null)
     try {
       const data = await previewTriage()
-      setLayout(data)
+      const flat = [...data.days.flatMap(d => d.items), ...data.overflow]
+      const seen = new Set()
+      const unique = flat.filter(t => {
+        if (seen.has(t.id)) return false
+        seen.add(t.id)
+        return true
+      })
+      unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      setAllTasks(unique)
+      const day0 = unique.slice(0, MAX_TRIAGE_TASKS)
+      setTriageTasks(day0)
     } catch (e) {
       setError(e?.message || 'Could not load triage')
     } finally {
@@ -441,105 +360,28 @@ export default function Tournament({ onDone }) {
     }
   }, [])
 
-  // Mount-only fetch; refresh is stable (useCallback []).
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { refresh() }, [refresh])
 
-  // All live tasks the bin-pack saw, flattened + sorted by score desc.
-  // Includes currently-pinned items (they're inside their day's bucket) so
-  // pre-populating the slots and the suggested list both read the same data.
-  const allTasks = useMemo(() => {
-    if (!layout) return []
-    const flat = [...layout.days.flatMap(d => d.items), ...layout.overflow]
-    // Dedupe by id (pinned items appear in their day's bucket already).
-    const seen = new Set()
-    const unique = flat.filter(t => {
-      if (seen.has(t.id)) return false
-      seen.add(t.id)
-      return true
-    })
-    return unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-  }, [layout])
+  const triageIds = useMemo(() => new Set(triageTasks.map(t => t.id)), [triageTasks])
 
-  // Slots start empty — triage is an active choice, not a system guess. This
-  // only runs on layout refresh, to drop any slotted task that no longer exists.
-  useEffect(() => {
-    if (!layout) return
-    const validIds = new Set(allTasks.map(t => t.id))
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSlots(prev => prev.map(id => (id != null && validIds.has(id) ? id : null)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout])
-
-  const taskById = useMemo(() => {
+  const taskMap = useMemo(() => {
     const m = new Map()
     for (const t of allTasks) m.set(t.id, t)
+    for (const t of triageTasks) m.set(t.id, t)
     return m
-  }, [allTasks])
+  }, [allTasks, triageTasks])
 
-  const slotsFull = slots.every(s => s != null)
+  // ── Handlers ──
 
-  // Suggested + search list: filter, then paginate.
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return allTasks
-    return allTasks.filter(t => t.title.toLowerCase().includes(q))
-  }, [allTasks, search])
-
-  const visible = filtered.slice(0, suggestedShown)
-  const moreCount = Math.max(0, filtered.length - suggestedShown)
-
-  function assignToFirstEmptySlot(taskId) {
-    setSlots(prev => {
-      // If already in a slot, this is a no-op (button is disabled).
-      if (prev.includes(taskId)) return prev
-      const idx = prev.findIndex(s => s == null)
-      if (idx === -1) return prev
-      const next = [...prev]
-      next[idx] = taskId
-      return next
-    })
-  }
-
-  // Fill a specific slot — used by the per-slot type-ahead.
-  function assignToSlot(idx, taskId) {
-    setSlots(prev => {
-      if (prev.includes(taskId)) return prev
-      const next = [...prev]
-      next[idx] = taskId
-      return next
-    })
-  }
-
-  function clearSlot(idx) {
-    setSlots(prev => { const n = [...prev]; n[idx] = null; return n })
-  }
-
-  // Create a brand-new task from typed text and drop it into slot `idx` — for
-  // something that just came up and isn't in the backlog yet. Due date is set
-  // to today; pinned to today so the bin-pack places it in day 0 and the slot
-  // can resolve it.
-  async function handleCreateIntoSlot(idx, title) {
-    const t = title.trim()
-    if (!t || addingTask) return
+  async function handleCreateTask(title) {
+    if (addingTask || triageTasks.length >= MAX_TRIAGE_TASKS) return
     setAddingTask(true); setError(null)
     try {
       const iso = todayIso()
-      const created = await createTask({ title: t, task_type: 'task', due_date: iso })
-      try {
-        await pinTask(created.id, iso)
-      } catch (e) {
-        // 409 = today already at the 3-pin cap. Unpin any today-pins that
-        // aren't in our chosen slots, then retry — same recovery as Apply.
-        if (e?.status === 409 || /409/.test(String(e?.message))) {
-          const day0 = layout?.days?.[0]
-          const conflicts = (day0?.items || []).filter(x => x.pinned_for === iso && !slots.includes(x.id))
-          for (const c of conflicts) await unpinTask(c.id)
-          await pinTask(created.id, iso)
-        } else { throw e }
-      }
-      assignToSlot(idx, created.id)
-      await refresh()
+      const created = await createTask({ title, task_type: 'task', due_date: iso })
+      setTriageTasks(prev => [created, ...prev])
+      setAllTasks(prev => [created, ...prev])
     } catch (e) {
       setError(e?.message || 'Could not add task')
     } finally {
@@ -547,91 +389,73 @@ export default function Tournament({ onDone }) {
     }
   }
 
-  // ★ on a plan-view item: pin to today + drop into the first empty slot.
-  // Errors (e.g. 409 if today already has 3 different pins) bubble into the
-  // plan error banner so the user knows the pin didn't land.
-  async function handlePinFromPlan(taskId) {
-    setPlanError(null)
-    const iso = todayIso()
-    try {
-      await pinTask(taskId, iso)
-      assignToFirstEmptySlot(taskId)
-      await refresh()
-    } catch (e) {
-      const msg = String(e?.message || e || '')
-      if (e?.status === 409 || /409|already has/.test(msg)) {
-        setPlanError('Today already has 3 pins — clear one in the top-3 first.')
-      } else {
-        setPlanError(msg || 'Pin failed')
-      }
-    }
+  function handlePickExisting(task) {
+    if (triageTasks.length >= MAX_TRIAGE_TASKS) return
+    if (triageIds.has(task.id)) return
+    setTriageTasks(prev => [task, ...prev])
   }
 
-  // Drag-end from the full plan view: re-pin to the target day. Cap is 3 pins
-  // per day server-side; surface a friendly message on 409.
-  async function handlePlanDragEnd(event) {
+  async function handleSnooze(taskId, isoDate) {
+    setShowSnoozeFor(null)
+    setTriageTasks(prev => prev.filter(t => t.id !== taskId))
+    try { await snoozeTask(taskId, isoDate) }
+    catch (e) { setError(e?.message || 'Snooze failed') }
+  }
+
+  function handleDragEnd(event) {
     const { active, over } = event
-    if (!over) return
-    const taskId = active?.data?.current?.taskId
-    const targetDate = over?.data?.current?.date
-    if (!taskId || !targetDate) return
-    setPlanError(null)
-    try {
-      await pinTask(taskId, targetDate)
-      await refresh()
-    } catch (e) {
-      const msg = String(e?.message || e || '')
-      if (e?.status === 409 || /409|already has/.test(msg)) {
-        setPlanError(`${dayLabel(targetDate, -1)} already has 3 pins.`)
-      } else {
-        setPlanError(msg || 'Move failed')
-      }
-    }
-  }
-
-  function toggleWhy(taskId) {
-    setShowWhyId(prev => (prev === taskId ? null : taskId))
+    if (!over || active.id === over.id) return
+    const oldIndex = triageTasks.findIndex(t => t.id === active.id)
+    const newIndex = triageTasks.findIndex(t => t.id === over.id)
+    const reordered = arrayMove(triageTasks, oldIndex, newIndex)
+    setTriageTasks(reordered)
+    reorderTasks(reordered.map(t => t.id))
   }
 
   async function handleRecompute() {
     setBusy(true)
-    try { await recomputeTriage(); await refresh() }
-    finally { setBusy(false) }
+    try {
+      await recomputeTriage()
+      await refresh()
+    } finally { setBusy(false) }
   }
 
   async function handleApply() {
     setBusy(true); setError(null)
     try {
-      const iso = todayIso()
-      // Pin everything in slots. Server caps at 3/day; we send sequentially
-      // to surface a pin failure (e.g. existing other pin) clearly.
-      for (const id of slots.filter(Boolean)) {
-        try { await pinTask(id, iso) }
-        catch (e) {
-          // 409 = day already at cap. Pre-existing pins might be eating
-          // the slots; unpin anything not in our chosen 3 and retry.
-          if (e?.status === 409 || /409/.test(String(e?.message))) {
-            const day0 = layout?.days?.[0]
-            const conflicts = (day0?.items || []).filter(t => t.pinned_for === iso && !slots.includes(t.id))
-            for (const c of conflicts) await unpinTask(c.id)
-            await pinTask(id, iso)
-          } else { throw e }
-        }
+      const result = await applyOrderedTriage(triageTasks.map(t => t.id))
+      if (result.overflow && result.overflow.length > 0) {
+        setOverflowItems(result.overflow)
+      } else {
+        markTriageDone()
+        setApplied(true)
+        setTimeout(() => onDone?.(), 600)
       }
-      await runTriage()
-      markTriageDone()
-      setApplied(true)
-      setTimeout(() => onDone?.(), 800)
     } catch (e) {
       setError(e?.message || 'Could not apply triage')
     } finally { setBusy(false) }
   }
 
-  if (loading) return <PageLoading />
-  if (error)   return <PageError onRetry={refresh} />
-  if (!layout) return <PageError onRetry={refresh} />
+  async function handleOverflowResolve(keepIds, bumpIds) {
+    setBusy(true); setError(null)
+    try {
+      await resolveOverflow(keepIds, bumpIds)
+      setOverflowItems(null)
+      markTriageDone()
+      setApplied(true)
+      setTimeout(() => onDone?.(), 600)
+    } catch (e) {
+      setError(e?.message || 'Could not resolve overflow')
+    } finally { setBusy(false) }
+  }
 
-  const totalLive = allTasks.length
+  function handleKeepAll() {
+    const allIds = overflowItems || []
+    handleOverflowResolve(allIds, [])
+  }
+
+  if (loading) return <PageLoading />
+  if (error && !triageTasks.length) return <PageError onRetry={refresh} />
 
   return (
     <div className="aria-page">
@@ -642,112 +466,58 @@ export default function Tournament({ onDone }) {
           <div>
             <h1 className="text-2xl font-semibold text-ui-text">Triage</h1>
             <p className="text-sm text-ui-subtext mt-0.5">
-              Pick your top 3 for today — system handles the rest.
+              Add, snooze, reorder — then apply.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="ghost" size="sm" onClick={handleRecompute} disabled={busy}>
               ↻ Recompute
             </Button>
-            <Button onClick={handleApply} disabled={busy || slots.every(s => s == null)}>
-              {applied ? '✓ Applied' : 'Apply'}
+            <Button onClick={handleApply} disabled={busy || triageTasks.length === 0}>
+              {applied ? '✓ Applied' : `Apply (${triageTasks.length})`}
             </Button>
           </div>
         </div>
 
-        {/* Top-3 slots */}
-        <div className="space-y-2 mt-5 mb-6">
-          {slots.map((id, idx) => (
-            <SlotCard
-              key={idx}
-              index={idx}
-              task={id != null ? taskById.get(id) : null}
-              slotFilledIds={slots.filter(Boolean)}
-              allTasks={allTasks}
-              onClear={() => clearSlot(idx)}
-              onWhy={() => id != null && toggleWhy(id)}
-              showWhy={id != null && showWhyId === id}
-              onPick={(taskId) => assignToSlot(idx, taskId)}
-              onCreate={(title) => handleCreateIntoSlot(idx, title)}
-              busy={addingTask}
-            />
-          ))}
-        </div>
+        {/* Task count + capacity hint */}
+        <p className="text-[10px] text-ui-subtext mb-4 px-0.5">
+          {triageTasks.length} task{triageTasks.length === 1 ? '' : 's'} for today
+          {triageTasks.length >= MAX_TRIAGE_TASKS && ' (max)'}
+        </p>
 
-        {/* Search */}
-        <div className="mb-3">
-          <input
-            type="search"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setSuggestedShown(SUGGESTED_INITIAL) }}
-            placeholder={`Search ${totalLive} task${totalLive === 1 ? '' : 's'}…`}
-            className="w-full text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2 text-ui-text placeholder-ui-subtext/50 outline-none focus:border-ui-accent transition-colors"
+        {/* Add new task input */}
+        {triageTasks.length < MAX_TRIAGE_TASKS && (
+          <NewTaskInput
+            allTasks={allTasks}
+            triageIds={triageIds}
+            onCreated={handleCreateTask}
+            onPick={handlePickExisting}
+            busy={addingTask}
           />
-        </div>
+        )}
 
-        {/* Suggested / search results */}
-        <div className="mb-4">
-          <div className="flex items-baseline justify-between mb-2 px-0.5">
-            <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">
-              {search ? 'Results' : 'Suggested — top scored'}
-            </p>
-            <span className="text-[10px] text-ui-subtext">
-              {filtered.length} match{filtered.length === 1 ? '' : 'es'}
-            </span>
-          </div>
-          {visible.length === 0 ? (
-            <p className="text-xs text-ui-subtext text-center py-6">no matches</p>
-          ) : (
-            visible.map(t => (
-              <CandidateRow
-                key={t.id}
-                task={t}
-                inSlots={slots.includes(t.id)}
-                slotsFull={slotsFull}
-                onAdd={() => assignToFirstEmptySlot(t.id)}
-                onWhy={() => toggleWhy(t.id)}
-                showWhy={showWhyId === t.id}
-                onAfterStale={refresh}
-              />
-            ))
-          )}
-          {moreCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setSuggestedShown(n => n + SUGGESTED_PAGE)}
-              className="w-full mt-2 text-xs text-ui-subtext hover:text-ui-text py-2 transition-colors"
-            >
-              Show {Math.min(moreCount, SUGGESTED_PAGE)} more ↓
-            </button>
-          )}
-        </div>
+        {/* Sortable triage list */}
+        {triageTasks.length === 0 ? (
+          <p className="text-xs text-ui-subtext text-center py-8">
+            No tasks to triage — add one above or hit Recompute.
+          </p>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={triageTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              {triageTasks.map(t => (
+                <SortableTriageRow
+                  key={t.id}
+                  task={t}
+                  onSnooze={() => setShowSnoozeFor(t.id)}
+                  onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
+                  showWhy={showWhyId === t.id}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        )}
 
         {error && <p className="text-xs text-red-400 text-center my-3">{error}</p>}
-
-        {/* Full-plan disclosure */}
-        <div className="mt-8">
-          <button
-            type="button"
-            onClick={() => setShowFullPlan(s => !s)}
-            className="w-full flex items-center justify-center gap-2 text-xs text-ui-subtext hover:text-ui-text py-2 transition-colors border-t border-ui-border pt-4"
-          >
-            <span>{showFullPlan ? '▾' : '▸'}</span>
-            <span>{showFullPlan ? 'Hide' : 'Show'} full 7-day plan</span>
-          </button>
-          {showFullPlan && (
-            <>
-              <p className="text-[10px] text-ui-subtext text-center mt-2">
-                Drag between days to repin · tap ★ to send to today
-              </p>
-              {planError && (
-                <p className="text-xs text-amber-400 text-center mt-2">{planError}</p>
-              )}
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePlanDragEnd}>
-                <FullPlanView layout={layout} onPinToday={handlePinFromPlan} />
-              </DndContext>
-            </>
-          )}
-        </div>
 
         <div className="mt-6 text-center">
           <button
@@ -759,6 +529,25 @@ export default function Tournament({ onDone }) {
           </button>
         </div>
       </div>
+
+      {/* Snooze sheet */}
+      {showSnoozeFor != null && (
+        <SnoozeSheet
+          onSnooze={(isoDate) => handleSnooze(showSnoozeFor, isoDate)}
+          onClose={() => setShowSnoozeFor(null)}
+          domainName={taskMap.get(showSnoozeFor)?.domain_name}
+        />
+      )}
+
+      {/* Overflow bumper */}
+      {overflowItems && (
+        <OverflowBumper
+          tasks={overflowItems}
+          taskMap={taskMap}
+          onResolve={handleOverflowResolve}
+          onKeepAll={handleKeepAll}
+        />
+      )}
     </div>
   )
 }

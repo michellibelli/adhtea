@@ -37,7 +37,7 @@ from models import (
     Task, TaskStatus, TaskType, TaskWeight,
     Project, User, CapacitySnapshot,
 )
-from schemas import TaskResponse
+from schemas import TaskResponse, TriageApplyRequest, TriageOverflowRequest
 from routes.auth import get_current_user
 from routes.domain_utils import effective_rules, time_of_day_allowed
 
@@ -517,3 +517,125 @@ def run(
     db.commit()
 
     return _serialize_layout(days, overflow)
+
+
+@router.post("/apply-ordered")
+def apply_ordered(
+    body: TriageApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Apply the user's manually ordered triage list.
+
+    Walks the ordered task IDs accumulating weight against today's capacity
+    budget.  Tasks within budget are placed as status=today; overflow IDs
+    are returned so the frontend can present the bump-to-tomorrow UI.
+    """
+    tz = ZoneInfo(getattr(current_user, "timezone", None) or "America/Los_Angeles")
+    now_local = datetime.now(tz).replace(tzinfo=None)
+    today_local = now_local.date()
+    today_midnight = datetime(today_local.year, today_local.month, today_local.day)
+
+    capacity = _latest_capacity(db, current_user.id, today_local)
+    base_budget = BASE_BUDGET_UNITS * (capacity / 100.0)
+    committed = _committed_weight_for_day(db, current_user.id, today_local)
+    remaining = max(0.0, base_budget - committed)
+
+    task_map = {}
+    if body.ordered_task_ids:
+        rows = (
+            db.query(Task)
+            .filter(
+                Task.id.in_(body.ordered_task_ids),
+                Task.owner_id == current_user.id,
+                Task.task_type == TaskType.task,
+                Task.status.in_([TaskStatus.inbox, TaskStatus.today]),
+            )
+            .all()
+        )
+        task_map = {t.id: t for t in rows}
+
+    placed_ids = []
+    overflow_ids = []
+    used = 0.0
+
+    for idx, tid in enumerate(body.ordered_task_ids):
+        task = task_map.get(tid)
+        if not task:
+            continue
+        w = _task_weight(task)
+        if used + w <= remaining:
+            task.status = TaskStatus.today
+            task.due_date = today_local
+            task.scheduled_date = today_midnight
+            task.sort_order = float(idx)
+            placed_ids.append(tid)
+            used += w
+        else:
+            overflow_ids.append(tid)
+
+    recompute_user_scores(db, current_user.id, today_local, now_local)
+    db.commit()
+
+    return {
+        "placed": placed_ids,
+        "overflow": overflow_ids,
+        "budget": base_budget,
+        "committed": committed,
+        "used": used,
+    }
+
+
+@router.post("/resolve-overflow")
+def resolve_overflow(
+    body: TriageOverflowRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Resolve over-capacity tasks after triage apply.
+
+    keep_today_ids:  force onto today (user accepts overload).
+    bump_ids:        push to tomorrow at top of the list (sort_order 0,1,2…).
+    """
+    tz = ZoneInfo(getattr(current_user, "timezone", None) or "America/Los_Angeles")
+    now_local = datetime.now(tz).replace(tzinfo=None)
+    today_local = now_local.date()
+    tomorrow = today_local + timedelta(days=1)
+    today_midnight = datetime(today_local.year, today_local.month, today_local.day)
+
+    all_ids = body.keep_today_ids + body.bump_ids
+    if not all_ids:
+        return {"ok": True}
+
+    rows = (
+        db.query(Task)
+        .filter(
+            Task.id.in_(all_ids),
+            Task.owner_id == current_user.id,
+        )
+        .all()
+    )
+    task_map = {t.id: t for t in rows}
+
+    for tid in body.keep_today_ids:
+        task = task_map.get(tid)
+        if not task:
+            continue
+        task.status = TaskStatus.today
+        task.due_date = today_local
+        task.scheduled_date = today_midnight
+
+    for idx, tid in enumerate(body.bump_ids):
+        task = task_map.get(tid)
+        if not task:
+            continue
+        task.status = TaskStatus.inbox
+        task.due_date = tomorrow
+        task.scheduled_date = None
+        task.sort_order = float(idx)
+        task.push_count = (task.push_count or 0) + 1
+
+    recompute_user_scores(db, current_user.id, today_local, now_local)
+    db.commit()
+
+    return {"ok": True}

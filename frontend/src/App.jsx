@@ -47,6 +47,7 @@ async function getOpeningScreen() {
 
 function AppShell() {
   const [screen, setScreen]                   = useState('focus')
+  const [triageReturnTo, setTriageReturnTo]   = useState('focus')
   const [user, setUser]                       = useState(null)
   const [capacity, setCapacity]               = useState(null)
   const [carriedOver, setCarriedOver]         = useState(false)
@@ -104,8 +105,13 @@ function AppShell() {
   function handleLogout() { logout().then(() => window.location.reload()) }
 
   function handleTriageDone() {
-    setScreen('focus')
+    setScreen(triageReturnTo)
     setCarriedOver(false)
+  }
+
+  function openTriage(returnTo = 'focus') {
+    setTriageReturnTo(returnTo)
+    setScreen('tournament')
   }
 
   if (!ready) {
@@ -156,7 +162,7 @@ function AppShell() {
           gateMode
           onComplete={() => {
             setShowCheckIn(false)
-            setScreen('tournament')
+            openTriage('focus')
             getTodayCapacity().then(setCapacity).catch(() => {})
           }}
         />
@@ -211,8 +217,8 @@ function AppShell() {
       <main className="pt-[56px] md:pt-0">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => setScreen('tournament')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}
-        {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTournament={() => setScreen('tournament')} />}
+        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}
+        {screen === 'today'    && <Today visibleLimit={user?.task_visible_limit ?? 10} carriedOver={carriedOver} onTournament={() => openTriage('today')} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
