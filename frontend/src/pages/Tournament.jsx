@@ -3,7 +3,7 @@
 // Flow: add new tasks → snooze what you don't want today → drag into
 // execution order → Apply. If over capacity, an overflow bumper lets
 // you tap tasks to bump to tomorrow.
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   DndContext, closestCenter, useSensor, useSensors, TouchSensor,
 } from '@dnd-kit/core'
@@ -124,31 +124,49 @@ function MetaBadges({ task }) {
 
 // ── Sortable triage row ─────────────────────────────────────────────────────
 
-function ActionMenu({ onSnooze, onEdit, onClose }) {
-  return (
-    <div className="absolute right-0 top-full mt-1 z-40 bg-ui-surface border border-ui-border rounded-xl shadow-lg overflow-hidden min-w-[140px]">
-      {[
-        { label: 'Tomorrow',   action: () => onSnooze(offsetDate(1)) },
-        { label: 'Next week',  action: () => onSnooze(offsetDate(7)) },
-        { label: 'Next month', action: () => onSnooze(offsetDate(30)) },
-        { label: 'Edit…',      action: onEdit },
-      ].map(({ label, action }) => (
-        <button
-          key={label}
-          type="button"
-          onClick={(e) => { e.stopPropagation(); action(); onClose() }}
-          className="w-full text-left text-sm px-3 py-2 text-ui-text hover:bg-ui-accent/10 transition-colors"
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+function ActionMenu({ anchorRef, onSnooze, onEdit, onClose }) {
+  const [pos, setPos] = useState(null)
+
+  useEffect(() => {
+    if (!anchorRef?.current) return
+    const r = anchorRef.current.getBoundingClientRect()
+    setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+  }, [anchorRef])
+
+  if (!pos) return null
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-50" onClick={onClose} />
+      <div
+        className="fixed z-50 bg-ui-surface border border-ui-border rounded-xl shadow-lg overflow-hidden min-w-[140px]"
+        style={{ top: pos.top, right: pos.right }}
+      >
+        {[
+          { label: 'Tomorrow',   action: () => onSnooze(offsetDate(1)) },
+          { label: 'Next week',  action: () => onSnooze(offsetDate(7)) },
+          { label: 'Next month', action: () => onSnooze(offsetDate(30)) },
+          { label: 'Edit…',      action: onEdit },
+        ].map(({ label, action }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); action(); onClose() }}
+            className="w-full text-left text-sm px-3 py-2 text-ui-text hover:bg-ui-accent/10 transition-colors"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </>,
+    document.body,
   )
 }
 
 function SortableTriageRow({ task, onSnooze, onEdit, onWhy, showWhy }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const [showMenu, setShowMenu] = useState(false)
+  const menuBtnRef = useRef(null)
   const components = parseComponents(task.score_components)
 
   const style = {
@@ -182,32 +200,31 @@ function SortableTriageRow({ task, onSnooze, onEdit, onWhy, showWhy }) {
 
           <ScoreChip task={task} onClick={() => onWhy(task.id)} />
 
-          <div className="relative flex-shrink-0">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowMenu(prev => !prev) }}
-              title="Actions"
-              aria-label="Actions"
-              className="p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                <circle cx="12" cy="5" r="2" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="12" cy="19" r="2" />
-              </svg>
-            </button>
-            {showMenu && (
-              <ActionMenu
-                onSnooze={(iso) => onSnooze(task.id, iso)}
-                onEdit={() => onEdit(task.id)}
-                onClose={() => setShowMenu(false)}
-              />
-            )}
-          </div>
+          <button
+            ref={menuBtnRef}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowMenu(prev => !prev) }}
+            title="Actions"
+            aria-label="Actions"
+            className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
         </div>
         {showWhy && <WhyTooltip components={components} total={task.score} />}
       </Card>
-      {showMenu && <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />}
+      {showMenu && (
+        <ActionMenu
+          anchorRef={menuBtnRef}
+          onSnooze={(iso) => onSnooze(task.id, iso)}
+          onEdit={() => onEdit(task.id)}
+          onClose={() => setShowMenu(false)}
+        />
+      )}
     </div>
   )
 }
@@ -367,6 +384,7 @@ function OverflowBumper({ tasks, taskMap, onResolve, onKeepAll }) {
 // Non-sortable row for Up Next section — same visual, + button instead of drag
 function UpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showWhy }) {
   const [showMenu, setShowMenu] = useState(false)
+  const menuBtnRef = useRef(null)
   const components = parseComponents(task.score_components)
 
   return (
@@ -383,32 +401,23 @@ function UpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showW
 
             <ScoreChip task={task} onClick={() => onWhy(task.id)} />
 
-            <div className="relative flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowMenu(prev => !prev)}
-                title="Actions"
-                aria-label="Actions"
-                className="p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <circle cx="12" cy="5" r="2" />
-                  <circle cx="12" cy="12" r="2" />
-                  <circle cx="12" cy="19" r="2" />
-                </svg>
-              </button>
-              {showMenu && (
-                <ActionMenu
-                  onSnooze={(iso) => { onSnooze(task.id, iso); setShowMenu(false) }}
-                  onEdit={() => { onEdit(task.id); setShowMenu(false) }}
-                  onClose={() => setShowMenu(false)}
-                />
-              )}
-            </div>
+            <button
+              ref={menuBtnRef}
+              type="button"
+              onClick={() => setShowMenu(prev => !prev)}
+              title="Actions"
+              aria-label="Actions"
+              className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
           </div>
           {showWhy && <WhyTooltip components={components} total={task.score} />}
         </Card>
-        {showMenu && <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />}
       </div>
       {canPromote && (
         <button
@@ -417,6 +426,14 @@ function UpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showW
           title="Add to today"
           className="flex-shrink-0 mt-2 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
         >+</button>
+      )}
+      {showMenu && (
+        <ActionMenu
+          anchorRef={menuBtnRef}
+          onSnooze={(iso) => onSnooze(task.id, iso)}
+          onEdit={() => onEdit(task.id)}
+          onClose={() => setShowMenu(false)}
+        />
       )}
     </div>
   )
