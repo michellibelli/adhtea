@@ -572,7 +572,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
           {/* Shared 3-icon action row — same on mobile + desktop. Sits
               directly under the bag, with the tea-box directly under it.
               Spacing controlled by the card area's gap-3. */}
-          {celebrate !== 'dunk' && (
+          {!celebrate && (
             <div className="flex gap-3 justify-center items-center">
               <button
                 onClick={() => onNavigate?.('capture')}
@@ -611,7 +611,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
 
           {/* Shared tea-box — in-flow directly below the action row on
               both mobile and desktop. Sized 260px wide centered. */}
-          {celebrate !== 'dunk' && (
+          {!celebrate && (
             <div className="w-full mx-auto" style={{ maxWidth: 260 }}>
               <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} />
             </div>
