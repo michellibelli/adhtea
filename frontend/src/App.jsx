@@ -181,17 +181,26 @@ function AppShell() {
           on the right inside the same 52px frame. Stats only show on the
           Focus screen once Focus pushes them up. */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b transition-colors duration-300"
-        style={{
-          background: focusStats?.isBonus
-            ? 'linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(180,130,20,0.18) 100%)'
-            : 'var(--aria-nav-bg, var(--aria-surface))',
-          borderColor: focusStats?.isBonus
-            ? 'rgba(180,130,20,0.35)'
-            : 'var(--aria-nav-border, var(--aria-border))',
-        }}
+        className="fixed top-0 left-0 right-0 z-40 flex justify-center"
+        style={{ pointerEvents: 'none' }}
       >
-        <div className="flex items-center gap-3 px-4 h-[48px] max-w-md mx-auto">
+        <div
+          className="flex items-center gap-3 px-4 h-[48px] max-w-md w-full backdrop-blur-md border-b transition-colors duration-300"
+          style={{
+            pointerEvents: 'auto',
+            background: focusStats?.isBonus
+              ? 'linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(180,130,20,0.18) 100%)'
+              : 'var(--aria-nav-bg, var(--aria-surface))',
+            borderColor: focusStats?.isBonus
+              ? 'rgba(180,130,20,0.35)'
+              : 'var(--aria-nav-border, var(--aria-border))',
+            borderLeft: '1px solid',
+            borderRight: '1px solid',
+            borderLeftColor: focusStats?.isBonus ? 'rgba(180,130,20,0.2)' : 'var(--aria-border, transparent)',
+            borderRightColor: focusStats?.isBonus ? 'rgba(180,130,20,0.2)' : 'var(--aria-border, transparent)',
+            borderRadius: '0 0 12px 12px',
+          }}
+        >
           <button
             onClick={() => setScreen('focus')}
             className="flex-shrink-0 hover:opacity-80 transition-opacity"

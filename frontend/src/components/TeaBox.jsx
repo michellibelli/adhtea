@@ -135,9 +135,6 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         aria-label="Open today's list"
         title="Open today's list"
       >
-        {/* Bags — a single packed row, no gaps, rising out of the box.
-            items-end keeps every bag on one baseline; the front panel (higher
-            z-index) covers their lower half so they sit inside the box. */}
         <div
           className="absolute left-0 right-0 flex items-end justify-start px-3"
           style={{ bottom: 14 }}
@@ -188,32 +185,31 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
             boxShadow: 'inset 0 5px 7px -4px rgba(45,26,8,0.5)',
             zIndex: 3,
           }}
-        >
-          {onNavigate && (
-            <div
-              className="absolute right-2 top-0 bottom-0 flex items-center gap-2"
-              onClick={e => e.stopPropagation()}
-            >
-              {[
-                { id: 'projects', label: 'Projects', path: 'M12 22v-9 M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z' },
-                { id: 'routines', label: 'Routines', path: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' },
-                { id: 'selfcare', label: 'Log', path: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z' },
-              ].map(({ id, label, path }) => (
-                <button
-                  key={id}
-                  onClick={() => onNavigate(id)}
-                  className="tea-box-brand"
-                  aria-label={label}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d={path} />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        />
       </div>
+
+      {/* Drawers — three equally sized compartments below the box,
+          same wood material, part of the same furniture piece. */}
+      {onNavigate && (
+        <div className="tea-box-drawers">
+          {[
+            { id: 'projects', label: 'Projects', path: 'M12 22v-9 M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z' },
+            { id: 'routines', label: 'Routines', path: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' },
+            { id: 'selfcare', label: 'Log', path: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z' },
+          ].map(({ id, label, path }) => (
+            <button
+              key={id}
+              onClick={() => onNavigate(id)}
+              className="tea-box-drawer"
+              aria-label={label}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d={path} />
+              </svg>
+            </button>
+          ))}
+        </div>
+      )}
     </>
   )
 }

@@ -978,33 +978,73 @@ body {
   height: 100%;
 }
 
-/* Tea-box branded icons — burned into wood */
-.tea-box-brand {
-  width: 20px;
-  height: 20px;
+/* Tea-box drawers — wooden compartments below the box */
+.tea-box-drawers {
+  display: flex;
+  width: 100%;
+  margin-top: -2px;
+  border-radius: 0 0 7px 7px;
+  overflow: hidden;
+  border: 1.5px solid #7A5A30;
+  border-top: none;
+}
+
+.tea-box-drawer {
+  flex: 1;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
-  background: transparent;
   cursor: pointer;
-  color: rgba(80, 50, 20, 0.28);
-  transition: color 0.3s ease, filter 0.3s ease;
   -webkit-tap-highlight-color: transparent;
-  filter: blur(0.3px);
+  color: rgba(50, 28, 10, 0.4);
+  background:
+    repeating-linear-gradient(1.5deg,
+      rgba(50,30,10,0) 0px,
+      rgba(50,30,10,0.05) 2px,
+      rgba(50,30,10,0) 4px),
+    repeating-linear-gradient(0deg,
+      rgba(60,38,18,0) 0px,
+      rgba(60,38,18,0.09) 1px,
+      rgba(60,38,18,0) 5px,
+      rgba(255,238,206,0.07) 9px,
+      rgba(60,38,18,0) 14px),
+    linear-gradient(180deg, #B8894E 0%, #9A6F3A 100%);
+  box-shadow:
+    inset 0 3px 5px -3px rgba(45,26,8,0.45);
+  transition: color 0.25s ease, background 0.25s ease;
 }
-.tea-box-brand:hover,
-.tea-box-brand:focus-visible {
-  color: rgba(60, 35, 10, 0.55);
-  filter: blur(0px);
+
+.tea-box-drawer + .tea-box-drawer {
+  border-left: 1px solid rgba(90, 58, 24, 0.5);
 }
-.tea-box-brand:active {
-  color: rgba(50, 28, 8, 0.7);
+
+.tea-box-drawer:hover,
+.tea-box-drawer:focus-visible {
+  color: rgba(40, 20, 5, 0.7);
+  background:
+    repeating-linear-gradient(1.5deg,
+      rgba(50,30,10,0) 0px,
+      rgba(50,30,10,0.05) 2px,
+      rgba(50,30,10,0) 4px),
+    repeating-linear-gradient(0deg,
+      rgba(60,38,18,0) 0px,
+      rgba(60,38,18,0.09) 1px,
+      rgba(60,38,18,0) 5px),
+    linear-gradient(180deg, #C49A60 0%, #A57A48 100%);
 }
-.tea-box-brand svg {
-  width: 14px;
-  height: 14px;
+
+.tea-box-drawer:active {
+  color: rgba(35, 16, 4, 0.85);
+  box-shadow:
+    inset 0 2px 6px -1px rgba(30,16,4,0.55);
+}
+
+.tea-box-drawer svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Shelf-specific animations with ~3s idle pause at end of each cycle */
