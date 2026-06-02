@@ -202,18 +202,38 @@ function AppShell() {
             maxWidth: 340,
           }}
         >
-          <button
-            onClick={() => setScreen('focus')}
-            className="flex-shrink-0 hover:opacity-80 transition-opacity"
-            aria-label="Home"
-          >
-            <Logo size={28} />
-          </button>
-          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-            <CapacityBar capacity={capacity} compact hideLabels className="" />
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            {/* Top row: logo + bar + gear aligned on same axis */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setScreen('focus')}
+                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                aria-label="Home"
+              >
+                <Logo size={28} />
+              </button>
+              <div className="flex-1 min-w-0">
+                <CapacityBar capacity={capacity} compact hideLabels className="" />
+              </div>
+              <button
+                onClick={() => setScreen('settings')}
+                className="flex-shrink-0 p-1 rounded-md hover:opacity-70 transition-opacity"
+                aria-label="Settings"
+                style={{ opacity: 0.4 }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
+                  <ellipse cx="12" cy="7" rx="2.5" ry="3.5" />
+                  <ellipse cx="17" cy="12" rx="3.5" ry="2.5" />
+                  <ellipse cx="12" cy="17" rx="2.5" ry="3.5" />
+                  <ellipse cx="7" cy="12" rx="3.5" ry="2.5" />
+                  <circle cx="12" cy="12" r="2.5" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" />
+                </svg>
+              </button>
+            </div>
+            {/* Stats row below — only on Focus */}
             {screen === 'focus' && focusStats && (
               <div
-                className="flex items-center justify-between"
+                className="flex items-center justify-between mt-0.5 px-9"
                 style={{
                   fontFamily: 'var(--font-pixel)',
                   fontSize: '9px',
@@ -231,20 +251,6 @@ function AppShell() {
               </div>
             )}
           </div>
-          <button
-            onClick={() => setScreen('settings')}
-            className="flex-shrink-0 p-1 rounded-md hover:opacity-70 transition-opacity"
-            aria-label="Settings"
-            style={{ opacity: 0.4 }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
-              <ellipse cx="12" cy="7" rx="2.5" ry="3.5" />
-              <ellipse cx="17" cy="12" rx="3.5" ry="2.5" />
-              <ellipse cx="12" cy="17" rx="2.5" ry="3.5" />
-              <ellipse cx="7" cy="12" rx="3.5" ry="2.5" />
-              <circle cx="12" cy="12" r="2.5" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" />
-            </svg>
-          </button>
         </div>
       </header>
 
