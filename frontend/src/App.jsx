@@ -185,7 +185,7 @@ function AppShell() {
         style={{ pointerEvents: 'none' }}
       >
         <div
-          className="flex items-center gap-3 px-4 h-[48px] max-w-md w-full backdrop-blur-md border-b transition-colors duration-300"
+          className="flex items-center gap-3 px-4 h-[48px] w-full backdrop-blur-md border-b transition-colors duration-300"
           style={{
             pointerEvents: 'auto',
             background: focusStats?.isBonus
@@ -199,6 +199,7 @@ function AppShell() {
             borderLeftColor: focusStats?.isBonus ? 'rgba(180,130,20,0.2)' : 'var(--aria-border, transparent)',
             borderRightColor: focusStats?.isBonus ? 'rgba(180,130,20,0.2)' : 'var(--aria-border, transparent)',
             borderRadius: '0 0 12px 12px',
+            maxWidth: 340,
           }}
         >
           <button

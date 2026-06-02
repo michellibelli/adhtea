@@ -572,7 +572,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
           {/* Shared tea-box — in-flow directly below the action row on
               both mobile and desktop. Sized 260px wide centered. */}
           {!celebrate && (
-            <div className="w-full mx-auto relative" style={{ maxWidth: 260, zIndex: 5 }}>
+            <div className="w-full mx-auto relative" style={{ maxWidth: 340, zIndex: 5 }}>
               <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
             </div>
           )}
