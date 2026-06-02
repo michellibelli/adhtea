@@ -508,14 +508,23 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
+                style={{ height: 94, opacity: 0.55 }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-                  <line x1="6" y1="2" x2="6" y2="5"/>
-                  <line x1="10" y1="2" x2="10" y2="5"/>
-                  <line x1="14" y1="2" x2="14" y2="5"/>
+                {/* Kettle */}
+                <svg viewBox="0 0 40 64" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
+                  {/* Spout */}
+                  <path d="M8 28 Q2 32 4 40 Q5 44 8 44" />
+                  {/* Body */}
+                  <path d="M12 20 L32 20 L30 52 Q30 56 26 56 L18 56 Q14 56 14 52 Z" />
+                  {/* Handle */}
+                  <path d="M16 20 Q16 8 24 8 Q32 8 32 20" strokeWidth={2.5} />
+                  {/* Lid */}
+                  <line x1="14" y1="20" x2="34" y2="20" strokeWidth={2.5} />
+                  <line x1="22" y1="16" x2="22" y2="20" />
+                  {/* Steam */}
+                  <path d="M20 10 Q18 6 20 2" strokeWidth={1.2} opacity="0.4" />
+                  <path d="M26 12 Q24 8 26 4" strokeWidth={1.2} opacity="0.3" />
                 </svg>
               </button>
               <div className="flex-1 min-w-0">
@@ -524,10 +533,19 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
+                style={{ height: 94, opacity: 0.55 }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                  <polyline points="20 6 9 17 4 12"/>
+                {/* Mug with checkmark steam */}
+                <svg viewBox="0 0 40 64" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
+                  {/* Mug body */}
+                  <path d="M6 22 L6 50 Q6 56 12 56 L24 56 Q30 56 30 50 L30 22" />
+                  {/* Rim */}
+                  <line x1="4" y1="22" x2="32" y2="22" strokeWidth={2.5} />
+                  {/* Handle */}
+                  <path d="M30 28 Q38 28 38 38 Q38 46 30 46" strokeWidth={2.5} />
+                  {/* Checkmark steam */}
+                  <polyline points="13 12 17 16 27 4" strokeWidth={2.2} opacity="0.5" />
                 </svg>
               </button>
             </div>
