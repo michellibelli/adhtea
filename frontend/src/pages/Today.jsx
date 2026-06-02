@@ -21,7 +21,6 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { PageLoading, PageError } from '../components/PageState'
-import CafeShelf from '../components/CafeShelf'
 import { isTimedVisible } from '../utils/timing'
 
 const MAX_TODAY = 15
@@ -217,15 +216,26 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-semibold text-ui-text">Today</h1>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <span className="text-sm text-ui-subtext">{todayVisible.length + timed.length} today</span>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <span className="text-sm text-ui-subtext mr-1">{todayVisible.length + timed.length} today</span>
             {onNavigate && (
-              <Button variant="secondary" onClick={() => onNavigate('capture')}>
-                + Capture
-              </Button>
+              <>
+                <Button variant="secondary" className="!px-2 !py-1.5" onClick={() => onNavigate('capture')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 inline mr-1"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+                  Capture
+                </Button>
+                <Button variant="secondary" className="!px-2 !py-1.5" onClick={() => onNavigate('projects')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 inline mr-1"><path d="M12 22v-9"/><path d="M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z"/></svg>
+                  Projects
+                </Button>
+                <Button variant="secondary" className="!px-2 !py-1.5" onClick={() => onNavigate('routines')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 inline mr-1"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                  Routines
+                </Button>
+              </>
             )}
             {onTournament && (
-              <Button variant="secondary" onClick={() => onTournament?.()}>
+              <Button variant="secondary" className="!px-2 !py-1.5" onClick={() => onTournament?.()}>
                 🍵 Triage
               </Button>
             )}
@@ -431,7 +441,6 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
           </div>
         )}
 
-        <CafeShelf onNavigate={onNavigate} />
       </div>
     </div>
   )

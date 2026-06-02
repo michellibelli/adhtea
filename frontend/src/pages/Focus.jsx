@@ -2,13 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
 import EditTaskSheet from '../components/EditTaskSheet'
-import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
 import { TAG_COLORS } from '../utils/taskColors'
 import TeaBox from '../components/TeaBox'
-import CafeShelf from '../components/CafeShelf'
 
 
 const TEA_PUNS = [
@@ -353,44 +351,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   }
 
   return (
-    <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
+    <div className="aria-page flex flex-col !h-[calc(100dvh_-_52px)] !max-h-[calc(100dvh_-_52px)] !min-h-[calc(100dvh_-_52px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
       <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-8 max-w-sm mx-auto w-full">
-
-        {/* Header — hidden during dunk/fade, shown when idle */}
-        {!celebrate ? (
-          <>
-            {/* Header — desktop only. Mobile renders the same stats up
-                in the App.jsx top bar. On desktop the capacity bar +
-                stats sit here inside a visible paper-card box so the
-                focus bar reads as a distinct element on the page. */}
-            <div
-              className={`hidden md:block md:mb-4 rounded-lg ${isBonusMode ? 'focus-bar-bonus' : ''}`}
-              style={!isBonusMode ? {
-                background: 'var(--aria-surface)',
-                border: '1px solid color-mix(in srgb, var(--aria-text) 25%, transparent)',
-                padding: '8px 12px',
-                boxShadow: '0 1px 2px rgba(60,40,20,0.10), 0 3px 8px -2px rgba(60,40,20,0.12), inset 0 1px 0 rgba(255,248,224,0.55)',
-              } : { padding: '6px 12px' }}
-            >
-              <div className="flex items-center justify-between">
-                <h1 className={`text-[11px] font-pixel tracking-[0.18em] uppercase ${
-                  isBonusMode ? 'text-amber-900' : 'text-ui-subtext'
-                }`}>
-                  {isBonusMode ? 'Bonus' : 'Now'}
-                </h1>
-                <div className="flex items-center gap-3">
-                  {totalDone > 0 && (
-                    <span className={`text-[11px] ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>{totalDone} done</span>
-                  )}
-                  <span className={`text-[11px] ${isBonusMode ? 'text-amber-900 font-semibold' : 'text-ui-subtext'}`}>
-                    {isBonusMode ? `${remaining} bonus` : `${remaining} left`}
-                  </span>
-                </div>
-              </div>
-              <CapacityBar capacity={capacity} compact hideLabels className="mt-2" />
-            </div>
-          </>
-        ) : null}
 
         {/* Card area — bag + action row + tea-box stack together at the
             TOP of the column (justify-start) so the whole unit sits
@@ -611,13 +573,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               both mobile and desktop. Sized 260px wide centered. */}
           {!celebrate && (
             <div className="w-full mx-auto relative" style={{ maxWidth: 260, zIndex: 5 }}>
-              <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} />
+              <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
             </div>
           )}
 
-          {!celebrate && !leaving && (
-            <CafeShelf onNavigate={onNavigate} />
-          )}
         </div>
 
       </div>

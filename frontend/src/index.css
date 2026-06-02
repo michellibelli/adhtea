@@ -978,6 +978,64 @@ body {
   height: 100%;
 }
 
+/* Tea-box branded icons — burned into wood */
+.tea-box-brand {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(80, 50, 20, 0.28);
+  transition: color 0.3s ease, filter 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+  filter: blur(0.3px);
+}
+.tea-box-brand:hover,
+.tea-box-brand:focus-visible {
+  color: rgba(60, 35, 10, 0.55);
+  filter: blur(0px);
+}
+.tea-box-brand:active {
+  color: rgba(50, 28, 8, 0.7);
+}
+.tea-box-brand svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Shelf-specific animations with ~3s idle pause at end of each cycle */
+@keyframes shelf-leaf-sway {
+  0%, 67%, 100% { transform: rotate(0deg); }
+  22%           { transform: rotate(18deg); }
+  44%           { transform: rotate(-12deg); }
+}
+@keyframes shelf-heartbeat {
+  0%, 50%, 100% { transform: scale(1); }
+  6%            { transform: scale(1.1); }
+  12%           { transform: scale(1); }
+  18%           { transform: scale(1.06); }
+  26%           { transform: scale(1); }
+}
+@keyframes shelf-cloud-pass {
+  0%, 100% { transform: translateX(-20px); opacity: 0; }
+  10%      { opacity: 0.7; }
+  50%      { opacity: 0.8; }
+  65%      { opacity: 0; }
+  66%      { transform: translateX(18px); opacity: 0; }
+}
+.shelf-cloud {
+  animation: shelf-cloud-pass 10s ease-in-out infinite;
+}
+@keyframes shelf-flower-spin {
+  0%        { transform: rotate(0deg); }
+  20%       { transform: rotate(360deg); }
+  100%      { transform: rotate(360deg); }
+}
+
 /* =============================================================================
    Nav icon animations
    ============================================================================= */

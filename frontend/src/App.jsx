@@ -180,14 +180,24 @@ function AppShell() {
       {/* Mobile top bar — logo on the left, capacity track + stats stacked
           on the right inside the same 52px frame. Stats only show on the
           Focus screen once Focus pushes them up. */}
-      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-ui-nav border-b border-ui-nav-border">
-        <div className="flex items-center gap-3 px-4 h-[52px]">
+      <header
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b transition-colors duration-300"
+        style={{
+          background: focusStats?.isBonus
+            ? 'linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(180,130,20,0.18) 100%)'
+            : 'var(--aria-nav-bg, var(--aria-surface))',
+          borderColor: focusStats?.isBonus
+            ? 'rgba(180,130,20,0.35)'
+            : 'var(--aria-nav-border, var(--aria-border))',
+        }}
+      >
+        <div className="flex items-center gap-3 px-4 h-[48px] max-w-md mx-auto">
           <button
             onClick={() => setScreen('focus')}
             className="flex-shrink-0 hover:opacity-80 transition-opacity"
             aria-label="Home"
           >
-            <Logo size={32} />
+            <Logo size={28} />
           </button>
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <CapacityBar capacity={capacity} compact hideLabels className="" />
@@ -196,8 +206,8 @@ function AppShell() {
                 className="flex items-center justify-between"
                 style={{
                   fontFamily: 'var(--font-pixel)',
-                  fontSize: '9.5px',
-                  letterSpacing: '0.22em',
+                  fontSize: '9px',
+                  letterSpacing: '0.18em',
                   textTransform: 'uppercase',
                   lineHeight: 1,
                   color: focusStats.isBonus ? '#92400e' : 'var(--aria-subtext)',
@@ -213,11 +223,11 @@ function AppShell() {
           </div>
           <button
             onClick={() => setScreen('settings')}
-            className="flex-shrink-0 p-1.5 rounded-md hover:opacity-70 transition-opacity"
+            className="flex-shrink-0 p-1 rounded-md hover:opacity-70 transition-opacity"
             aria-label="Settings"
-            style={{ opacity: 0.45 }}
+            style={{ opacity: 0.4 }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
               <ellipse cx="12" cy="7" rx="2.5" ry="3.5" />
               <ellipse cx="17" cy="12" rx="3.5" ry="2.5" />
               <ellipse cx="12" cy="17" rx="2.5" ry="3.5" />
@@ -228,7 +238,7 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="pt-[56px]">
+      <main className="pt-[52px]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}
