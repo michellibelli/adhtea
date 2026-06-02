@@ -227,7 +227,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
         setLeaving(false)
         setEntering(true)
       }, 300),
-      setTimeout(() => setEntering(false), 800),
+      setTimeout(() => setEntering(false), 1500),
     ]
     if (pending && !pending.wasBonus) fetchAll()
   }
