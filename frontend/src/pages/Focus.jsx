@@ -397,11 +397,13 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             floating at the bottom of the page. */}
         <div
           className={`flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5 ${
-            !celebrate
-              ? entering
+            celebrate
+              ? ''
+              : entering
                 ? 'animate-card-rise-from-box'
-                : `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
-              : ''
+                : leaving
+                  ? 'opacity-0'
+                  : 'transition-all duration-300 opacity-100'
           }`}
         >
           {/* Relative wrapper — width via max-w-* on the inner bag div;
@@ -411,7 +413,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
                 inside the descending wrapper. */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1 } : celebrate === 'fade' ? { opacity: 0 } : undefined}>
 
             {/* Tag — outside sway-wrap so it stays still (where the string meets
                 the imaginary cup rim above). String + bag swing from here. */}
