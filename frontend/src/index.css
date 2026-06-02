@@ -830,14 +830,22 @@ body {
   30%  { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 1; transform: translateY(-6px) scale(1); }
 }
-@keyframes card-rise-from-box {
-  0%   { opacity: 0; transform: translateY(140px) scale(0.82); }
-  50%  { opacity: 1; transform: translateY(-8px) scale(1.01); }
-  75%  { transform: translateY(3px) scale(1); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes bag-pull-from-box {
+  0%   { opacity: 0; transform: translateY(380px) scale(0.18); }
+  12%  { opacity: 1; transform: translateY(320px) scale(0.25); }
+  55%  { transform: translateY(30px) scale(0.95); }
+  78%  { transform: translateY(-10px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
 }
-.animate-card-rise-from-box {
-  animation: card-rise-from-box 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.animate-bag-pull-from-box {
+  animation: bag-pull-from-box 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fade-in-up {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 300ms ease-out 350ms both;
 }
 @keyframes cup-pun-fadeout {
   from { opacity: 1; transform: scale(1); }

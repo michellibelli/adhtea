@@ -395,20 +395,15 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             TOP of the column (justify-start) so the whole unit sits
             directly under the focus bar / top header instead of
             floating at the bottom of the page. */}
-        <div
-          className={`flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5 ${
-            celebrate
-              ? ''
-              : entering
-                ? 'animate-card-rise-from-box'
-                : leaving
-                  ? 'opacity-0'
-                  : 'transition-all duration-300 opacity-100'
-          }`}
-        >
-          {/* Relative wrapper — width via max-w-* on the inner bag div;
-              card area's items-center centers this horizontally. */}
-          <div className="relative w-full flex justify-center">
+        <div className="flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5">
+          {/* Relative wrapper — teabag + cup/pun. Handles its own
+              animation: rise-from-box on entering, instant hide on gap. */}
+          <div className={`relative w-full flex justify-center ${
+            celebrate ? ''
+            : entering ? 'animate-bag-pull-from-box'
+            : leaving ? 'opacity-0'
+            : 'transition-all duration-300 opacity-100'
+          }`}>
 
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
@@ -574,8 +569,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
           {/* Shared 3-icon action row — same on mobile + desktop. Sits
               directly under the bag, with the tea-box directly under it.
               Spacing controlled by the card area's gap-3. */}
-          {!celebrate && (
-            <div className="flex gap-3 justify-center items-center">
+          {!celebrate && !leaving && (
+            <div className={`flex gap-3 justify-center items-center ${entering ? 'animate-fade-in-up' : ''}`}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
@@ -618,6 +613,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} />
             </div>
           )}
+
         </div>
 
       </div>
