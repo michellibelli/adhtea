@@ -209,20 +209,22 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   function skipCelebration() {
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = []
-    setCelebrate(false)
-    setLeaving(true)
     const pending = completedTaskRef.current
     completedTaskRef.current = null
     if (pending) {
+      // Remove completed task from local list BEFORE clearing celebrate
+      // so the old bag never renders in the non-celebrate layout.
       if (pending.wasBonus) {
         setBonusTasks((prev) => prev.filter((t) => t.id !== pending.taskId))
-        setTimeout(() => setLeaving(false), 50)
       } else {
-        fetchAll().then(() => setTimeout(() => setLeaving(false), 50))
+        setTasks((prev) => prev.filter((t) => t.id !== pending.taskId))
       }
-    } else {
-      setLeaving(false)
     }
+    setCelebrate(false)
+    setLeaving(true)
+    setTimeout(() => setLeaving(false), 50)
+    // Background refresh to sync with server
+    if (pending && !pending.wasBonus) fetchAll()
   }
 
   async function handleComplete() {
@@ -529,15 +531,15 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               </div>
             )}
 
-            {/* Pun text — rises from the cup as the bag descends */}
+            {/* Pun text — rises from below the cup */}
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                top: '100%', marginTop: '40px',
+                top: '100%', marginTop: '115px',
                 zIndex: 4, pointerEvents: 'none', textAlign: 'center',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
-                  : 'pun-rise-from-cup 2400ms ease-out 1200ms both',
+                  : 'pun-rise-below-cup 2400ms ease-out 1200ms both',
               }}>
                 {/* eslint-disable-next-line react-hooks/refs -- punRef set in handleComplete before this renders */}
                 <span className="text-lg font-semibold px-4" style={{ color: '#3D2B1F' }}>{punRef.current}</span>

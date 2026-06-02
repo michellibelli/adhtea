@@ -825,6 +825,11 @@ body {
   25%  { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 1; transform: translateY(-10px) scale(1); }
 }
+@keyframes pun-rise-below-cup {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.9); }
+  30%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 1; transform: translateY(-6px) scale(1); }
+}
 @keyframes cup-pun-fadeout {
   from { opacity: 1; transform: scale(1); }
   to   { opacity: 0; transform: scale(0.92); }
