@@ -508,22 +508,31 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ height: 94 }}
+                className="flex-shrink-0 flex items-end justify-center rounded-lg active:scale-95 transition-all"
+                style={{ width: 52, height: 94 }}
               >
-                <svg viewBox="0 0 40 64" fill="none" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
-                  <path d="M8 28 Q2 32 4 40 Q5 44 8 44" stroke="#6B7F8E" strokeWidth={2.5} fill="none" />
-                  <path d="M12 20 L32 20 L30 52 Q30 56 26 56 L18 56 Q14 56 14 52 Z"
-                    fill="url(#kettleGrad)" stroke="#4A5E6D" strokeWidth={1.8} />
-                  <path d="M16 20 Q16 8 24 8 Q32 8 32 20" stroke="#4A5E6D" strokeWidth={2.8} fill="none" />
-                  <line x1="13" y1="20" x2="34" y2="20" stroke="#4A5E6D" strokeWidth={2.8} />
-                  <circle cx="22" cy="17" r="1.5" fill="#4A5E6D" />
-                  <path d="M20 10 Q18 6 20 2" stroke="#6B7F8E" strokeWidth={1.3} opacity="0.35" />
-                  <path d="M26 12 Q24 8 26 4" stroke="#6B7F8E" strokeWidth={1.3} opacity="0.25" />
+                <svg viewBox="0 0 48 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 48, height: 88 }}>
+                  {/* Body — round kettle */}
+                  <ellipse cx="24" cy="58" rx="18" ry="22" fill="url(#kettleGrad)" stroke="#4A5E6D" strokeWidth={1.8} />
+                  {/* Flat base */}
+                  <ellipse cx="24" cy="78" rx="14" ry="3" fill="#4A5E6D" opacity="0.25" />
+                  {/* Lip / rim */}
+                  <ellipse cx="24" cy="37" rx="10" ry="3" fill="#6B8090" stroke="#4A5E6D" strokeWidth={1.5} />
+                  {/* Lid dome */}
+                  <path d="M16 37 Q16 30 24 30 Q32 30 32 37" fill="#7A92A3" stroke="#4A5E6D" strokeWidth={1.5} />
+                  {/* Knob */}
+                  <circle cx="24" cy="29" r="2.5" fill="#4A5E6D" />
+                  {/* Spout */}
+                  <path d="M6 52 Q1 46 3 40 Q5 36 8 38" stroke="#4A5E6D" strokeWidth={2.2} fill="none" />
+                  {/* Handle — arched, right side */}
+                  <path d="M38 48 Q46 48 46 58 Q46 68 38 68" stroke="#4A5E6D" strokeWidth={2.8} fill="none" />
+                  {/* Steam */}
+                  <path d="M22 24 Q20 18 22 12" stroke="#6B7F8E" strokeWidth={1.2} opacity="0.3" />
+                  <path d="M28 22 Q26 16 28 10" stroke="#6B7F8E" strokeWidth={1.2} opacity="0.2" />
                   <defs>
-                    <linearGradient id="kettleGrad" x1="12" y1="20" x2="32" y2="56" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#8FA4B4" />
-                      <stop offset="50%" stopColor="#7A92A3" />
+                    <linearGradient id="kettleGrad" x1="6" y1="36" x2="42" y2="80" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#97B0BF" />
+                      <stop offset="40%" stopColor="#8299AA" />
                       <stop offset="100%" stopColor="#5E7485" />
                     </linearGradient>
                   </defs>
@@ -535,19 +544,26 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ height: 94 }}
+                className="flex-shrink-0 flex items-end justify-center rounded-lg active:scale-95 transition-all"
+                style={{ width: 52, height: 94 }}
               >
-                <svg viewBox="0 0 40 64" fill="none" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
-                  <path d="M6 22 L6 50 Q6 56 12 56 L24 56 Q30 56 30 50 L30 22"
+                <svg viewBox="0 0 48 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 48, height: 88 }}>
+                  {/* Body */}
+                  <path d="M8 30 L8 70 Q8 80 16 80 L28 80 Q36 80 36 70 L36 30"
                     fill="url(#mugGrad)" stroke="#5A6B4A" strokeWidth={1.8} />
-                  <line x1="4" y1="22" x2="32" y2="22" stroke="#5A6B4A" strokeWidth={2.8} />
-                  <path d="M30 28 Q38 28 38 38 Q38 46 30 46" stroke="#5A6B4A" strokeWidth={2.8} fill="none" />
-                  <polyline points="13 12 17 16 27 4" stroke="#5A6B4A" strokeWidth={2.2} opacity="0.45" />
+                  {/* Flat base shadow */}
+                  <ellipse cx="22" cy="79" rx="12" ry="2.5" fill="#4A5C3A" opacity="0.2" />
+                  {/* Lip — thick rolled rim */}
+                  <path d="M6 30 L38 30" stroke="#5A6B4A" strokeWidth={3.5} />
+                  <path d="M7 28 L37 28" stroke="#8FA07A" strokeWidth={2} opacity="0.5" />
+                  {/* Handle */}
+                  <path d="M36 38 Q46 38 46 52 Q46 64 36 64" stroke="#5A6B4A" strokeWidth={3} fill="none" />
+                  {/* Checkmark steam */}
+                  <polyline points="15 18 20 23 33 8" stroke="#5A6B4A" strokeWidth={2.2} opacity="0.4" />
                   <defs>
-                    <linearGradient id="mugGrad" x1="6" y1="22" x2="30" y2="56" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#8FA07A" />
-                      <stop offset="45%" stopColor="#7A8E68" />
+                    <linearGradient id="mugGrad" x1="8" y1="28" x2="36" y2="80" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#96A882" />
+                      <stop offset="40%" stopColor="#7E9468" />
                       <stop offset="100%" stopColor="#5E7050" />
                     </linearGradient>
                   </defs>
