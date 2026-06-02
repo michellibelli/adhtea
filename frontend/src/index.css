@@ -830,6 +830,15 @@ body {
   30%  { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 1; transform: translateY(-6px) scale(1); }
 }
+@keyframes card-rise-from-box {
+  0%   { opacity: 0; transform: translateY(140px) scale(0.82); }
+  50%  { opacity: 1; transform: translateY(-8px) scale(1.01); }
+  75%  { transform: translateY(3px) scale(1); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-card-rise-from-box {
+  animation: card-rise-from-box 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 @keyframes cup-pun-fadeout {
   from { opacity: 1; transform: scale(1); }
   to   { opacity: 0; transform: scale(0.92); }

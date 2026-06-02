@@ -13,18 +13,6 @@ const svgG = (animName, dur, delay, origin = 'center', active = false) => ({
   }
 })
 
-const TeacupIcon = ({ active }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{width:40,height:40}}>
-    <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-    <g {...svgG('nav-steam', '2.2s', '0s', 'center bottom', active)}>
-      <line x1="6"  y1="2" x2="6"  y2="5"/>
-      <line x1="10" y1="2" x2="10" y2="5"/>
-      <line x1="14" y1="2" x2="14" y2="5"/>
-    </g>
-  </svg>
-)
-
 const MoonIcon = ({ active }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{width:29,height:29}}>
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
@@ -80,7 +68,6 @@ const MOBILE_NAV_ITEMS = [
 ]
 
 const DESKTOP_NAV_ITEMS = [
-  { id: 'capture',  label: 'Capture',  Icon: TeacupIcon },
   ...MOBILE_NAV_ITEMS,
 ]
 
@@ -91,7 +78,7 @@ const MOBILE_BOTTOM_ITEMS = [
   { id: 'settings', label: 'Menu',     Icon: FlowerIcon },
 ]
 
-export default function BottomNav({ active, onNavigate, onCapture }) {
+export default function BottomNav({ active, onNavigate }) {
   return (
     <>
       {/* Mobile bottom nav bar — hairline divider, icons honor --aria-nav-text
@@ -149,25 +136,6 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
         })}
       </nav>
 
-      {/* Mobile FAB — capture. Hidden on Focus where the capture button is
-          inlined into the action row, floats just above the bottom nav on
-          every other screen. */}
-      {active !== 'focus' && (
-        <button
-          onClick={onCapture}
-          className="fixed right-4 bottom-[86px] z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-ui-primary-text active:scale-95 transition-transform md:hidden pixel-btn bg-ui-primary"
-          aria-label="Capture"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-            <line x1="6" y1="2" x2="6" y2="5"/>
-            <line x1="10" y1="2" x2="10" y2="5"/>
-            <line x1="14" y1="2" x2="14" y2="5"/>
-          </svg>
-        </button>
-      )}
-
       {/* Desktop sidebar */}
       <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-20 flex-col items-center border-r-4 border-ui-accent bg-ui-primary pt-6 pb-6 gap-1">
 
@@ -184,7 +152,7 @@ export default function BottomNav({ active, onNavigate, onCapture }) {
           return (
             <button
               key={id}
-              onClick={() => id === 'capture' ? onCapture() : onNavigate(id)}
+              onClick={() => onNavigate(id)}
               className="w-full flex flex-col items-center justify-center gap-1 py-3 px-2 transition-all duration-150"
             >
               <span style={{ opacity: isActive ? 1 : 0.5, transition: 'opacity 150ms' }}>

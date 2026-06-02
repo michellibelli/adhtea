@@ -134,6 +134,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   const celebrationTimersRef = useRef([])
   const [showSnooze,    setShowSnooze]    = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
+  const [entering,      setEntering]      = useState(false)  // next-card rise-from-box animation
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
@@ -212,8 +213,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
     const pending = completedTaskRef.current
     completedTaskRef.current = null
     if (pending) {
-      // Remove completed task from local list BEFORE clearing celebrate
-      // so the old bag never renders in the non-celebrate layout.
       if (pending.wasBonus) {
         setBonusTasks((prev) => prev.filter((t) => t.id !== pending.taskId))
       } else {
@@ -222,8 +221,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
     }
     setCelebrate(false)
     setLeaving(true)
-    setTimeout(() => setLeaving(false), 50)
-    // Background refresh to sync with server
+    // 300ms empty gap, then next card rises from tea box
+    celebrationTimersRef.current = [
+      setTimeout(() => {
+        setLeaving(false)
+        setEntering(true)
+      }, 300),
+      setTimeout(() => setEntering(false), 800),
+    ]
     if (pending && !pending.wasBonus) fetchAll()
   }
 
@@ -393,7 +398,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
         <div
           className={`flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5 ${
             !celebrate
-              ? `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
+              ? entering
+                ? 'animate-card-rise-from-box'
+                : `transition-all duration-300 ${leaving ? 'opacity-0 translate-y-2' : 'opacity-100'}`
               : ''
           }`}
         >

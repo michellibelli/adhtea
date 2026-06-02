@@ -218,7 +218,7 @@ function AppShell() {
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}
-        {screen === 'today'    && <Today carriedOver={carriedOver} onTournament={() => openTriage('today')} />}
+        {screen === 'today'    && <Today carriedOver={carriedOver} onTournament={() => openTriage('today')} onNavigate={setScreen} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
@@ -237,7 +237,7 @@ function AppShell() {
         )}
       </div>
 
-      <BottomNav active={screen} onNavigate={setScreen} onCapture={() => setScreen('capture')} />
+      <BottomNav active={screen} onNavigate={setScreen} />
     </div>
   )
 }
