@@ -181,25 +181,23 @@ function AppShell() {
           on the right inside the same 52px frame. Stats only show on the
           Focus screen once Focus pushes them up. */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 flex justify-center"
+        className="fixed top-0 left-0 right-0 z-40 flex justify-center pt-2"
         style={{ pointerEvents: 'none' }}
       >
         <div
-          className="flex items-center gap-3 px-4 h-[48px] w-full backdrop-blur-md border-b transition-colors duration-300"
+          className="flex items-center gap-3 px-5 w-full backdrop-blur-md transition-colors duration-300"
           style={{
             pointerEvents: 'auto',
+            height: 52,
             background: focusStats?.isBonus
-              ? 'linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(180,130,20,0.18) 100%)'
+              ? 'linear-gradient(135deg, rgba(251,191,36,0.3) 0%, rgba(180,130,20,0.22) 100%)'
               : 'var(--aria-nav-bg, var(--aria-surface))',
-            borderColor: focusStats?.isBonus
-              ? 'rgba(180,130,20,0.35)'
-              : 'var(--aria-nav-border, var(--aria-border))',
-            borderLeft: '1px solid',
-            borderRight: '1px solid',
-            borderLeftColor: focusStats?.isBonus ? 'rgba(180,130,20,0.2)' : 'var(--aria-border, transparent)',
-            borderRightColor: focusStats?.isBonus ? 'rgba(180,130,20,0.2)' : 'var(--aria-border, transparent)',
-            borderRadius: '0 0 12px 12px',
-            maxWidth: 340,
+            border: focusStats?.isBonus
+              ? '1.5px solid rgba(180,130,20,0.4)'
+              : '1.5px solid var(--aria-border, rgba(0,0,0,0.1))',
+            borderRadius: 16,
+            maxWidth: 360,
+            boxShadow: '0 2px 8px rgba(40,24,10,0.12), 0 1px 3px rgba(40,24,10,0.08)',
           }}
         >
           <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -254,7 +252,7 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="pt-[52px]">
+      <main className="pt-[64px]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}

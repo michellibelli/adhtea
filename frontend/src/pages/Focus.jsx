@@ -321,7 +321,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   }
 
   return (
-    <div className="aria-page flex flex-col !h-[calc(100dvh_-_52px)] !max-h-[calc(100dvh_-_52px)] !min-h-[calc(100dvh_-_52px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
+    <div className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
       <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-8 max-w-sm mx-auto w-full">
 
         {/* Card area — bag + action row + tea-box stack together at the
