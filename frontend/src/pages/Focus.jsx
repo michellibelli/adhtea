@@ -508,23 +508,25 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
-                style={{ height: 94, opacity: 0.55 }}
+                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                style={{ height: 94 }}
               >
-                {/* Kettle */}
-                <svg viewBox="0 0 40 64" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
-                  {/* Spout */}
-                  <path d="M8 28 Q2 32 4 40 Q5 44 8 44" />
-                  {/* Body */}
-                  <path d="M12 20 L32 20 L30 52 Q30 56 26 56 L18 56 Q14 56 14 52 Z" />
-                  {/* Handle */}
-                  <path d="M16 20 Q16 8 24 8 Q32 8 32 20" strokeWidth={2.5} />
-                  {/* Lid */}
-                  <line x1="14" y1="20" x2="34" y2="20" strokeWidth={2.5} />
-                  <line x1="22" y1="16" x2="22" y2="20" />
-                  {/* Steam */}
-                  <path d="M20 10 Q18 6 20 2" strokeWidth={1.2} opacity="0.4" />
-                  <path d="M26 12 Q24 8 26 4" strokeWidth={1.2} opacity="0.3" />
+                <svg viewBox="0 0 40 64" fill="none" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
+                  <path d="M8 28 Q2 32 4 40 Q5 44 8 44" stroke="#6B7F8E" strokeWidth={2.5} fill="none" />
+                  <path d="M12 20 L32 20 L30 52 Q30 56 26 56 L18 56 Q14 56 14 52 Z"
+                    fill="url(#kettleGrad)" stroke="#4A5E6D" strokeWidth={1.8} />
+                  <path d="M16 20 Q16 8 24 8 Q32 8 32 20" stroke="#4A5E6D" strokeWidth={2.8} fill="none" />
+                  <line x1="13" y1="20" x2="34" y2="20" stroke="#4A5E6D" strokeWidth={2.8} />
+                  <circle cx="22" cy="17" r="1.5" fill="#4A5E6D" />
+                  <path d="M20 10 Q18 6 20 2" stroke="#6B7F8E" strokeWidth={1.3} opacity="0.35" />
+                  <path d="M26 12 Q24 8 26 4" stroke="#6B7F8E" strokeWidth={1.3} opacity="0.25" />
+                  <defs>
+                    <linearGradient id="kettleGrad" x1="12" y1="20" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#8FA4B4" />
+                      <stop offset="50%" stopColor="#7A92A3" />
+                      <stop offset="100%" stopColor="#5E7485" />
+                    </linearGradient>
+                  </defs>
                 </svg>
               </button>
               <div className="flex-1 min-w-0">
@@ -533,19 +535,22 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg text-ui-subtext hover:text-ui-accent active:scale-95 transition-all"
-                style={{ height: 94, opacity: 0.55 }}
+                className="flex-shrink-0 w-14 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                style={{ height: 94 }}
               >
-                {/* Mug with checkmark steam */}
-                <svg viewBox="0 0 40 64" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
-                  {/* Mug body */}
-                  <path d="M6 22 L6 50 Q6 56 12 56 L24 56 Q30 56 30 50 L30 22" />
-                  {/* Rim */}
-                  <line x1="4" y1="22" x2="32" y2="22" strokeWidth={2.5} />
-                  {/* Handle */}
-                  <path d="M30 28 Q38 28 38 38 Q38 46 30 46" strokeWidth={2.5} />
-                  {/* Checkmark steam */}
-                  <polyline points="13 12 17 16 27 4" strokeWidth={2.2} opacity="0.5" />
+                <svg viewBox="0 0 40 64" fill="none" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-16">
+                  <path d="M6 22 L6 50 Q6 56 12 56 L24 56 Q30 56 30 50 L30 22"
+                    fill="url(#mugGrad)" stroke="#5A6B4A" strokeWidth={1.8} />
+                  <line x1="4" y1="22" x2="32" y2="22" stroke="#5A6B4A" strokeWidth={2.8} />
+                  <path d="M30 28 Q38 28 38 38 Q38 46 30 46" stroke="#5A6B4A" strokeWidth={2.8} fill="none" />
+                  <polyline points="13 12 17 16 27 4" stroke="#5A6B4A" strokeWidth={2.2} opacity="0.45" />
+                  <defs>
+                    <linearGradient id="mugGrad" x1="6" y1="22" x2="30" y2="56" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#8FA07A" />
+                      <stop offset="45%" stopColor="#7A8E68" />
+                      <stop offset="100%" stopColor="#5E7050" />
+                    </linearGradient>
+                  </defs>
                 </svg>
               </button>
             </div>

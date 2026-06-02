@@ -188,16 +188,16 @@ function AppShell() {
           className="flex items-center gap-3 px-5 w-full backdrop-blur-md transition-colors duration-300"
           style={{
             pointerEvents: 'auto',
-            height: 52,
+            height: 54,
             background: focusStats?.isBonus
-              ? 'linear-gradient(135deg, rgba(251,191,36,0.3) 0%, rgba(180,130,20,0.22) 100%)'
+              ? 'linear-gradient(135deg, rgba(251,191,36,0.35) 0%, rgba(180,130,20,0.25) 100%)'
               : 'var(--aria-nav-bg, var(--aria-surface))',
             border: focusStats?.isBonus
-              ? '1.5px solid rgba(180,130,20,0.4)'
-              : '1.5px solid var(--aria-border, rgba(0,0,0,0.1))',
+              ? '2px solid rgba(180,130,20,0.45)'
+              : '2px solid color-mix(in srgb, var(--aria-text) 18%, transparent)',
             borderRadius: 16,
             maxWidth: 360,
-            boxShadow: '0 2px 8px rgba(40,24,10,0.12), 0 1px 3px rgba(40,24,10,0.08)',
+            boxShadow: '0 3px 12px rgba(40,24,10,0.16), 0 1px 4px rgba(40,24,10,0.10), inset 0 1px 0 rgba(255,248,224,0.4)',
           }}
         >
           <div className="flex-1 min-w-0 flex flex-col justify-center">
