@@ -49,7 +49,7 @@ export default function Inbox({ onCountChange }) {
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-2xl mx-auto w-full">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-ui-text">Inbox</h1>
           {tasks.length > 0 && <span className="text-sm text-ui-subtext">{tasks.length} item{tasks.length !== 1 ? 's' : ''}</span>}

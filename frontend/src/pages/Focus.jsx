@@ -8,6 +8,7 @@ import Button from '../components/Button'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
 import { TAG_COLORS } from '../utils/taskColors'
 import TeaBox from '../components/TeaBox'
+import CafeShelf from '../components/CafeShelf'
 
 
 const TEA_PUNS = [
@@ -327,7 +328,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
   // All done — no today tasks AND no bonus tasks
   if (!task) {
     return (
-      <div className="aria-page flex items-center justify-center md:pl-20">
+      <div className="aria-page flex items-center justify-center">
         <div className="px-6 pb-32 md:pb-8 max-w-sm w-full text-center">
           <div className="text-4xl mb-4 sparkle" style={{color:'#C490D1'}}>✦</div>
           <h2 className="text-sm pixel-heading text-ui-text mb-2">
@@ -353,7 +354,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_56px)] !max-h-[calc(100dvh_-_56px)] !min-h-[calc(100dvh_-_56px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-[calc(70px_+_env(safe-area-inset-bottom))] md:pb-8 md:pl-28 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-8 max-w-sm mx-auto w-full">
 
         {/* Header — hidden during dunk/fade, shown when idle */}
         {!celebrate ? (
@@ -614,6 +615,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             </div>
           )}
 
+          {!celebrate && !leaving && (
+            <CafeShelf onNavigate={onNavigate} />
+          )}
         </div>
 
       </div>

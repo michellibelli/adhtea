@@ -183,7 +183,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
   // bottom once `log` is populated (first save flips it on).
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-2xl mx-auto w-full">
 
         {gateMode && (
           <div className="mb-5 px-4 py-3 rounded-xl bg-ui-accent/10 border border-ui-accent/30">

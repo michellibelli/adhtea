@@ -21,6 +21,7 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { PageLoading, PageError } from '../components/PageState'
+import CafeShelf from '../components/CafeShelf'
 import { isTimedVisible } from '../utils/timing'
 
 const MAX_TODAY = 15
@@ -211,7 +212,7 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-2xl mx-auto w-full">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
@@ -429,6 +430,8 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
             )}
           </div>
         )}
+
+        <CafeShelf onNavigate={onNavigate} />
       </div>
     </div>
   )

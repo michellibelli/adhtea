@@ -28,7 +28,7 @@ import Settings from './pages/Settings'
 import AllTasks from './pages/AllTasks'
 import Projects from './pages/Projects'
 import OnboardingWelcome from './pages/OnboardingWelcome'
-import BottomNav from './components/BottomNav'
+// BottomNav removed — nav items live in CafeShelf on Focus/Today pages
 import Logo from './components/Logo'
 import PageProgress from './components/PageProgress'
 import './App.css'
@@ -180,7 +180,7 @@ function AppShell() {
       {/* Mobile top bar — logo on the left, capacity track + stats stacked
           on the right inside the same 52px frame. Stats only show on the
           Focus screen once Focus pushes them up. */}
-      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md md:hidden bg-ui-nav border-b border-ui-nav-border">
+      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-ui-nav border-b border-ui-nav-border">
         <div className="flex items-center gap-3 px-4 h-[52px]">
           <button
             onClick={() => setScreen('focus')}
@@ -211,10 +211,24 @@ function AppShell() {
               </div>
             )}
           </div>
+          <button
+            onClick={() => setScreen('settings')}
+            className="flex-shrink-0 p-1.5 rounded-md hover:opacity-70 transition-opacity"
+            aria-label="Settings"
+            style={{ opacity: 0.45 }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <ellipse cx="12" cy="7" rx="2.5" ry="3.5" />
+              <ellipse cx="17" cy="12" rx="3.5" ry="2.5" />
+              <ellipse cx="12" cy="17" rx="2.5" ry="3.5" />
+              <ellipse cx="7" cy="12" rx="3.5" ry="2.5" />
+              <circle cx="12" cy="12" r="2.5" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" />
+            </svg>
+          </button>
         </div>
       </header>
 
-      <main className="pt-[56px] md:pt-0">
+      <main className="pt-[56px]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}
@@ -228,16 +242,6 @@ function AppShell() {
         {screen === 'projects'  && <Projects onNavigate={setScreen} />}
       </main>
 
-      {/* Desktop sign out */}
-      <div className="hidden md:flex fixed left-0 bottom-0 z-50 w-20 flex-col items-center pb-4">
-        {user && (
-          <button onClick={handleLogout} className="text-[9px] text-white/60 hover:text-white transition-colors px-2 text-center leading-tight">
-            Sign<br />out
-          </button>
-        )}
-      </div>
-
-      <BottomNav active={screen} onNavigate={setScreen} />
     </div>
   )
 }
@@ -285,7 +289,7 @@ export default function App() {
       <div className="aria-page-bg" aria-hidden="true" />
       {showChip && (
         <div style={{
-          position: 'fixed', bottom: 'calc(96px + env(safe-area-inset-bottom))', right: 6, zIndex: 9999,
+          position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom))', right: 6, zIndex: 9999,
           background: 'transparent', color: 'var(--aria-subtext)', fontWeight: 500,
           padding: 0, fontSize: 9, fontFamily: 'monospace',
           pointerEvents: 'none', textAlign: 'right', lineHeight: '1.3', opacity: 0.55,

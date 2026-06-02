@@ -238,7 +238,7 @@ export default function Capture({ onNavigate }) {
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-lg mx-auto w-full">
 
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold text-ui-text">Capture</h1>

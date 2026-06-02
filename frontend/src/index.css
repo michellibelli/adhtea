@@ -903,6 +903,82 @@ body {
 }
 
 /* =============================================================================
+   Cafe shelf — illustrated nav objects
+   ============================================================================= */
+
+.cafe-shelf {
+  width: 100%;
+  max-width: 280px;
+  margin: 8px auto 0;
+  position: relative;
+  padding-top: 6px;
+}
+
+.cafe-shelf-line {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--aria-text) 18%, transparent) 20%,
+    color-mix(in srgb, var(--aria-text) 22%, transparent) 50%,
+    color-mix(in srgb, var(--aria-text) 18%, transparent) 80%,
+    transparent 100%
+  );
+  border-radius: 1px;
+}
+
+.cafe-shelf-items {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px 0 4px;
+}
+
+.cafe-shelf-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cafe-shelf-item:hover,
+.cafe-shelf-item:focus-visible {
+  opacity: 0.85;
+  transform: translateY(-2px);
+}
+
+.cafe-shelf-item:active {
+  transform: scale(0.92);
+  opacity: 1;
+}
+
+.cafe-shelf-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cafe-shelf-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* =============================================================================
    Nav icon animations
    ============================================================================= */
 

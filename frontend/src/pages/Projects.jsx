@@ -478,7 +478,7 @@ export default function Projects() {
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-2xl mx-auto w-full">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

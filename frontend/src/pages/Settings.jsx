@@ -343,7 +343,7 @@ export default function Settings({ onNavigate, user }) {
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-lg mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-lg mx-auto w-full">
 
         <h1 className="text-2xl font-semibold text-ui-text mb-6">Menu</h1>
 

@@ -612,7 +612,7 @@ export default function Tournament({ onDone }) {
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-32 md:pb-8 md:pl-28 max-w-2xl mx-auto w-full">
+      <div className="px-4 pt-8 pb-8 max-w-2xl mx-auto w-full">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
