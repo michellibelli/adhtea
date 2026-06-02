@@ -4,46 +4,17 @@ import { TAG_COLORS } from '../utils/taskColors'
 // max_total_per_day cap, so this is also the natural display limit.
 const BOX_CAPACITY = 15
 
-// The box reads left-to-right as morning → evening. Used only to give untimed
-// tasks a rough slot so they interleave sensibly with timed items.
-const DAY_START = 8 * 60 + 30   // 8:30am, in minutes since midnight
-const DAY_SPAN  = 12 * 60       // 12 hours → 8:30pm
-
-// Shiny gold — a completed bonus task drops into the box as one of these.
 const GOLD = {
   bg: 'linear-gradient(135deg, #F6E29A 0%, #E4B63C 38%, #F3D777 58%, #C9971F 100%)',
   border: '#A6781C',
   shadow: '#7C5912',
 }
 
-// "14:30" -> minutes since midnight, or null when the task has no time.
-function bagMinutes(t) {
-  if (!t.due_time) return null
-  const [h, m] = t.due_time.split(':').map(Number)
-  return h * 60 + m
-}
-
-// Order the bags left-to-right as a rough morning → evening run: timed items
-// sort by their actual time, untimed tasks are spread through the day. The
-// result is a single packed row — placement is approximate, not a timeline.
+// Order bags left-to-right by triage priority (sort_order).
 function orderedBags(tasks) {
-  const capped = [...tasks]
+  return [...tasks]
     .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
     .slice(0, BOX_CAPACITY)
-  // Untimed bags get a stable slot from their id order. Next rewrites
-  // sort_order, so ordering untimed bags by sort_order would reshuffle the
-  // whole row on every press — the box must stay put while the focus moves.
-  const untimed = capped.filter(t => !t.due_time).sort((a, b) => a.id - b.id)
-  return capped
-    .map(t => {
-      const min = bagMinutes(t)
-      const key = min != null
-        ? min
-        : DAY_START + ((untimed.indexOf(t) + 0.5) / Math.max(1, untimed.length)) * DAY_SPAN
-      return { task: t, key }
-    })
-    .sort((a, b) => a.key - b.key)
-    .map(x => x.task)
 }
 
 // One bag in the box. `gold` bags are completed bonus tasks — decorative,
@@ -62,7 +33,7 @@ function Bag({ colors, active, gold, onClick, title }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        width: 15,
+        width: 20,
         zIndex: active ? 2 : 1,
         // Bag colours pull from the same muted TAG_COLORS used by the
         // Focus tag + bookshelf, which made the bags too pale in the
@@ -71,25 +42,22 @@ function Bag({ colors, active, gold, onClick, title }) {
         filter: gold ? undefined : 'saturate(1.25)',
       }}
     >
-      {/* Paper tag — small square cap at the top of the string */}
       <div style={{
-        width: 7,
-        height: 4,
+        width: 9,
+        height: 5,
         background: colors.bg,
         border: `0.6px solid ${colors.border}`,
         borderRadius: 1,
       }} />
-      {/* String connecting tag to bag body */}
       <div style={{
         width: 1,
-        height: 5,
+        height: 6,
         background: stringColor,
         opacity: 0.65,
       }} />
-      {/* Bag body — the bulk of the teabag */}
       <div style={{
-        width: 15,
-        height: 28,
+        width: 20,
+        height: 36,
         background: colors.bg,
         border: `1.5px solid ${colors.border}`,
         borderTopWidth: 2.5,           // crimped fold
@@ -127,7 +95,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
 
       <div
         className="relative w-full select-none cursor-pointer active:scale-[0.98] transition-transform"
-        style={{ height: 52 }}
+        style={{ height: 62 }}
         onClick={onOpen}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.() } }}
         role="button"
@@ -137,7 +105,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
       >
         <div
           className="absolute left-0 right-0 flex items-end justify-start px-3"
-          style={{ bottom: 14 }}
+          style={{ bottom: 16 }}
         >
           {colored.map(t => {
             const isProject = !!t.project_name
@@ -164,7 +132,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         <div
           className="absolute left-0 right-0 bottom-0"
           style={{
-            height: 36,
+            height: 40,
             background: `
               repeating-linear-gradient(1.5deg,
                 rgba(50,30,10,0) 0px,

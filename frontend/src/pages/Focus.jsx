@@ -275,36 +275,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
     } catch (err) { console.error(err) }
   }
 
-  function handleNext() {
-    if (!task) return
-    setLeaving(true)
-    setTimeout(() => {
-      const updater = (prev) => {
-        // Send the skipped task to the back. sort_order alone isn't enough:
-        // pickNext ranks in_context above sort_order, so an in-context task
-        // would stay in focus however high its sort_order. Clearing
-        // in_context too drops it below the other candidates. (Null
-        // sort_order falls back to 999 in pickNext, so the bump clears 999.)
-        const maxOrder = Math.max(0, ...prev.map(t => t.sort_order ?? 999))
-        return prev.map(t => t.id === task.id
-          ? { ...t, sort_order: maxOrder + 1, in_context: false }
-          : t)
-      }
-      if (isBonusMode) setBonusTasks(updater)
-      else setTasks(updater)
-      setSelectedId(null)  // skipping returns focus to the pickNext ranking
-      setLeaving(false)
-    }, 300)
-  }
-
-  function handleBonusSkip() {
-    if (!task) return
-    setLeaving(true)
-    setTimeout(() => {
-      setLeaving(false)
-      setBonusTasks((prev) => prev.filter((t) => t.id !== task.id))
-    }, 250)
-  }
 
   async function handleSnooze(isoDate) {
     if (!task) return
@@ -532,12 +502,13 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
           {/* Shared 3-icon action row — same on mobile + desktop. Sits
               directly under the bag, with the tea-box directly under it.
               Spacing controlled by the card area's gap-3. */}
-          {!celebrate && !leaving && (
-            <div className={`flex gap-3 justify-center items-center ${entering ? 'animate-fade-in-up' : ''}`}>
+          {/* Tea box flanked by Capture (left) and Done (right) */}
+          {!celebrate && (
+            <div className={`w-full mx-auto relative flex items-center gap-3 ${entering ? 'animate-fade-in-up' : ''}`} style={{ maxWidth: 380, zIndex: 5 }}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+                className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                   <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
@@ -547,33 +518,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                   <line x1="14" y1="2" x2="14" y2="5"/>
                 </svg>
               </button>
+              <div className="flex-1 min-w-0">
+                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
+              </div>
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
+                className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </button>
-              <button
-                onClick={isBonusMode ? handleBonusSkip : handleNext}
-                aria-label={isBonusMode ? 'Skip' : 'Next'}
-                className="h-12 w-12 flex items-center justify-center rounded-md border border-ui-border text-ui-subtext hover:text-ui-accent active:scale-95 transition-all bg-ui-surface/20 backdrop-blur-sm"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                  <polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </button>
-            </div>
-          )}
-
-          {/* Shared tea-box — in-flow directly below the action row on
-              both mobile and desktop. Sized 260px wide centered. */}
-          {!celebrate && (
-            <div className="w-full mx-auto relative" style={{ maxWidth: 340, zIndex: 5 }}>
-              <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
             </div>
           )}
 
