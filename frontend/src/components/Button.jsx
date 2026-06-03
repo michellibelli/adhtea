@@ -20,7 +20,7 @@ const SIZES = {
 
 const VARIANTS = {
   primary:   'bg-ui-primary hover:bg-ui-primary-hover text-ui-primary-text pixel-btn',
-  secondary: 'border-4 border-ui-border text-ui-subtext hover:text-ui-accent hover:border-ui-accent/60 transition-colors duration-150 bg-ui-surface/85 backdrop-blur-sm',
+  secondary: 'border-4 border-ui-border text-ui-subtext hover:text-ui-accent hover:border-ui-accent/60 transition-colors duration-150 bg-ui-surface',
   ghost:     'text-ui-subtext hover:text-ui-accent transition-colors duration-150',
   danger:    'border-4 border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors duration-150',
 }
