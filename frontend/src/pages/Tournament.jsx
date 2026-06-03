@@ -187,6 +187,13 @@ function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy 
     >
       <Card className={`px-3 py-2 mb-1.5 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
         <div className="flex items-start gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onComplete(task.id) }}
+            title="Mark done"
+            aria-label="Mark done"
+            className="flex-shrink-0 mt-1 w-5 h-5 rounded-full border-2 border-ui-border hover:border-ui-accent hover:bg-ui-accent/20 transition-colors"
+          />
           <span
             className="text-ui-subtext/40 text-[11px] flex-shrink-0 px-0.5 select-none mt-1"
             aria-hidden="true"
