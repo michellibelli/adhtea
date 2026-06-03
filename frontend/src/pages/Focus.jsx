@@ -509,31 +509,40 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
                 className="flex-shrink-0 flex items-end justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 52, height: 94 }}
+                style={{ width: 56, height: 94 }}
               >
-                <svg viewBox="0 0 48 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 48, height: 88 }}>
-                  {/* Body — round kettle */}
-                  <ellipse cx="24" cy="58" rx="18" ry="22" fill="url(#kettleGrad)" stroke="#4A5E6D" strokeWidth={1.8} />
-                  {/* Flat base */}
-                  <ellipse cx="24" cy="78" rx="14" ry="3" fill="#4A5E6D" opacity="0.25" />
-                  {/* Lip / rim */}
-                  <ellipse cx="24" cy="37" rx="10" ry="3" fill="#6B8090" stroke="#4A5E6D" strokeWidth={1.5} />
+                <svg viewBox="0 0 56 94" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 94 }}>
+                  {/* Body */}
+                  <ellipse cx="26" cy="58" rx="20" ry="26" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
+                  {/* Horizontal texture lines */}
+                  <ellipse cx="26" cy="48" rx="18" ry="1.5" fill="none" stroke="#A8BCC8" strokeWidth={0.6} opacity="0.5" />
+                  <ellipse cx="26" cy="56" rx="19" ry="1.5" fill="none" stroke="#A8BCC8" strokeWidth={0.6} opacity="0.4" />
+                  <ellipse cx="26" cy="64" rx="18" ry="1.5" fill="none" stroke="#A8BCC8" strokeWidth={0.6} opacity="0.35" />
+                  {/* Small floral detail */}
+                  <circle cx="26" cy="70" r="2" fill="none" stroke="#A8BCC8" strokeWidth={0.7} opacity="0.4" />
+                  <circle cx="23" cy="68" r="1" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.3" />
+                  <circle cx="29" cy="68" r="1" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.3" />
+                  {/* Base shadow */}
+                  <ellipse cx="26" cy="83" rx="15" ry="3" fill="#6B8090" opacity="0.15" />
+                  {/* Rim / lip */}
+                  <ellipse cx="26" cy="33" rx="12" ry="3.5" fill="#D4C8B0" stroke="#8A9EAD" strokeWidth={1.5} />
                   {/* Lid dome */}
-                  <path d="M16 37 Q16 30 24 30 Q32 30 32 37" fill="#7A92A3" stroke="#4A5E6D" strokeWidth={1.5} />
+                  <path d="M16 33 Q16 24 26 24 Q36 24 36 33" fill="#BFD0DC" stroke="#8A9EAD" strokeWidth={1.3} />
                   {/* Knob */}
-                  <circle cx="24" cy="29" r="2.5" fill="#4A5E6D" />
+                  <circle cx="26" cy="23" r="2.5" fill="#8A9EAD" />
                   {/* Spout */}
-                  <path d="M6 52 Q1 46 3 40 Q5 36 8 38" stroke="#4A5E6D" strokeWidth={2.2} fill="none" />
-                  {/* Handle — arched, right side */}
-                  <path d="M38 48 Q46 48 46 58 Q46 68 38 68" stroke="#4A5E6D" strokeWidth={2.8} fill="none" />
+                  <path d="M6 52 Q0 44 3 36 Q5 32 9 35" stroke="#8A9EAD" strokeWidth={2.5} fill="none" />
+                  {/* Handle */}
+                  <path d="M44 46 Q54 46 54 58 Q54 70 44 70" stroke="#8A9EAD" strokeWidth={3} fill="none" />
                   {/* Steam */}
-                  <path d="M22 24 Q20 18 22 12" stroke="#6B7F8E" strokeWidth={1.2} opacity="0.3" />
-                  <path d="M28 22 Q26 16 28 10" stroke="#6B7F8E" strokeWidth={1.2} opacity="0.2" />
+                  <path d="M23 18 Q21 12 23 6" stroke="#8A9EAD" strokeWidth={1} opacity="0.25" />
+                  <path d="M29 16 Q27 10 29 4" stroke="#8A9EAD" strokeWidth={1} opacity="0.2" />
                   <defs>
-                    <linearGradient id="kettleGrad" x1="6" y1="36" x2="42" y2="80" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#97B0BF" />
-                      <stop offset="40%" stopColor="#8299AA" />
-                      <stop offset="100%" stopColor="#5E7485" />
+                    <linearGradient id="kettleGrad" x1="6" y1="32" x2="46" y2="84" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#E8DFD0" />
+                      <stop offset="30%" stopColor="#BFD0DC" />
+                      <stop offset="70%" stopColor="#97B0BF" />
+                      <stop offset="100%" stopColor="#7A92A3" />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -545,26 +554,33 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                 onClick={handleComplete}
                 aria-label="Done"
                 className="flex-shrink-0 flex items-end justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 52, height: 94 }}
+                style={{ width: 56, height: 94 }}
               >
-                <svg viewBox="0 0 48 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 48, height: 88 }}>
-                  {/* Body */}
-                  <path d="M8 30 L8 70 Q8 80 16 80 L28 80 Q36 80 36 70 L36 30"
-                    fill="url(#mugGrad)" stroke="#5A6B4A" strokeWidth={1.8} />
-                  {/* Flat base shadow */}
-                  <ellipse cx="22" cy="79" rx="12" ry="2.5" fill="#4A5C3A" opacity="0.2" />
-                  {/* Lip — thick rolled rim */}
-                  <path d="M6 30 L38 30" stroke="#5A6B4A" strokeWidth={3.5} />
-                  <path d="M7 28 L37 28" stroke="#8FA07A" strokeWidth={2} opacity="0.5" />
+                <svg viewBox="0 0 56 94" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 94 }}>
+                  {/* Tapered body — matches celebration cup shape */}
+                  <path d="M10 28 L38 28 L34 76 L14 76 Z" fill="url(#cupGrad)" stroke="#C4A882" strokeWidth={1.5} />
+                  {/* Base ellipse */}
+                  <ellipse cx="24" cy="76" rx="12" ry="4" fill="#DBC8A0" stroke="#C4A882" strokeWidth={1.5} />
+                  {/* Rim ellipse — lip */}
+                  <ellipse cx="24" cy="28" rx="16" ry="5" fill="#F5ECD7" stroke="#C4A882" strokeWidth={1.5} />
+                  {/* Tea liquid inside */}
+                  <ellipse cx="24" cy="28" rx="13" ry="3.5" fill="#DBA96A" opacity="0.45" />
+                  {/* Horizontal texture lines */}
+                  <line x1="12" y1="42" x2="36" y2="42" stroke="#D4C4A0" strokeWidth={0.6} opacity="0.45" />
+                  <line x1="13" y1="52" x2="35" y2="52" stroke="#D4C4A0" strokeWidth={0.6} opacity="0.4" />
+                  <line x1="13" y1="62" x2="34" y2="62" stroke="#D4C4A0" strokeWidth={0.6} opacity="0.35" />
+                  {/* Small floral/leaf detail */}
+                  <path d="M22 55 Q24 51 26 55" stroke="#C4A882" strokeWidth={0.7} fill="none" opacity="0.4" />
+                  <path d="M20 56 Q24 49 28 56" stroke="#C4A882" strokeWidth={0.5} fill="none" opacity="0.3" />
                   {/* Handle */}
-                  <path d="M36 38 Q46 38 46 52 Q46 64 36 64" stroke="#5A6B4A" strokeWidth={3} fill="none" />
+                  <path d="M37 36 Q50 36 50 52 Q50 66 37 66" stroke="#C4A882" strokeWidth={3} fill="none" />
                   {/* Checkmark steam */}
-                  <polyline points="15 18 20 23 33 8" stroke="#5A6B4A" strokeWidth={2.2} opacity="0.4" />
+                  <polyline points="16 18 21 23 34 8" stroke="#C4A882" strokeWidth={2} opacity="0.35" />
                   <defs>
-                    <linearGradient id="mugGrad" x1="8" y1="28" x2="36" y2="80" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#96A882" />
-                      <stop offset="40%" stopColor="#7E9468" />
-                      <stop offset="100%" stopColor="#5E7050" />
+                    <linearGradient id="cupGrad" x1="10" y1="28" x2="38" y2="76" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#F5ECD7" />
+                      <stop offset="40%" stopColor="#EDD5A8" />
+                      <stop offset="100%" stopColor="#D4BC8A" />
                     </linearGradient>
                   </defs>
                 </svg>
