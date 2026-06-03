@@ -20,9 +20,7 @@ export function isTimedVisible(task) {
     const m = minutesUntil(task.due_time)
     return m <= 5 && m >= -30
   }
-  if (task.task_type === 'routine') {
-    const m = minutesUntil(task.due_time)
-    return m <= 5 && m >= -60
-  }
+  // Routines are always visible — gentle pressure to complete them daily.
+  if (task.task_type === 'routine') return true
   return true
 }

@@ -10,10 +10,15 @@ const GOLD = {
   shadow: '#7C5912',
 }
 
-// Order bags left-to-right by triage priority (sort_order).
+// Order bags: routines first (front of box), then by triage priority.
 function orderedBags(tasks) {
   return [...tasks]
-    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
+    .sort((a, b) => {
+      const aRtn = a.task_type === 'routine' ? 0 : 1
+      const bRtn = b.task_type === 'routine' ? 0 : 1
+      if (aRtn !== bRtn) return aRtn - bRtn
+      return (a.sort_order ?? 999) - (b.sort_order ?? 999)
+    })
     .slice(0, BOX_CAPACITY)
 }
 
