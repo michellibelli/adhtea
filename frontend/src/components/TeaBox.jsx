@@ -1,4 +1,5 @@
 import { TAG_COLORS } from '../utils/taskColors'
+import { minutesUntil } from '../utils/timing'
 
 // The box holds at most 15 bags — a fully-triaged day never exceeds the
 // max_total_per_day cap, so this is also the natural display limit.
@@ -10,13 +11,16 @@ const GOLD = {
   shadow: '#7C5912',
 }
 
-// Order bags: routines first (front of box), then by triage priority.
+// Order bags: due/overdue routines first, then by triage priority.
+function isRoutineDue(t) {
+  return t.task_type === 'routine' && (!t.due_time || minutesUntil(t.due_time) <= 5)
+}
 function orderedBags(tasks) {
   return [...tasks]
     .sort((a, b) => {
-      const aRtn = a.task_type === 'routine' ? 0 : 1
-      const bRtn = b.task_type === 'routine' ? 0 : 1
-      if (aRtn !== bRtn) return aRtn - bRtn
+      const aDue = isRoutineDue(a) ? 0 : 1
+      const bDue = isRoutineDue(b) ? 0 : 1
+      if (aDue !== bDue) return aDue - bDue
       return (a.sort_order ?? 999) - (b.sort_order ?? 999)
     })
     .slice(0, BOX_CAPACITY)

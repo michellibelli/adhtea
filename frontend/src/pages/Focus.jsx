@@ -80,11 +80,11 @@ function pickNext(tasks) {
     const bImm = isImminent(b)
     if (aImm && !bImm) return -1
     if (bImm && !aImm) return 1
-    // Routines float above regular tasks — gentle pressure to complete.
-    const aRtn = a.task_type === 'routine'
-    const bRtn = b.task_type === 'routine'
-    if (aRtn && !bRtn) return -1
-    if (bRtn && !aRtn) return 1
+    // Routines float above regular tasks only when due or overdue.
+    const aRtnDue = a.task_type === 'routine' && (!a.due_time || minutesUntil(a.due_time) <= 5)
+    const bRtnDue = b.task_type === 'routine' && (!b.due_time || minutesUntil(b.due_time) <= 5)
+    if (aRtnDue && !bRtnDue) return -1
+    if (bRtnDue && !aRtnDue) return 1
     const aCtx = a.in_context !== false
     const bCtx = b.in_context !== false
     if (aCtx !== bCtx) return aCtx ? -1 : 1
