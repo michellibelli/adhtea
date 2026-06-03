@@ -15,7 +15,7 @@ import { SmartPointerSensor } from '../utils/dnd'
 import {
   previewTriage, recomputeTriage, applyOrderedTriage, resolveOverflow,
 } from '../api/triage'
-import { createTask, snoozeTask, updateTask, reorderTasks } from '../api/tasks'
+import { createTask, snoozeTask, updateTask, reorderTasks, completeTask } from '../api/tasks'
 import { createPortal } from 'react-dom'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -124,7 +124,7 @@ function MetaBadges({ task }) {
 
 // ── Sortable triage row ─────────────────────────────────────────────────────
 
-function ActionMenu({ anchorRef, onSnooze, onEdit, onClose }) {
+function ActionMenu({ anchorRef, onSnooze, onEdit, onComplete, onClose }) {
   const [pos, setPos] = useState(null)
 
   useEffect(() => {
@@ -143,6 +143,7 @@ function ActionMenu({ anchorRef, onSnooze, onEdit, onClose }) {
         style={{ top: pos.top, right: pos.right }}
       >
         {[
+          { label: '✓ Done',      action: onComplete },
           { label: 'Tomorrow',   action: () => onSnooze(offsetDate(1)) },
           { label: 'Next week',  action: () => onSnooze(offsetDate(7)) },
           { label: 'Next month', action: () => onSnooze(offsetDate(30)) },
@@ -163,7 +164,7 @@ function ActionMenu({ anchorRef, onSnooze, onEdit, onClose }) {
   )
 }
 
-function SortableTriageRow({ task, onSnooze, onEdit, onWhy, showWhy }) {
+function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const [showMenu, setShowMenu] = useState(false)
   const menuBtnRef = useRef(null)
@@ -222,6 +223,7 @@ function SortableTriageRow({ task, onSnooze, onEdit, onWhy, showWhy }) {
           anchorRef={menuBtnRef}
           onSnooze={(iso) => onSnooze(task.id, iso)}
           onEdit={() => onEdit(task.id)}
+          onComplete={() => onComplete(task.id)}
           onClose={() => setShowMenu(false)}
         />
       )}
@@ -550,6 +552,13 @@ export default function Tournament({ onDone }) {
     catch (e) { setError(e?.message || 'Could not update task') }
   }
 
+  async function handleComplete(taskId) {
+    setTriageTasks(prev => prev.filter(t => t.id !== taskId))
+    setAllTasks(prev => prev.filter(t => t.id !== taskId))
+    try { await completeTask(taskId) }
+    catch (e) { setError(e?.message || 'Complete failed') }
+  }
+
   async function handleSnooze(taskId, isoDate) {
     setTriageTasks(prev => prev.filter(t => t.id !== taskId))
     setAllTasks(prev => prev.filter(t => t.id !== taskId))
@@ -702,6 +711,7 @@ export default function Tournament({ onDone }) {
                   task={t}
                   onSnooze={handleSnooze}
                   onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
+                  onComplete={handleComplete}
                   onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
                   showWhy={showWhyId === t.id}
                 />

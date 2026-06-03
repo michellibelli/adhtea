@@ -34,6 +34,8 @@ function Bag({ colors, active, gold, onClick, title }) {
         flexDirection: 'column',
         alignItems: 'center',
         width: 20,
+        transition: 'transform 0.3s ease, opacity 0.3s ease',
+        flexShrink: 0,
         zIndex: active ? 2 : 1,
         // Bag colours pull from the same muted TAG_COLORS used by the
         // Focus tag + bookshelf, which made the bags too pale in the
@@ -104,8 +106,8 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         title="Open today's list"
       >
         <div
-          className="absolute left-0 right-0 flex items-end justify-start px-3"
-          style={{ bottom: 16 }}
+          className="absolute left-0 right-0 flex items-end justify-start px-3 overflow-hidden"
+          style={{ bottom: 16, transition: 'all 0.3s ease' }}
         >
           {colored.map(t => {
             const isProject = !!t.project_name
