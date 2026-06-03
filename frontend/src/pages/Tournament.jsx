@@ -3,7 +3,7 @@
 // Flow: add new tasks → snooze what you don't want today → drag into
 // execution order → Apply. If over capacity, an overflow bumper lets
 // you tap tasks to bump to tomorrow.
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   DndContext, closestCenter, useSensor, useSensors, TouchSensor,
 } from '@dnd-kit/core'
@@ -19,28 +19,13 @@ import { createTask, snoozeTask, updateTask, reorderTasks, completeTask } from '
 import { createPortal } from 'react-dom'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import ProjectBadge from '../components/ProjectBadge'
+import TaskCard from '../components/TaskCard'
 import EditTaskSheet from '../components/EditTaskSheet'
 import { PageLoading, PageError } from '../components/PageState'
 import { markTriageDone } from '../utils/triage'
 
-const STALE_PUSH_THRESHOLD = 5
 const MAX_TODAY = 15
 const MAX_TOTAL = 20
-
-const LEVER_LABELS = {
-  priority:        'Priority',
-  critical_bonus:  'Critical',
-  overdue_boost:   'Overdue',
-  due_today:       'Due today',
-  due_soon:        'Due soon',
-  same_day_create: 'Same-day deadline',
-  project_stall:   'Stalling project',
-  in_context:      'Fits this time',
-  age_boost:       'Inbox age',
-  push_penalty:    'Pushed before',
-}
-
 
 function todayIso() {
   const d = new Date()
@@ -57,119 +42,10 @@ function offsetDate(days) {
 }
 
 
-function parseComponents(raw) {
-  if (!raw) return null
-  try { return JSON.parse(raw) } catch { return null }
-}
-
-
-function WhyTooltip({ components, total }) {
-  if (!components) return null
-  const entries = Object.entries(components).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-  return (
-    <div className="mt-2 pt-2 border-t border-ui-border/50 space-y-0.5">
-      <p className="text-[10px] font-semibold text-ui-text mb-1">
-        Total score: {Math.round(total)}
-      </p>
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-center justify-between text-[10px]">
-          <span className="text-ui-subtext">{LEVER_LABELS[k] || k}</span>
-          <span className={`font-mono ${v >= 0 ? 'text-ui-accent' : 'text-red-400'}`}>
-            {v >= 0 ? '+' : ''}{v}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-
-function ScoreChip({ task, onClick }) {
-  if (task.score == null) return null
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title="Why this score?"
-      className="flex-shrink-0 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-ui-border/40 text-ui-text hover:bg-ui-accent/20 hover:text-ui-accent transition-colors"
-    >
-      {Math.round(task.score)}
-    </button>
-  )
-}
-
-
-function MetaBadges({ task }) {
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <ProjectBadge name={task.project_name} size="xs" />
-      {task.domain_name && (
-        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-ui-border/60 text-ui-subtext uppercase tracking-wider">
-          {task.domain_name}
-        </span>
-      )}
-      {task.is_critical && (
-        <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">critical</span>
-      )}
-      {(task.push_count || 0) >= STALE_PUSH_THRESHOLD && (
-        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-medium">stale ×{task.push_count}</span>
-      )}
-      {task.due_date && (
-        <span className="text-[9px] text-ui-subtext">due {task.due_date}</span>
-      )}
-    </div>
-  )
-}
-
-
 // ── Sortable triage row ─────────────────────────────────────────────────────
-
-function ActionMenu({ anchorRef, onSnooze, onEdit, onComplete, onClose }) {
-  const [pos, setPos] = useState(null)
-
-  useEffect(() => {
-    if (!anchorRef?.current) return
-    const r = anchorRef.current.getBoundingClientRect()
-    setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
-  }, [anchorRef])
-
-  if (!pos) return null
-
-  return createPortal(
-    <>
-      <div className="fixed inset-0 z-50" onClick={onClose} />
-      <div
-        className="fixed z-50 bg-ui-surface border border-ui-border rounded-xl shadow-lg overflow-hidden min-w-[140px]"
-        style={{ top: pos.top, right: pos.right }}
-      >
-        {[
-          { label: '✓ Done',      action: onComplete },
-          { label: 'Tomorrow',   action: () => onSnooze(offsetDate(1)) },
-          { label: 'Next week',  action: () => onSnooze(offsetDate(7)) },
-          { label: 'Next month', action: () => onSnooze(offsetDate(30)) },
-          { label: 'Edit…',      action: onEdit },
-        ].map(({ label, action }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); action(); onClose() }}
-            className="w-full text-left text-sm px-3 py-2 text-ui-text hover:bg-ui-accent/10 transition-colors"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </>,
-    document.body,
-  )
-}
 
 function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
-  const [showMenu, setShowMenu] = useState(false)
-  const menuBtnRef = useRef(null)
-  const components = parseComponents(task.score_components)
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -178,62 +54,16 @@ function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy 
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="cursor-grab active:cursor-grabbing"
-    >
-      <Card className={`px-3 py-2 mb-1.5 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
-        <div className="flex items-start gap-2">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onComplete(task.id) }}
-            title="Mark done"
-            aria-label="Mark done"
-            className="flex-shrink-0 mt-1 w-5 h-5 rounded-full border-2 border-ui-border hover:border-ui-accent hover:bg-ui-accent/20 transition-colors"
-          />
-          <span
-            className="text-ui-subtext/40 text-[11px] flex-shrink-0 px-0.5 select-none mt-1"
-            aria-hidden="true"
-          >⋮⋮</span>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
-            <div className="mt-1">
-              <MetaBadges task={task} />
-            </div>
-          </div>
-
-          <ScoreChip task={task} onClick={() => onWhy(task.id)} />
-
-          <button
-            ref={menuBtnRef}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setShowMenu(prev => !prev) }}
-            title="Actions"
-            aria-label="Actions"
-            className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-              <circle cx="12" cy="5" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="12" cy="19" r="2" />
-            </svg>
-          </button>
-        </div>
-        {showWhy && <WhyTooltip components={components} total={task.score} />}
-      </Card>
-      {showMenu && (
-        <ActionMenu
-          anchorRef={menuBtnRef}
-          onSnooze={(iso) => onSnooze(task.id, iso)}
-          onEdit={() => onEdit(task.id)}
-          onComplete={() => onComplete(task.id)}
-          onClose={() => setShowMenu(false)}
-        />
-      )}
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing mb-1.5">
+      <TaskCard
+        task={task}
+        variant="triage"
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        showScore
+        showWhy={showWhy}
+        onWhy={() => onWhy(task.id)}
+      />
     </div>
   )
 }
@@ -390,7 +220,7 @@ function OverflowBumper({ tasks, taskMap, onResolve, onKeepAll }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-function DraggableUpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showWhy }) {
+function DraggableUpNextRow({ task, onSnooze, onPromote, canPromote, onWhy, showWhy }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -398,49 +228,19 @@ function DraggableUpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onW
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 50 : 'auto',
   }
-  const [showMenu, setShowMenu] = useState(false)
-  const menuBtnRef = useRef(null)
-  const components = parseComponents(task.score_components)
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="cursor-grab active:cursor-grabbing"
-    >
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          <Card className={`px-3 py-2 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
-            <div className="flex items-start gap-2">
-              <span className="text-ui-subtext/30 text-[11px] flex-shrink-0 px-0.5 select-none mt-1" aria-hidden="true">⋮⋮</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
-                <div className="mt-1">
-                  <MetaBadges task={task} />
-                </div>
-              </div>
-
-              <ScoreChip task={task} onClick={() => onWhy(task.id)} />
-
-              <button
-                ref={menuBtnRef}
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setShowMenu(prev => !prev) }}
-                title="Actions"
-                aria-label="Actions"
-                className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <circle cx="12" cy="5" r="2" />
-                  <circle cx="12" cy="12" r="2" />
-                  <circle cx="12" cy="19" r="2" />
-                </svg>
-              </button>
-            </div>
-            {showWhy && <WhyTooltip components={components} total={task.score} />}
-          </Card>
+          <TaskCard
+            task={task}
+            variant="triage"
+            onSnooze={onSnooze}
+            showScore
+            showWhy={showWhy}
+            onWhy={() => onWhy(task.id)}
+          />
         </div>
         {canPromote && (
           <button
@@ -449,14 +249,6 @@ function DraggableUpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onW
             title="Add to today"
             className="flex-shrink-0 mt-2 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
           >+</button>
-        )}
-        {showMenu && (
-          <ActionMenu
-            anchorRef={menuBtnRef}
-            onSnooze={(iso) => onSnooze(task.id, iso)}
-            onEdit={() => onEdit(task.id)}
-            onClose={() => setShowMenu(false)}
-          />
         )}
       </div>
     </div>

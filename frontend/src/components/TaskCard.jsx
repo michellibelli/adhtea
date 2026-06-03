@@ -202,6 +202,57 @@ function EditForm({ task, onSave, onCancel }) {
 
 // ── Task card ────────────────────────────────────────────────────────────────
 
+function ScoreChip({ score, onClick }) {
+  if (score == null) return null
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick?.() }}
+      title="Why this score?"
+      className="flex-shrink-0 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-ui-border/40 text-ui-text hover:bg-ui-accent/20 hover:text-ui-accent transition-colors"
+    >
+      {Math.round(score)}
+    </button>
+  )
+}
+
+const LEVER_LABELS = {
+  priority:        'Priority',
+  critical_bonus:  'Critical',
+  overdue_boost:   'Overdue',
+  due_today:       'Due today',
+  due_soon:        'Due soon',
+  same_day_create: 'Same-day deadline',
+  project_stall:   'Stalling project',
+  in_context:      'Fits this time',
+  age_boost:       'Inbox age',
+  push_penalty:    'Pushed before',
+}
+
+function WhyTooltip({ components, total }) {
+  if (!components) return null
+  let parsed = components
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed) } catch { return null }
+  }
+  const entries = Object.entries(parsed).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+  return (
+    <div className="mt-2 pt-2 border-t border-ui-border/50 space-y-0.5">
+      <p className="text-[10px] font-semibold text-ui-text mb-1">
+        Total score: {Math.round(total)}
+      </p>
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex items-center justify-between text-[10px]">
+          <span className="text-ui-subtext">{LEVER_LABELS[k] || k}</span>
+          <span className={`font-mono ${v >= 0 ? 'text-ui-accent' : 'text-red-400'}`}>
+            {v >= 0 ? '+' : ''}{v}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function TaskCard({
   task: initialTask,
   variant = 'today',
@@ -211,6 +262,9 @@ export default function TaskCard({
   onDefer,
   onDelete,
   onScheduleToday,
+  showScore = false,
+  showWhy = false,
+  onWhy,
 }) {
   const [task,        setTask]        = useState(initialTask)
   const [showSnooze,  setShowSnooze]  = useState(false)
@@ -238,7 +292,7 @@ export default function TaskCard({
 
   return (
     <>
-      <Card className={`px-4 py-3 transition-all duration-300 ${leaving ? 'opacity-0 scale-95 translate-x-3' : 'opacity-100'}`}>
+      <Card className={`px-4 py-3 transition-all duration-300 ${leaving ? 'opacity-0 scale-95 translate-x-3' : 'opacity-100'} ${(task.push_count || 0) >= 5 ? 'border-amber-400/40' : ''}`}>
 
         {editing ? (
           <EditForm task={task} onSave={handleSaved} onCancel={() => setEditing(false)} />
@@ -246,7 +300,7 @@ export default function TaskCard({
           <>
             <div className="flex items-start gap-3">
               {/* Complete circle */}
-              {(variant === 'today' || variant === 'inbox') && (
+              {(variant === 'today' || variant === 'inbox' || variant === 'triage') && (
                 <button
                   onClick={handleComplete}
                   className="mt-0.5 w-6 h-6 rounded-full border-2 border-ui-accent/50 flex-shrink-0 flex items-center justify-center hover:bg-ui-primary hover:border-transparent hover:text-ui-primary-text active:scale-90 transition-all duration-150 group"
@@ -329,6 +383,8 @@ export default function TaskCard({
                 </div>
               </div>
 
+              {showScore && <ScoreChip score={task.score} onClick={onWhy} />}
+
               {/* Right-side action column: snooze + edit + delete, always visible.
                   Stops click propagation so tapping an icon doesn't also
                   toggle the expanded-actions panel on the card body. */}
@@ -336,7 +392,7 @@ export default function TaskCard({
                 className="flex flex-col gap-1.5 flex-shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
-                {(variant === 'today' || variant === 'inbox') && (
+                {(variant === 'today' || variant === 'inbox' || variant === 'triage') && (
                   <button
                     onClick={() => setShowSnooze(true)}
                     title="Snooze"
@@ -389,7 +445,7 @@ export default function TaskCard({
                     → Today
                   </Button>
                 )}
-                {variant === 'today' && (
+                {(variant === 'today' || variant === 'triage') && (
                   <Button size="sm" variant="secondary" onClick={() => { setShowActions(false); onDefer?.(task.id) }}>
                     ↩ Inbox
                   </Button>
@@ -401,6 +457,7 @@ export default function TaskCard({
                 )}
               </div>
             )}
+            {showWhy && <WhyTooltip components={task.score_components} total={task.score} />}
           </>
         )}
       </Card>
