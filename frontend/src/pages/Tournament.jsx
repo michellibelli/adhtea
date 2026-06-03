@@ -381,60 +381,75 @@ function OverflowBumper({ tasks, taskMap, onResolve, onKeepAll }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-// Non-sortable row for Up Next section — same visual, + button instead of drag
-function UpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showWhy }) {
+function DraggableUpNextRow({ task, onSnooze, onEdit, onPromote, canPromote, onWhy, showWhy }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  }
   const [showMenu, setShowMenu] = useState(false)
   const menuBtnRef = useRef(null)
   const components = parseComponents(task.score_components)
 
   return (
-    <div className="flex items-start gap-2">
-      <div className="flex-1 min-w-0">
-        <Card className={`px-3 py-2 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
-          <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
-              <div className="mt-1">
-                <MetaBadges task={task} />
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <Card className={`px-3 py-2 ${(task.push_count || 0) >= STALE_PUSH_THRESHOLD ? 'border-amber-400/40' : ''}`}>
+            <div className="flex items-start gap-2">
+              <span className="text-ui-subtext/30 text-[11px] flex-shrink-0 px-0.5 select-none mt-1" aria-hidden="true">⋮⋮</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ui-text leading-snug break-words">{task.title}</p>
+                <div className="mt-1">
+                  <MetaBadges task={task} />
+                </div>
               </div>
+
+              <ScoreChip task={task} onClick={() => onWhy(task.id)} />
+
+              <button
+                ref={menuBtnRef}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowMenu(prev => !prev) }}
+                title="Actions"
+                aria-label="Actions"
+                className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                  <circle cx="12" cy="5" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="19" r="2" />
+                </svg>
+              </button>
             </div>
-
-            <ScoreChip task={task} onClick={() => onWhy(task.id)} />
-
-            <button
-              ref={menuBtnRef}
-              type="button"
-              onClick={() => setShowMenu(prev => !prev)}
-              title="Actions"
-              aria-label="Actions"
-              className="flex-shrink-0 p-1 text-ui-subtext/40 hover:text-ui-accent transition-colors mt-0.5"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                <circle cx="12" cy="5" r="2" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="12" cy="19" r="2" />
-              </svg>
-            </button>
-          </div>
-          {showWhy && <WhyTooltip components={components} total={task.score} />}
-        </Card>
+            {showWhy && <WhyTooltip components={components} total={task.score} />}
+          </Card>
+        </div>
+        {canPromote && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onPromote(task) }}
+            title="Add to today"
+            className="flex-shrink-0 mt-2 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
+          >+</button>
+        )}
+        {showMenu && (
+          <ActionMenu
+            anchorRef={menuBtnRef}
+            onSnooze={(iso) => onSnooze(task.id, iso)}
+            onEdit={() => onEdit(task.id)}
+            onClose={() => setShowMenu(false)}
+          />
+        )}
       </div>
-      {canPromote && (
-        <button
-          type="button"
-          onClick={() => onPromote(task)}
-          title="Add to today"
-          className="flex-shrink-0 mt-2 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
-        >+</button>
-      )}
-      {showMenu && (
-        <ActionMenu
-          anchorRef={menuBtnRef}
-          onSnooze={(iso) => onSnooze(task.id, iso)}
-          onEdit={() => onEdit(task.id)}
-          onClose={() => setShowMenu(false)}
-        />
-      )}
     </div>
   )
 }
@@ -558,8 +573,33 @@ export default function Tournament({ onDone }) {
   function handleDragEnd(event) {
     const { active, over } = event
     if (!over || active.id === over.id) return
+    const isFromUpNext = !triageIds.has(active.id)
+    const isOverToday = triageIds.has(over.id)
+
+    if (isFromUpNext && isOverToday && triageTasks.length < MAX_TODAY) {
+      const task = allTasks.find(t => t.id === active.id)
+      if (!task) return
+      const iso = todayIso()
+      const updated = { ...task, due_date: iso, status: 'today' }
+      const overIndex = triageTasks.findIndex(t => t.id === over.id)
+      const inserted = [...triageTasks]
+      inserted.splice(overIndex, 0, updated)
+      setTriageTasks(inserted)
+      setAllTasks(prev => prev.map(t => t.id === task.id ? updated : t))
+      updateTask(task.id, { due_date: iso }).catch(() => {})
+      reorderTasks(inserted.map(t => t.id))
+      return
+    }
+
+    if (isFromUpNext) {
+      const task = allTasks.find(t => t.id === active.id)
+      if (task && triageTasks.length < MAX_TODAY) handlePromote(task)
+      return
+    }
+
     const oldIndex = triageTasks.findIndex(t => t.id === active.id)
     const newIndex = triageTasks.findIndex(t => t.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
     const reordered = arrayMove(triageTasks, oldIndex, newIndex)
     setTriageTasks(reordered)
     reorderTasks(reordered.map(t => t.id))
@@ -648,14 +688,15 @@ export default function Tournament({ onDone }) {
           />
         )}
 
-        {triageTasks.length === 0 ? (
-          <p className="text-xs text-ui-subtext text-center py-8">
-            No tasks to triage — add one above or hit Recompute.
-          </p>
-        ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={triageTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              {triageTasks.map(t => (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={[...triageTasks.map(t => t.id), ...upNext.map(t => t.id)]} strategy={verticalListSortingStrategy}>
+
+            {triageTasks.length === 0 ? (
+              <p className="text-xs text-ui-subtext text-center py-8">
+                No tasks to triage — add one above or hit Recompute.
+              </p>
+            ) : (
+              triageTasks.map(t => (
                 <SortableTriageRow
                   key={t.id}
                   task={t}
@@ -664,36 +705,37 @@ export default function Tournament({ onDone }) {
                   onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
                   showWhy={showWhyId === t.id}
                 />
-              ))}
-            </SortableContext>
-          </DndContext>
-        )}
+              ))
+            )}
 
-        {/* ── Divider + Up Next ── */}
-        {upNext.length > 0 && (
-          <>
-            <div className="flex items-center gap-3 px-0.5 mt-4 mb-4">
-              <div className="flex-1 h-px bg-ui-border" />
-              <span className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Up Next</span>
-              <div className="flex-1 h-px bg-ui-border" />
-            </div>
+            {/* ── Divider + Up Next ── */}
+            {upNext.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 px-0.5 mt-4 mb-4">
+                  <div className="flex-1 h-px bg-ui-border" />
+                  <span className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Up Next — drag up to add</span>
+                  <div className="flex-1 h-px bg-ui-border" />
+                </div>
 
-            <div className="space-y-1.5">
-              {upNext.map(t => (
-                <UpNextRow
-                  key={t.id}
-                  task={t}
-                  onSnooze={handleSnooze}
-                  onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
-                  onPromote={handlePromote}
-                  canPromote={triageTasks.length < MAX_TODAY}
-                  onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
-                  showWhy={showWhyId === t.id}
-                />
-              ))}
-            </div>
-          </>
-        )}
+                <div className="space-y-1.5">
+                  {upNext.map(t => (
+                    <DraggableUpNextRow
+                      key={t.id}
+                      task={t}
+                      onSnooze={handleSnooze}
+                      onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
+                      onPromote={handlePromote}
+                      canPromote={triageTasks.length < MAX_TODAY}
+                      onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
+                      showWhy={showWhyId === t.id}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+          </SortableContext>
+        </DndContext>
 
         {error && <p className="text-xs text-red-400 text-center my-3">{error}</p>}
 
