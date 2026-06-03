@@ -288,7 +288,16 @@ export default function TaskCard({
     setShowActions(false)
   }
 
+  const WEIGHT_CYCLE = ['light', 'medium', 'heavy']
   const dots = WEIGHT_DOTS[task.weight] || 1
+
+  function cycleWeight(e) {
+    e.stopPropagation()
+    const cur = WEIGHT_CYCLE.indexOf(task.weight) ?? 0
+    const next = WEIGHT_CYCLE[(cur + 1) % 3]
+    setTask(t => ({ ...t, weight: next }))
+    updateTask(task.id, { weight: next }).catch(console.error)
+  }
 
   return (
     <>
@@ -328,11 +337,16 @@ export default function TaskCard({
 
                 {/* Meta row */}
                 <div className="flex items-center gap-2 mt-1.5 ml-4 flex-wrap">
-                  <div className="flex gap-0.5">
+                  <button
+                    type="button"
+                    onClick={cycleWeight}
+                    title={`Difficulty: ${task.weight || 'medium'} — tap to change`}
+                    className="flex gap-0.5 p-0.5 -m-0.5 rounded hover:bg-ui-accent/10 transition-colors"
+                  >
                     {[1, 2, 3].map((d) => (
                       <div key={d} className={`w-1.5 h-1.5 rounded-full ${d <= dots ? 'bg-ui-accent' : 'bg-ui-border'}`} />
                     ))}
-                  </div>
+                  </button>
 
                   <ProjectBadge name={task.project_name} size="xs" />
 
