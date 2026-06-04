@@ -555,19 +555,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                   boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,248,224,0.4)',
                 }}
               >
-                <svg viewBox="0 0 110 86" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 44 }}>
-                  <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#DBC8A0" stroke="#C4A882" strokeWidth={2} />
-                  <path d="M 20 22 L 84 22 L 76 71 L 28 71 Z" fill="url(#cupGrad)" stroke="#C4A882" strokeWidth={2} />
-                  {/* Checkmark on cup body */}
-                  <polyline points="38 48 48 58 68 36" stroke="#8A7A5A" strokeWidth={3} opacity="0.4" fill="none" />
-                  <path d="M 84 32 Q 100 32 100 48 Q 100 62 84 60" stroke="#C4A882" strokeWidth={3} fill="none" />
-                  <ellipse cx="52" cy="22" rx="34" ry="5.5" fill="#F5ECD7" stroke="#C4A882" strokeWidth={2} />
-                  <ellipse cx="52" cy="22" rx="28" ry="3.5" fill="#DBA96A" opacity="0.4" />
+                <svg viewBox="0 0 110 86" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 52, height: 40 }}>
+                  <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#C4A878" stroke="#8A7050" strokeWidth={2} />
+                  <path d="M 20 22 L 84 22 L 76 71 L 28 71 Z" fill="url(#cupGrad)" stroke="#8A7050" strokeWidth={2.5} />
+                  <polyline points="38 48 48 58 68 36" stroke="#5A4A2A" strokeWidth={3.5} opacity="0.55" fill="none" />
+                  <path d="M 84 32 Q 100 32 100 48 Q 100 62 84 60" stroke="#8A7050" strokeWidth={3.5} fill="none" />
+                  <ellipse cx="52" cy="22" rx="34" ry="5.5" fill="#E8D8B8" stroke="#8A7050" strokeWidth={2} />
+                  <ellipse cx="52" cy="22" rx="28" ry="3.5" fill="#C49A5A" opacity="0.45" />
                   <defs>
                     <linearGradient id="cupGrad" x1="20" y1="22" x2="84" y2="71" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#F5ECD7" />
-                      <stop offset="40%" stopColor="#EDD5A8" />
-                      <stop offset="100%" stopColor="#D4BC8A" />
+                      <stop offset="0%" stopColor="#E8D8B8" />
+                      <stop offset="40%" stopColor="#D4BC8A" />
+                      <stop offset="100%" stopColor="#B8A070" />
                     </linearGradient>
                   </defs>
                 </svg>
