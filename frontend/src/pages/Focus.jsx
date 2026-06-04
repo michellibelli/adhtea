@@ -468,7 +468,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                bottom: -40,
+                bottom: 60,
                 zIndex: 4, pointerEvents: 'none', textAlign: 'center',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
