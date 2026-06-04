@@ -206,23 +206,28 @@ function AppShell() {
           >
             <Logo size={28} />
           </button>
-          {/* Ornamental divider */}
-          <div className="flex-1 flex items-center justify-center" style={{ opacity: 0.4 }}>
-            <svg viewBox="0 0 160 12" fill="none" style={{ width: '100%', maxWidth: 200, height: 12 }}>
+          {/* Ornamental divider with flower */}
+          <div className="flex-1 flex items-center justify-center" style={{ opacity: 0.45 }}>
+            <svg viewBox="0 0 160 16" fill="none" style={{ width: '100%', maxWidth: 200, height: 16 }}>
               {/* Left line */}
-              <line x1="0" y1="6" x2="58" y2="6" stroke="var(--aria-text)" strokeWidth={0.8} />
-              {/* Left curl */}
-              <path d="M58 6 Q62 2 66 6" stroke="var(--aria-text)" strokeWidth={0.8} fill="none" />
-              {/* Center diamond */}
-              <path d="M72 6 L80 1 L88 6 L80 11 Z" fill="var(--aria-text)" fillOpacity="0.15" stroke="var(--aria-text)" strokeWidth={0.8} />
-              <circle cx="80" cy="6" r="1.5" fill="var(--aria-text)" fillOpacity="0.3" />
-              {/* Right curl */}
-              <path d="M94 6 Q98 10 102 6" stroke="var(--aria-text)" strokeWidth={0.8} fill="none" />
+              <line x1="2" y1="8" x2="60" y2="8" stroke="var(--aria-text)" strokeWidth={0.7} />
+              {/* Left leaf */}
+              <path d="M54 8 Q50 4 56 5 Q53 7 54 8" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.5} />
+              {/* Center flower — 6 petals, clearly visible */}
+              <ellipse cx="80" cy="4" rx="3.5" ry="6" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} rx="3.5" ry="6" />
+              <ellipse cx="80" cy="4" rx="3.5" ry="6" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(60 80 8)" />
+              <ellipse cx="80" cy="4" rx="3.5" ry="6" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(120 80 8)" />
+              <ellipse cx="80" cy="4" rx="3.5" ry="6" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(180 80 8)" />
+              <ellipse cx="80" cy="4" rx="3.5" ry="6" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(240 80 8)" />
+              <ellipse cx="80" cy="4" rx="3.5" ry="6" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(300 80 8)" />
+              <circle cx="80" cy="8" r="2.2" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.6} />
+              {/* Right leaf */}
+              <path d="M106 8 Q110 4 104 5 Q107 7 106 8" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.5} />
               {/* Right line */}
-              <line x1="102" y1="6" x2="160" y2="6" stroke="var(--aria-text)" strokeWidth={0.8} />
-              {/* Small dots */}
-              <circle cx="20" cy="6" r="1" fill="var(--aria-text)" fillOpacity="0.25" />
-              <circle cx="140" cy="6" r="1" fill="var(--aria-text)" fillOpacity="0.25" />
+              <line x1="100" y1="8" x2="158" y2="8" stroke="var(--aria-text)" strokeWidth={0.7} />
+              {/* Tiny dots at ends */}
+              <circle cx="4" cy="8" r="0.8" fill="var(--aria-text)" fillOpacity="0.3" />
+              <circle cx="156" cy="8" r="0.8" fill="var(--aria-text)" fillOpacity="0.3" />
             </svg>
           </div>
           <button
