@@ -507,18 +507,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               Spacing controlled by the card area's gap-3. */}
           {/* Tea box flanked by Capture (left) and Done (right) */}
           {!celebrate && (
-            <div className={`w-full mx-auto relative flex items-center gap-3 ${entering ? 'animate-fade-in-up' : ''}`} style={{ maxWidth: 380, zIndex: 5 }}>
+            <div className={`w-full mx-auto relative flex items-end gap-3 ${entering ? 'animate-fade-in-up' : ''}`} style={{ maxWidth: 380, zIndex: 5 }}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
                 className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.5)', border: '1px solid rgba(180,160,130,0.2)' }}
+                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.7)', border: '2px solid rgba(180,160,130,0.35)', boxShadow: '0 2px 6px rgba(60,40,20,0.1)' }}
               >
                 <svg viewBox="0 0 56 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 44, height: 68 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
-                  <ellipse cx="26" cy="45" rx="16" ry="1.2" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.4" />
-                  <ellipse cx="26" cy="53" rx="17" ry="1.2" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.35" />
-                  <ellipse cx="26" cy="61" rx="16" ry="1.2" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.3" />
+                  {/* Plus sign */}
+                  <line x1="26" y1="47" x2="26" y2="63" stroke="#4A5E6D" strokeWidth={2.5} opacity="0.5" />
+                  <line x1="18" y1="55" x2="34" y2="55" stroke="#4A5E6D" strokeWidth={2.5} opacity="0.5" />
                   <ellipse cx="26" cy="32" rx="11" ry="3" fill="#D4C8B0" stroke="#8A9EAD" strokeWidth={1.5} />
                   <path d="M17 32 Q17 24 26 24 Q35 24 35 32" fill="#BFD0DC" stroke="#8A9EAD" strokeWidth={1.3} />
                   <circle cx="26" cy="23" r="2" fill="#8A9EAD" />
@@ -543,19 +543,16 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                 onClick={handleComplete}
                 aria-label="Done"
                 className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.5)', border: '1px solid rgba(180,160,130,0.2)' }}
+                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.7)', border: '2px solid rgba(180,160,130,0.35)', boxShadow: '0 2px 6px rgba(60,40,20,0.1)' }}
               >
-                {/* Cup matches celebration animation aspect ratio (110:86) */}
                 <svg viewBox="0 0 110 86" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 44 }}>
                   <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#DBC8A0" stroke="#C4A882" strokeWidth={2} />
                   <path d="M 20 22 L 84 22 L 76 71 L 28 71 Z" fill="url(#cupGrad)" stroke="#C4A882" strokeWidth={2} />
-                  <line x1="24" y1="38" x2="80" y2="38" stroke="#D4C4A0" strokeWidth={0.8} opacity="0.4" />
-                  <line x1="26" y1="50" x2="78" y2="50" stroke="#D4C4A0" strokeWidth={0.8} opacity="0.35" />
-                  <line x1="27" y1="62" x2="77" y2="62" stroke="#D4C4A0" strokeWidth={0.8} opacity="0.3" />
+                  {/* Checkmark on cup body */}
+                  <polyline points="38 48 48 58 68 36" stroke="#8A7A5A" strokeWidth={3} opacity="0.4" fill="none" />
                   <path d="M 84 32 Q 100 32 100 48 Q 100 62 84 60" stroke="#C4A882" strokeWidth={3} fill="none" />
                   <ellipse cx="52" cy="22" rx="34" ry="5.5" fill="#F5ECD7" stroke="#C4A882" strokeWidth={2} />
                   <ellipse cx="52" cy="22" rx="28" ry="3.5" fill="#DBA96A" opacity="0.4" />
-                  <polyline points="38 12 44 17 62 2" stroke="#C4A882" strokeWidth={2} opacity="0.3" />
                   <defs>
                     <linearGradient id="cupGrad" x1="20" y1="22" x2="84" y2="71" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#F5ECD7" />
