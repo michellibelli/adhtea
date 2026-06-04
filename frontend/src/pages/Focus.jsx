@@ -454,7 +454,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                width: 'fit-content', bottom: -20,
+                width: 'fit-content', bottom: 80,
                 zIndex: 0, pointerEvents: 'none',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
@@ -468,7 +468,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                bottom: -140,
+                bottom: -40,
                 zIndex: 4, pointerEvents: 'none', textAlign: 'center',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
@@ -483,7 +483,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                width: 'fit-content', bottom: -20,
+                width: 'fit-content', bottom: 80,
                 zIndex: 3, pointerEvents: 'none',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
