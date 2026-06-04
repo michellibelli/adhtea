@@ -450,11 +450,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             </div>{/* end teabag unit */}
 
 
-            {/* Teacup back — behind bag (back rim arc + tea pool) */}
+            {/* Teacup back — behind bag, anchored to bottom of wrapper */}
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                width: 'fit-content', top: '100%', marginTop: '-12px',
+                width: 'fit-content', bottom: -20,
                 zIndex: 0, pointerEvents: 'none',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
@@ -464,11 +464,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               </div>
             )}
 
-            {/* Pun text — rises from below the cup */}
+            {/* Pun text — below the cup, still inside wrapper */}
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                top: '100%', marginTop: '115px',
+                bottom: -140,
                 zIndex: 4, pointerEvents: 'none', textAlign: 'center',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
@@ -479,11 +479,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               </div>
             )}
 
-            {/* Teacup front — in front of bag (body, handle, base, front rim arc) */}
+            {/* Teacup front — in front of bag */}
             {(celebrate === 'dunk' || celebrate === 'fade') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                width: 'fit-content', top: '100%', marginTop: '-12px',
+                width: 'fit-content', bottom: -20,
                 zIndex: 3, pointerEvents: 'none',
                 animation: celebrate === 'fade'
                   ? 'cup-pun-fadeout 800ms ease-in forwards'
