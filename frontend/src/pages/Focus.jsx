@@ -136,7 +136,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   const celebrationTimersRef = useRef([])
   const [showSnooze,    setShowSnooze]    = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
-  const [entering,      setEntering]      = useState(false)  // next-card rise-from-box animation
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
@@ -223,13 +222,9 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
     }
     setCelebrate(false)
     setLeaving(true)
-    // 300ms empty gap, then next card rises from tea box
+    // 300ms blank gap, then fade in next card
     celebrationTimersRef.current = [
-      setTimeout(() => {
-        setLeaving(false)
-        setEntering(true)
-      }, 300),
-      setTimeout(() => setEntering(false), 2000),
+      setTimeout(() => setLeaving(false), 300),
     ]
     if (pending && !pending.wasBonus) fetchAll()
   }
@@ -332,13 +327,11 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             directly under the focus bar / top header instead of
             floating at the bottom of the page. */}
         <div className="flex-1 min-h-0 flex flex-col justify-start items-center pt-1 md:pt-2" style={{ gap: 20 }}>
-          {/* Relative wrapper — teabag + cup/pun. Handles its own
-              animation: rise-from-box on entering, instant hide on gap. */}
+          {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center ${
             celebrate ? ''
-            : entering ? 'animate-bag-pull-from-box'
             : leaving ? 'opacity-0'
-            : 'transition-all duration-300 opacity-100'
+            : 'transition-opacity duration-500 opacity-100'
           }`}>
 
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
@@ -506,8 +499,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               directly under the bag, with the tea-box directly under it.
               Spacing controlled by the card area's gap-3. */}
           {/* Tea box flanked by Capture (left) and Done (right) */}
-          {!celebrate && (
-            <div className={`w-full mx-auto relative flex items-end gap-3 ${entering ? 'animate-fade-in-up' : ''}`} style={{ maxWidth: 380, zIndex: 5 }}>
+          <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
@@ -571,8 +563,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                   </defs>
                 </svg>
               </button>
-            </div>
-          )}
+          </div>
 
         </div>
 
