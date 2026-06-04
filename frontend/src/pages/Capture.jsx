@@ -211,7 +211,7 @@ export default function Capture({ onNavigate }) {
         }
         reset()
       }
-      setTimeout(() => setSaved(null), 2500)
+      setTimeout(() => { setSaved(null); onNavigate?.('focus') }, 1500)
     } catch (err) {
       console.error(err)
       setError(err?.message || 'Could not save — check connection and try again.')
