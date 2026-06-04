@@ -331,7 +331,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
             TOP of the column (justify-start) so the whole unit sits
             directly under the focus bar / top header instead of
             floating at the bottom of the page. */}
-        <div className="flex-1 min-h-0 flex flex-col justify-start items-center gap-3 pt-2 md:pt-5">
+        <div className="flex-1 min-h-0 flex flex-col justify-start items-center pt-4 md:pt-5" style={{ gap: 20 }}>
           {/* Relative wrapper — teabag + cup/pun. Handles its own
               animation: rise-from-box on entering, instant hide on gap. */}
           <div className={`relative w-full flex justify-center ${
