@@ -207,24 +207,35 @@ function AppShell() {
             <Logo size={28} />
           </button>
           {/* Floral vine accent */}
-          <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ opacity: 0.35 }}>
-            <svg viewBox="0 0 200 20" fill="none" style={{ width: '100%', height: 16 }}>
-              <path d="M0 10 Q25 2 50 10 Q75 18 100 10 Q125 2 150 10 Q175 18 200 10" stroke="var(--aria-text)" strokeWidth={0.8} fill="none" />
-              <circle cx="50" cy="10" r="2.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.6} />
-              <circle cx="47" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
-              <circle cx="53" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
-              <circle cx="100" cy="10" r="3" fill="none" stroke="var(--aria-text)" strokeWidth={0.7} />
-              <circle cx="96" cy="8" r="1.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
-              <circle cx="104" cy="8" r="1.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
-              <circle cx="100" cy="6" r="1" fill="none" stroke="var(--aria-text)" strokeWidth={0.4} />
-              <circle cx="150" cy="10" r="2.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.6} />
-              <circle cx="147" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
-              <circle cx="153" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
-              {/* Small leaves along vine */}
-              <path d="M30 10 Q28 6 32 7" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
-              <path d="M70 10 Q72 14 68 13" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
-              <path d="M130 10 Q128 6 132 7" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
-              <path d="M170 10 Q172 14 168 13" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
+          <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ opacity: 0.5 }}>
+            <svg viewBox="0 0 200 24" fill="none" style={{ width: '100%', height: 20 }}>
+              {/* Main vine */}
+              <path d="M0 12 Q25 3 50 12 Q75 21 100 12 Q125 3 150 12 Q175 21 200 12" stroke="var(--aria-text)" strokeWidth={1.2} fill="none" strokeLinecap="round" />
+              {/* Center flower — 5 petals */}
+              <ellipse cx="100" cy="8" rx="3" ry="5" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.7} />
+              <ellipse cx="100" cy="8" rx="3" ry="5" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(72 100 8)" />
+              <ellipse cx="100" cy="8" rx="3" ry="5" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(144 100 8)" />
+              <ellipse cx="100" cy="8" rx="3" ry="5" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(216 100 8)" />
+              <ellipse cx="100" cy="8" rx="3" ry="5" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(288 100 8)" />
+              <circle cx="100" cy="8" r="1.8" fill="var(--aria-text)" fillOpacity="0.25" />
+              {/* Left flower — 3 petals */}
+              <ellipse cx="50" cy="12" rx="2.5" ry="4" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.6} transform="rotate(-20 50 12)" />
+              <ellipse cx="50" cy="12" rx="2.5" ry="4" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.6} transform="rotate(100 50 12)" />
+              <ellipse cx="50" cy="12" rx="2.5" ry="4" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.6} transform="rotate(220 50 12)" />
+              <circle cx="50" cy="12" r="1.5" fill="var(--aria-text)" fillOpacity="0.2" />
+              {/* Right flower — 3 petals */}
+              <ellipse cx="150" cy="12" rx="2.5" ry="4" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.6} transform="rotate(20 150 12)" />
+              <ellipse cx="150" cy="12" rx="2.5" ry="4" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.6} transform="rotate(140 150 12)" />
+              <ellipse cx="150" cy="12" rx="2.5" ry="4" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.6} transform="rotate(260 150 12)" />
+              <circle cx="150" cy="12" r="1.5" fill="var(--aria-text)" fillOpacity="0.2" />
+              {/* Leaves — fuller, with fill */}
+              <path d="M25 12 Q20 5 28 7 Q24 9 25 12" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.6} />
+              <path d="M35 8 Q38 2 40 8 Q37 6 35 8" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <path d="M70 17 Q74 22 68 20 Q71 18 70 17" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.6} />
+              <path d="M82 14 Q78 20 80 14 Q80 16 82 14" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <path d="M125 7 Q120 2 128 4 Q124 6 125 7" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.6} />
+              <path d="M165 17 Q168 22 162 19 Q165 18 165 17" fill="var(--aria-text)" fillOpacity="0.12" stroke="var(--aria-text)" strokeWidth={0.6} />
+              <path d="M178 14 Q175 8 180 11 Q177 12 178 14" fill="var(--aria-text)" fillOpacity="0.1" stroke="var(--aria-text)" strokeWidth={0.5} />
             </svg>
           </div>
           <button
