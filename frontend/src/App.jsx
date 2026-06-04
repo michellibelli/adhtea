@@ -207,7 +207,7 @@ function AppShell() {
             <Logo size={28} />
           </button>
           {/* Floral vine accent */}
-          <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ opacity: 0.2 }}>
+          <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ opacity: 0.35 }}>
             <svg viewBox="0 0 200 20" fill="none" style={{ width: '100%', height: 16 }}>
               <path d="M0 10 Q25 2 50 10 Q75 18 100 10 Q125 2 150 10 Q175 18 200 10" stroke="var(--aria-text)" strokeWidth={0.8} fill="none" />
               <circle cx="50" cy="10" r="2.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.6} />
