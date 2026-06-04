@@ -519,7 +519,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                   boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,255,255,0.3)',
                 }}
               >
-                <svg viewBox="0 0 56 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 44, height: 68 }}>
+                <svg viewBox="0 0 56 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 50, height: 78 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
                   {/* Plus sign */}
                   <line x1="26" y1="47" x2="26" y2="63" stroke="#4A5E6D" strokeWidth={2.5} opacity="0.5" />
