@@ -10,7 +10,6 @@ import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
-import CapacityBar from './components/CapacityBar'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Signup from './pages/Signup'
@@ -190,72 +189,65 @@ function AppShell() {
             pointerEvents: 'auto',
             height: 54,
             background: focusStats?.isBonus
-              ? 'linear-gradient(135deg, rgba(251,191,36,0.35) 0%, rgba(180,130,20,0.25) 100%)'
-              : 'var(--aria-nav-bg, var(--aria-surface))',
+              ? 'linear-gradient(135deg, rgba(251,191,36,0.4) 0%, rgba(180,130,20,0.3) 100%)'
+              : 'linear-gradient(180deg, #F5ECD7 0%, #E8DCC8 100%)',
             border: focusStats?.isBonus
-              ? '2px solid rgba(180,130,20,0.45)'
-              : '2px solid color-mix(in srgb, var(--aria-text) 18%, transparent)',
+              ? '2.5px solid rgba(180,130,20,0.5)'
+              : '2.5px solid color-mix(in srgb, var(--aria-text) 22%, transparent)',
             borderRadius: 16,
             maxWidth: 360,
             boxShadow: '0 3px 12px rgba(40,24,10,0.16), 0 1px 4px rgba(40,24,10,0.10), inset 0 1px 0 rgba(255,248,224,0.4)',
           }}
         >
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
-            {/* Top row: logo + bar + gear aligned on same axis */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setScreen('focus')}
-                className="flex-shrink-0 hover:opacity-80 transition-opacity"
-                aria-label="Home"
-              >
-                <Logo size={28} />
-              </button>
-              <div className="flex-1 min-w-0">
-                <CapacityBar capacity={capacity} compact hideLabels className="" />
-              </div>
-              <button
-                onClick={() => setScreen('settings')}
-                className="flex-shrink-0 p-1 rounded-md hover:opacity-70 transition-opacity"
-                aria-label="Settings"
-                style={{ opacity: 0.4 }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
-                  <ellipse cx="12" cy="7" rx="2.5" ry="3.5" />
-                  <ellipse cx="17" cy="12" rx="3.5" ry="2.5" />
-                  <ellipse cx="12" cy="17" rx="2.5" ry="3.5" />
-                  <ellipse cx="7" cy="12" rx="3.5" ry="2.5" />
-                  <circle cx="12" cy="12" r="2.5" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" />
-                </svg>
-              </button>
-            </div>
-            {/* Stats row below — only on Focus */}
-            {screen === 'focus' && focusStats && (
-              <div
-                className="flex items-center justify-between mt-0.5 px-9"
-                style={{
-                  fontFamily: 'var(--font-pixel)',
-                  fontSize: '9px',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  lineHeight: 1,
-                  color: focusStats.isBonus ? '#92400e' : 'var(--aria-subtext)',
-                }}
-              >
-                <span>{focusStats.label}</span>
-                <span className="flex gap-2">
-                  {focusStats.done && <span>{focusStats.done}</span>}
-                  <span>{focusStats.remaining}</span>
-                </span>
-              </div>
-            )}
+          <button
+            onClick={() => setScreen('focus')}
+            className="flex-shrink-0 hover:opacity-80 transition-opacity"
+            aria-label="Home"
+          >
+            <Logo size={28} />
+          </button>
+          {/* Floral vine accent */}
+          <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ opacity: 0.2 }}>
+            <svg viewBox="0 0 200 20" fill="none" style={{ width: '100%', height: 16 }}>
+              <path d="M0 10 Q25 2 50 10 Q75 18 100 10 Q125 2 150 10 Q175 18 200 10" stroke="var(--aria-text)" strokeWidth={0.8} fill="none" />
+              <circle cx="50" cy="10" r="2.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.6} />
+              <circle cx="47" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <circle cx="53" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <circle cx="100" cy="10" r="3" fill="none" stroke="var(--aria-text)" strokeWidth={0.7} />
+              <circle cx="96" cy="8" r="1.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <circle cx="104" cy="8" r="1.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <circle cx="100" cy="6" r="1" fill="none" stroke="var(--aria-text)" strokeWidth={0.4} />
+              <circle cx="150" cy="10" r="2.5" fill="none" stroke="var(--aria-text)" strokeWidth={0.6} />
+              <circle cx="147" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
+              <circle cx="153" cy="8" r="1.2" fill="none" stroke="var(--aria-text)" strokeWidth={0.5} />
+              {/* Small leaves along vine */}
+              <path d="M30 10 Q28 6 32 7" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
+              <path d="M70 10 Q72 14 68 13" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
+              <path d="M130 10 Q128 6 132 7" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
+              <path d="M170 10 Q172 14 168 13" stroke="var(--aria-text)" strokeWidth={0.5} fill="none" />
+            </svg>
           </div>
+          <button
+            onClick={() => setScreen('settings')}
+            className="flex-shrink-0 p-1 rounded-md hover:opacity-70 transition-opacity"
+            aria-label="Settings"
+            style={{ opacity: 0.4 }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--aria-text)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]">
+              <ellipse cx="12" cy="7" rx="2.5" ry="3.5" />
+              <ellipse cx="17" cy="12" rx="3.5" ry="2.5" />
+              <ellipse cx="12" cy="17" rx="2.5" ry="3.5" />
+              <ellipse cx="7" cy="12" rx="3.5" ry="2.5" />
+              <circle cx="12" cy="12" r="2.5" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" />
+            </svg>
+          </button>
         </div>
       </header>
 
       <main className="pt-[64px]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} capacity={capacity} />}
+        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} />}
         {screen === 'today'    && <Today carriedOver={carriedOver} onTournament={() => openTriage('today')} onNavigate={setScreen} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
