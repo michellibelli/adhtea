@@ -326,7 +326,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             TOP of the column (justify-start) so the whole unit sits
             directly under the focus bar / top header instead of
             floating at the bottom of the page. */}
-        <div className="flex-1 min-h-0 flex flex-col justify-start items-center pt-1 md:pt-2" style={{ gap: 20 }}>
+        <div className="flex-1 min-h-0 flex flex-col justify-center items-center" style={{ gap: 16 }}>
           {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center ${
             celebrate ? ''
