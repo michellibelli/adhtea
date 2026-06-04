@@ -512,7 +512,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
                 className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.7)', border: '2px solid rgba(180,160,130,0.35)', boxShadow: '0 2px 6px rgba(60,40,20,0.1)' }}
+                style={{
+                  width: 64, height: 72,
+                  background: 'linear-gradient(180deg, #D0DDE6 0%, #B0C4D0 100%)',
+                  border: '2px solid #8A9EAD',
+                  boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,255,255,0.3)',
+                }}
               >
                 <svg viewBox="0 0 56 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 44, height: 68 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
@@ -543,7 +548,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                 onClick={handleComplete}
                 aria-label="Done"
                 className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.7)', border: '2px solid rgba(180,160,130,0.35)', boxShadow: '0 2px 6px rgba(60,40,20,0.1)' }}
+                style={{
+                  width: 64, height: 72,
+                  background: 'linear-gradient(180deg, #EDE2CC 0%, #D4BC8A 100%)',
+                  border: '2px solid #C4A882',
+                  boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,248,224,0.4)',
+                }}
               >
                 <svg viewBox="0 0 110 86" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 44 }}>
                   <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#DBC8A0" stroke="#C4A882" strokeWidth={2} />
