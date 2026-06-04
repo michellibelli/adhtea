@@ -519,7 +519,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                   boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,255,255,0.3)',
                 }}
               >
-                <svg viewBox="0 0 56 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 50, height: 78 }}>
+                <svg viewBox="-2 20 60 62" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 50, height: 52 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
                   {/* Plus sign */}
                   <line x1="26" y1="47" x2="26" y2="63" stroke="#4A5E6D" strokeWidth={2.5} opacity="0.5" />
@@ -555,7 +555,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
                   boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,248,224,0.4)',
                 }}
               >
-                <svg viewBox="0 0 110 86" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 52, height: 40 }}>
+                <svg viewBox="-2 18 114 68" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 54, height: 32 }}>
                   <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#C4A878" stroke="#8A7050" strokeWidth={2} />
                   <path d="M 20 22 L 84 22 L 76 71 L 28 71 Z" fill="url(#cupGrad)" stroke="#8A7050" strokeWidth={2.5} />
                   <polyline points="38 48 48 58 68 36" stroke="#5A4A2A" strokeWidth={3.5} opacity="0.55" fill="none" />
