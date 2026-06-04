@@ -511,37 +511,23 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="flex-shrink-0 flex items-end justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 56, height: 94 }}
+                className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.5)', border: '1px solid rgba(180,160,130,0.2)' }}
               >
-                <svg viewBox="0 0 56 94" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 94 }}>
-                  {/* Body */}
-                  <ellipse cx="26" cy="58" rx="20" ry="26" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
-                  {/* Horizontal texture lines */}
-                  <ellipse cx="26" cy="48" rx="18" ry="1.5" fill="none" stroke="#A8BCC8" strokeWidth={0.6} opacity="0.5" />
-                  <ellipse cx="26" cy="56" rx="19" ry="1.5" fill="none" stroke="#A8BCC8" strokeWidth={0.6} opacity="0.4" />
-                  <ellipse cx="26" cy="64" rx="18" ry="1.5" fill="none" stroke="#A8BCC8" strokeWidth={0.6} opacity="0.35" />
-                  {/* Small floral detail */}
-                  <circle cx="26" cy="70" r="2" fill="none" stroke="#A8BCC8" strokeWidth={0.7} opacity="0.4" />
-                  <circle cx="23" cy="68" r="1" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.3" />
-                  <circle cx="29" cy="68" r="1" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.3" />
-                  {/* Base shadow */}
-                  <ellipse cx="26" cy="83" rx="15" ry="3" fill="#6B8090" opacity="0.15" />
-                  {/* Rim / lip */}
-                  <ellipse cx="26" cy="33" rx="12" ry="3.5" fill="#D4C8B0" stroke="#8A9EAD" strokeWidth={1.5} />
-                  {/* Lid dome */}
-                  <path d="M16 33 Q16 24 26 24 Q36 24 36 33" fill="#BFD0DC" stroke="#8A9EAD" strokeWidth={1.3} />
-                  {/* Knob */}
-                  <circle cx="26" cy="23" r="2.5" fill="#8A9EAD" />
-                  {/* Spout */}
-                  <path d="M6 52 Q0 44 3 36 Q5 32 9 35" stroke="#8A9EAD" strokeWidth={2.5} fill="none" />
-                  {/* Handle */}
-                  <path d="M44 46 Q54 46 54 58 Q54 70 44 70" stroke="#8A9EAD" strokeWidth={3} fill="none" />
-                  {/* Steam */}
-                  <path d="M23 18 Q21 12 23 6" stroke="#8A9EAD" strokeWidth={1} opacity="0.25" />
-                  <path d="M29 16 Q27 10 29 4" stroke="#8A9EAD" strokeWidth={1} opacity="0.2" />
+                <svg viewBox="0 0 56 88" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 44, height: 68 }}>
+                  <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
+                  <ellipse cx="26" cy="45" rx="16" ry="1.2" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.4" />
+                  <ellipse cx="26" cy="53" rx="17" ry="1.2" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.35" />
+                  <ellipse cx="26" cy="61" rx="16" ry="1.2" fill="none" stroke="#A8BCC8" strokeWidth={0.5} opacity="0.3" />
+                  <ellipse cx="26" cy="32" rx="11" ry="3" fill="#D4C8B0" stroke="#8A9EAD" strokeWidth={1.5} />
+                  <path d="M17 32 Q17 24 26 24 Q35 24 35 32" fill="#BFD0DC" stroke="#8A9EAD" strokeWidth={1.3} />
+                  <circle cx="26" cy="23" r="2" fill="#8A9EAD" />
+                  <path d="M8 50 Q2 43 4 36 Q6 32 9 34" stroke="#8A9EAD" strokeWidth={2.2} fill="none" />
+                  <path d="M42 44 Q52 44 52 55 Q52 66 42 66" stroke="#8A9EAD" strokeWidth={2.5} fill="none" />
+                  <path d="M23 18 Q21 13 23 8" stroke="#8A9EAD" strokeWidth={1} opacity="0.2" />
+                  <path d="M29 16 Q27 11 29 6" stroke="#8A9EAD" strokeWidth={1} opacity="0.15" />
                   <defs>
-                    <linearGradient id="kettleGrad" x1="6" y1="32" x2="46" y2="84" gradientUnits="userSpaceOnUse">
+                    <linearGradient id="kettleGrad" x1="8" y1="31" x2="44" y2="79" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#E8DFD0" />
                       <stop offset="30%" stopColor="#BFD0DC" />
                       <stop offset="70%" stopColor="#97B0BF" />
@@ -556,31 +542,22 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange,
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="flex-shrink-0 flex items-end justify-center rounded-lg active:scale-95 transition-all"
-                style={{ width: 56, height: 94 }}
+                className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                style={{ width: 64, height: 72, background: 'rgba(var(--aria-surface-rgb, 245,236,215), 0.5)', border: '1px solid rgba(180,160,130,0.2)' }}
               >
-                <svg viewBox="0 0 56 94" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 94 }}>
-                  {/* Tapered body — matches celebration cup shape */}
-                  <path d="M10 28 L38 28 L34 76 L14 76 Z" fill="url(#cupGrad)" stroke="#C4A882" strokeWidth={1.5} />
-                  {/* Base ellipse */}
-                  <ellipse cx="24" cy="76" rx="12" ry="4" fill="#DBC8A0" stroke="#C4A882" strokeWidth={1.5} />
-                  {/* Rim ellipse — lip */}
-                  <ellipse cx="24" cy="28" rx="16" ry="5" fill="#F5ECD7" stroke="#C4A882" strokeWidth={1.5} />
-                  {/* Tea liquid inside */}
-                  <ellipse cx="24" cy="28" rx="13" ry="3.5" fill="#DBA96A" opacity="0.45" />
-                  {/* Horizontal texture lines */}
-                  <line x1="12" y1="42" x2="36" y2="42" stroke="#D4C4A0" strokeWidth={0.6} opacity="0.45" />
-                  <line x1="13" y1="52" x2="35" y2="52" stroke="#D4C4A0" strokeWidth={0.6} opacity="0.4" />
-                  <line x1="13" y1="62" x2="34" y2="62" stroke="#D4C4A0" strokeWidth={0.6} opacity="0.35" />
-                  {/* Small floral/leaf detail */}
-                  <path d="M22 55 Q24 51 26 55" stroke="#C4A882" strokeWidth={0.7} fill="none" opacity="0.4" />
-                  <path d="M20 56 Q24 49 28 56" stroke="#C4A882" strokeWidth={0.5} fill="none" opacity="0.3" />
-                  {/* Handle */}
-                  <path d="M37 36 Q50 36 50 52 Q50 66 37 66" stroke="#C4A882" strokeWidth={3} fill="none" />
-                  {/* Checkmark steam */}
-                  <polyline points="16 18 21 23 34 8" stroke="#C4A882" strokeWidth={2} opacity="0.35" />
+                {/* Cup matches celebration animation aspect ratio (110:86) */}
+                <svg viewBox="0 0 110 86" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 56, height: 44 }}>
+                  <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#DBC8A0" stroke="#C4A882" strokeWidth={2} />
+                  <path d="M 20 22 L 84 22 L 76 71 L 28 71 Z" fill="url(#cupGrad)" stroke="#C4A882" strokeWidth={2} />
+                  <line x1="24" y1="38" x2="80" y2="38" stroke="#D4C4A0" strokeWidth={0.8} opacity="0.4" />
+                  <line x1="26" y1="50" x2="78" y2="50" stroke="#D4C4A0" strokeWidth={0.8} opacity="0.35" />
+                  <line x1="27" y1="62" x2="77" y2="62" stroke="#D4C4A0" strokeWidth={0.8} opacity="0.3" />
+                  <path d="M 84 32 Q 100 32 100 48 Q 100 62 84 60" stroke="#C4A882" strokeWidth={3} fill="none" />
+                  <ellipse cx="52" cy="22" rx="34" ry="5.5" fill="#F5ECD7" stroke="#C4A882" strokeWidth={2} />
+                  <ellipse cx="52" cy="22" rx="28" ry="3.5" fill="#DBA96A" opacity="0.4" />
+                  <polyline points="38 12 44 17 62 2" stroke="#C4A882" strokeWidth={2} opacity="0.3" />
                   <defs>
-                    <linearGradient id="cupGrad" x1="10" y1="28" x2="38" y2="76" gradientUnits="userSpaceOnUse">
+                    <linearGradient id="cupGrad" x1="20" y1="22" x2="84" y2="71" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#F5ECD7" />
                       <stop offset="40%" stopColor="#EDD5A8" />
                       <stop offset="100%" stopColor="#D4BC8A" />
