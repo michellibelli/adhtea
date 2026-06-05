@@ -186,9 +186,9 @@ function AppShell() {
           className={`header-pill flex items-center gap-3 px-5 w-full backdrop-blur-md transition-colors duration-300${focusStats?.isBonus ? ' header-pill-bonus' : ''}`}
           style={{ pointerEvents: 'auto' }}
         >
-          {/* Left — flower accent */}
-          <div className="flex items-center justify-start" style={{ width: 40, opacity: 0.4 }}>
-            <svg viewBox="0 -8 24 40" fill="none" style={{ width: 28, height: 28 }}>
+          {/* Left — flower accent (geometric on Cafe, pressed watercolor on Linen) */}
+          <div className="header-pill-flower flex items-center justify-start" style={{ width: 40 }}>
+            <svg className="header-flower-geo" viewBox="0 -8 24 40" fill="none" style={{ width: 28, height: 28 }}>
               <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} />
               <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(72 12 12)" />
               <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(144 12 12)" />
@@ -196,6 +196,7 @@ function AppShell() {
               <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(288 12 12)" />
               <circle cx="12" cy="12" r="2.8" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.6} />
             </svg>
+            <img className="header-flower-pressed" src="/pressed-flower.svg" alt="" width={30} height={30} />
           </div>
           {/* Center — logo */}
           <button

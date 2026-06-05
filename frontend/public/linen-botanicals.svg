@@ -1,33 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="360" height="54">
-  <defs><filter id="sf"><feGaussianBlur stdDeviation="0.3"/></filter></defs>
+  <defs><filter id="sf"><feGaussianBlur stdDeviation="0.35"/></filter></defs>
   <g filter="url(#sf)">
-    <!-- rose petal fragments -->
-    <ellipse cx="42" cy="18" rx="3.5" ry="2" transform="rotate(-25 42 18)" fill="rgba(164,90,110,0.14)"/>
-    <ellipse cx="285" cy="32" rx="4" ry="1.8" transform="rotate(40 285 32)" fill="rgba(164,90,110,0.12)"/>
-    <ellipse cx="168" cy="12" rx="2.8" ry="1.5" transform="rotate(15 168 12)" fill="rgba(164,90,110,0.10)"/>
-    <ellipse cx="320" cy="14" rx="2" ry="3" transform="rotate(-35 320 14)" fill="rgba(155,125,184,0.11)"/>
-    <ellipse cx="78" cy="38" rx="3.2" ry="1.4" transform="rotate(55 78 38)" fill="rgba(155,125,184,0.10)"/>
-    <!-- lavender bits -->
-    <ellipse cx="130" cy="40" rx="1.2" ry="2.5" transform="rotate(10 130 40)" fill="rgba(155,125,184,0.13)"/>
-    <ellipse cx="132" cy="38" rx="1" ry="2" transform="rotate(-8 132 38)" fill="rgba(155,125,184,0.11)"/>
-    <ellipse cx="245" cy="20" rx="1.3" ry="2.2" transform="rotate(25 245 20)" fill="rgba(155,125,184,0.12)"/>
-    <ellipse cx="247" cy="22" rx="1" ry="1.8" transform="rotate(-15 247 22)" fill="rgba(155,125,184,0.10)"/>
-    <!-- herb stem slivers -->
-    <line x1="95" y1="10" x2="102" y2="16" stroke="rgba(149,112,64,0.16)" stroke-width="0.7" stroke-linecap="round"/>
-    <line x1="210" y1="35" x2="218" y2="30" stroke="rgba(149,112,64,0.14)" stroke-width="0.6" stroke-linecap="round"/>
-    <line x1="55" y1="28" x2="59" y2="22" stroke="rgba(120,100,70,0.12)" stroke-width="0.5" stroke-linecap="round"/>
-    <line x1="305" y1="40" x2="310" y2="34" stroke="rgba(149,112,64,0.13)" stroke-width="0.6" stroke-linecap="round"/>
-    <!-- seed specks -->
-    <circle cx="155" cy="28" r="0.9" fill="rgba(100,75,50,0.18)"/>
-    <circle cx="270" cy="10" r="0.7" fill="rgba(100,75,50,0.15)"/>
-    <circle cx="35" cy="42" r="0.8" fill="rgba(100,75,50,0.14)"/>
-    <circle cx="195" cy="44" r="0.6" fill="rgba(100,75,50,0.16)"/>
-    <circle cx="340" cy="26" r="0.7" fill="rgba(100,75,50,0.13)"/>
-    <circle cx="118" cy="8" r="0.5" fill="rgba(100,75,50,0.12)"/>
-    <circle cx="230" cy="46" r="0.8" fill="rgba(100,75,50,0.15)"/>
-    <!-- golden petal flecks -->
-    <ellipse cx="185" cy="16" rx="2.5" ry="1" transform="rotate(-40 185 16)" fill="rgba(180,150,80,0.10)"/>
-    <ellipse cx="65" cy="14" rx="1.8" ry="2.8" transform="rotate(30 65 14)" fill="rgba(180,150,80,0.09)"/>
-    <ellipse cx="255" cy="42" rx="2" ry="1.2" transform="rotate(20 255 42)" fill="rgba(180,150,80,0.11)"/>
+    <!-- rose petal fragments — dusty rose -->
+    <ellipse cx="42" cy="18" rx="4" ry="2.2" transform="rotate(-25 42 18)" fill="rgba(164,90,110,0.35)"/>
+    <ellipse cx="285" cy="32" rx="4.5" ry="2" transform="rotate(40 285 32)" fill="rgba(164,90,110,0.30)"/>
+    <ellipse cx="168" cy="12" rx="3.2" ry="1.8" transform="rotate(15 168 12)" fill="rgba(164,90,110,0.25)"/>
+    <!-- mauve petal fragments -->
+    <ellipse cx="320" cy="14" rx="2.5" ry="3.5" transform="rotate(-35 320 14)" fill="rgba(155,125,184,0.28)"/>
+    <ellipse cx="78" cy="38" rx="3.5" ry="1.6" transform="rotate(55 78 38)" fill="rgba(155,125,184,0.25)"/>
+    <!-- lavender buds -->
+    <ellipse cx="130" cy="40" rx="1.4" ry="3" transform="rotate(10 130 40)" fill="rgba(140,110,170,0.32)"/>
+    <ellipse cx="132" cy="37" rx="1.2" ry="2.4" transform="rotate(-8 132 37)" fill="rgba(140,110,170,0.28)"/>
+    <ellipse cx="245" cy="20" rx="1.5" ry="2.8" transform="rotate(25 245 20)" fill="rgba(140,110,170,0.30)"/>
+    <ellipse cx="247" cy="22" rx="1.2" ry="2" transform="rotate(-15 247 22)" fill="rgba(140,110,170,0.25)"/>
+    <!-- sage leaf fragments -->
+    <ellipse cx="198" cy="38" rx="4" ry="1.5" transform="rotate(20 198 38)" fill="rgba(90,120,85,0.22)"/>
+    <ellipse cx="108" cy="14" rx="3" ry="1.2" transform="rotate(-15 108 14)" fill="rgba(90,120,85,0.18)"/>
+    <!-- herb stem slivers — amber/brown -->
+    <line x1="95" y1="10" x2="104" y2="17" stroke="rgba(140,105,55,0.35)" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="210" y1="35" x2="219" y2="29" stroke="rgba(140,105,55,0.30)" stroke-width="0.7" stroke-linecap="round"/>
+    <line x1="55" y1="28" x2="60" y2="21" stroke="rgba(120,95,60,0.28)" stroke-width="0.6" stroke-linecap="round"/>
+    <line x1="305" y1="40" x2="311" y2="33" stroke="rgba(140,105,55,0.28)" stroke-width="0.7" stroke-linecap="round"/>
+    <!-- seed specks — dark brown -->
+    <circle cx="155" cy="28" r="1" fill="rgba(90,65,40,0.38)"/>
+    <circle cx="270" cy="10" r="0.8" fill="rgba(90,65,40,0.32)"/>
+    <circle cx="35" cy="42" r="0.9" fill="rgba(90,65,40,0.30)"/>
+    <circle cx="195" cy="44" r="0.7" fill="rgba(90,65,40,0.34)"/>
+    <circle cx="340" cy="26" r="0.8" fill="rgba(90,65,40,0.28)"/>
+    <circle cx="118" cy="8" r="0.6" fill="rgba(90,65,40,0.26)"/>
+    <circle cx="230" cy="46" r="0.9" fill="rgba(90,65,40,0.32)"/>
+    <!-- golden petal flecks — warm amber -->
+    <ellipse cx="185" cy="16" rx="3" ry="1.2" transform="rotate(-40 185 16)" fill="rgba(180,145,70,0.25)"/>
+    <ellipse cx="65" cy="14" rx="2" ry="3.2" transform="rotate(30 65 14)" fill="rgba(180,145,70,0.22)"/>
+    <ellipse cx="255" cy="42" rx="2.5" ry="1.4" transform="rotate(20 255 42)" fill="rgba(180,145,70,0.25)"/>
   </g>
 </svg>
