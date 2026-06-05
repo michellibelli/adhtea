@@ -491,7 +491,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               directly under the bag, with the tea-box directly under it.
               Spacing controlled by the card area's gap-3. */}
           {/* Tea box flanked by Capture (left) and Done (right) */}
-          <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
+          <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5, marginTop: 'auto' }}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
