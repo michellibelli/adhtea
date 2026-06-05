@@ -90,7 +90,7 @@ function Bag({ colors, active, gold, onClick, title }) {
 // so the user can act on a specific item — e.g. an 8am routine done at 9am
 // that the time-of-day window would otherwise keep off the card.
 export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, onOpen, onSelectTask, onNavigate }) {
-  const BOX_VISIBLE = 10
+  const BOX_VISIBLE = 9
   const colored = orderedBags(tasks).slice(0, BOX_VISIBLE)
   const goldShown = Math.max(0, Math.min(goldCount, BOX_VISIBLE - colored.length))
   const boxFull = goldCount >= BOX_VISIBLE
