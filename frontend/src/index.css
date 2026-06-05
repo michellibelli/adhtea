@@ -1330,42 +1330,6 @@ body {
 }
 
 /* =============================================================================
-   Nav icon animations
-   ============================================================================= */
-
-@keyframes nav-steam {
-  0%, 100% { transform: skewX(0deg) translateX(0); }
-  30%       { transform: skewX(-14deg) translateX(-1px); }
-  70%       { transform: skewX(14deg) translateX(1px); }
-}
-@keyframes nav-ray-sway {
-  0%, 100% { transform: rotate(0deg); }
-  35%       { transform: rotate(20deg); }
-  70%       { transform: rotate(-13deg); }
-}
-@keyframes nav-leaf-sway {
-  0%, 100% { transform: rotate(0deg); }
-  30%       { transform: rotate(22deg); }
-  65%       { transform: rotate(-15deg); }
-}
-@keyframes nav-star-twinkle {
-  0%, 35%, 100% { opacity: 1; transform: scale(1); }
-  18%            { opacity: 0.05; transform: scale(0.2); }
-}
-@keyframes nav-heartbeat {
-  0%, 100% { transform: scale(1); }
-  8%       { transform: scale(1.08); }
-  16%      { transform: scale(1); }
-  24%      { transform: scale(1.04); }
-  36%      { transform: scale(1); }
-}
-@keyframes nav-flower-spin {
-  0%   { transform: rotate(0deg); }
-  30%  { transform: rotate(360deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* =============================================================================
    Pride gradient bar
    ============================================================================= */
 
