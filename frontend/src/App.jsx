@@ -209,18 +209,17 @@ function AppShell() {
           {/* Ornamental divider with flower */}
           {/* Ornamental divider with flower */}
           <div className="flex-1 flex items-center justify-center" style={{ opacity: 0.45 }}>
-            <svg viewBox="0 0 160 24" fill="none" style={{ width: '100%', maxWidth: 200, height: 28 }}>
+            <svg viewBox="0 -4 160 32" fill="none" style={{ width: '100%', maxWidth: 200, height: 32 }}>
               {/* Left line */}
               <line x1="2" y1="12" x2="58" y2="12" stroke="var(--aria-text)" strokeWidth={0.7} />
               {/* Left leaf */}
               <path d="M52 12 Q48 7 55 8 Q51 10 52 12" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.5} />
-              {/* Center flower — 6 petals with room */}
-              <ellipse cx="80" cy="5" rx="4" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} />
-              <ellipse cx="80" cy="5" rx="4" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(60 80 12)" />
-              <ellipse cx="80" cy="5" rx="4" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(120 80 12)" />
-              <ellipse cx="80" cy="5" rx="4" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(180 80 12)" />
-              <ellipse cx="80" cy="5" rx="4" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(240 80 12)" />
-              <ellipse cx="80" cy="5" rx="4" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(300 80 12)" />
+              {/* Center flower — 5 petals, all rotating around center (80,12) */}
+              <ellipse cx="80" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} />
+              <ellipse cx="80" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(72 80 12)" />
+              <ellipse cx="80" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(144 80 12)" />
+              <ellipse cx="80" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(216 80 12)" />
+              <ellipse cx="80" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(288 80 12)" />
               <circle cx="80" cy="12" r="2.8" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.6} />
               {/* Right leaf */}
               <path d="M108 12 Q112 7 105 8 Q109 10 108 12" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.5} />
