@@ -27,7 +27,6 @@ import Settings from './pages/Settings'
 import AllTasks from './pages/AllTasks'
 import Projects from './pages/Projects'
 import OnboardingWelcome from './pages/OnboardingWelcome'
-// BottomNav removed — nav items live in CafeShelf on Focus/Today pages
 import Logo from './components/Logo'
 import PageProgress from './components/PageProgress'
 import './App.css'
