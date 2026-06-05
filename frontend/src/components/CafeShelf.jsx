@@ -4,7 +4,7 @@ const ITEMS = [
   {
     id: 'projects',
     label: 'Projects',
-    animation: 'nav-leaf-sway 6s ease-in-out infinite',
+    animation: 'shelf-leaf-sway 9s ease-in-out infinite',
     origin: 'center bottom',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke={C} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -16,20 +16,25 @@ const ITEMS = [
   {
     id: 'routines',
     label: 'Routines',
-    animation: 'nav-star-twinkle 4s ease-in-out infinite',
+    animation: 'none',
     origin: 'center',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke={C} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 28 24" fill="none" stroke={C} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         <circle cx="19" cy="5" r="1.3" fill={C} stroke="none" />
         <circle cx="22" cy="10" r="1" fill={C} stroke="none" />
+        <g className="shelf-cloud">
+          <ellipse cx="6" cy="13" rx="4" ry="2.5" fill="var(--aria-surface, #FBF6E5)" stroke="none" />
+          <ellipse cx="10" cy="12.5" rx="3.5" ry="2.8" fill="var(--aria-surface, #FBF6E5)" stroke="none" />
+          <ellipse cx="14" cy="13.2" rx="3" ry="2.2" fill="var(--aria-surface, #FBF6E5)" stroke="none" />
+        </g>
       </svg>
     ),
   },
   {
     id: 'selfcare',
     label: 'Log',
-    animation: 'nav-heartbeat 5s ease-in-out infinite',
+    animation: 'shelf-heartbeat 8s ease-in-out infinite',
     origin: 'center',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke={C} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -42,7 +47,7 @@ const ITEMS = [
   {
     id: 'settings',
     label: 'Settings',
-    animation: 'nav-flower-spin 12s linear infinite',
+    animation: 'shelf-flower-spin 15s linear infinite',
     origin: 'center',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke={C} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

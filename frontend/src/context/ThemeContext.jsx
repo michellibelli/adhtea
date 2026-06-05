@@ -6,6 +6,7 @@ import { createContext, useState, useEffect, useCallback } from 'react'
 // Components use ui-* Tailwind utilities (bg-ui-surface, text-ui-text, etc.)
 
 export const THEMES = [
+  { id: 'aria-linen',     label: 'Linen',     swatch: ['#F4F0F6', '#3D3545', '#9B7DB8', '#B8A0C4'] },
   { id: 'aria-cafe',      label: 'Cafe',      swatch: ['#FDF6E3', '#002B36', '#CB4B16', '#B58900'] },
   { id: 'aria-americano', label: 'Americano', swatch: ['#F3F3E0', '#183B4E', '#27548A', '#DDA853'] },
   { id: 'aria-berries',   label: 'Berries',   swatch: ['#FFF1CB', '#4A2D5C', '#B7A3E3', '#FF8F8F'] },

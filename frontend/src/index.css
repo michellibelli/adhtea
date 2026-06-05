@@ -121,6 +121,29 @@
   --aria-body-bg:       color-mix(in srgb, #FFF0DD 65%, #E2A16F);
 }
 
+/* Linen — lavender-mauve stationery. Cool cream ground, plum ink,
+   muted lavender accents. "Elegant recipe box" not "rustic cafe." */
+[data-theme="aria-linen"] {
+  --aria-surface:       #FDFBFE;
+  --aria-text:          #3D3545;
+  --aria-subtext:       #8A8494;
+  --aria-border:        color-mix(in srgb, #3D3545 14%, #FDFBFE);
+  --aria-accent:        #B8A0C4;
+  --aria-primary:       #9B7DB8;
+  --aria-primary-hover: color-mix(in srgb, #9B7DB8 80%, #3D3545);
+  --aria-primary-text:  #FDFBFE;
+  --aria-nav:           #3D3545;
+  --aria-nav-border:    color-mix(in srgb, #9B7DB8 50%, #3D3545);
+  --aria-nav-text:      #FDFBFE;
+  --aria-input:         #FDFBFE;
+  --aria-input-border:  color-mix(in srgb, #3D3545 18%, #FDFBFE);
+  --aria-input-focus:   #9B7DB8;
+  --aria-badge:         color-mix(in srgb, #B8A0C4 30%, #FDFBFE);
+  --aria-badge-text:    #3D3545;
+  --aria-shadow:        #3D3545;
+  --aria-body-bg:       #F4F0F6;
+}
+
 
 /* =============================================================================
    Cafe-theme retints — mute saturated Tailwind utility colours used
@@ -173,6 +196,55 @@
 [data-theme="aria-cafe"] .hover\:text-red-400:hover   { color: #B04A1D !important; }
 [data-theme="aria-cafe"] .hover\:border-amber-400:hover { border-color: rgba(181,137,0,0.60) !important; }
 [data-theme="aria-cafe"] .hover\:bg-red-400\/10:hover   { background-color: rgba(176,74,29,0.10) !important; }
+
+/* =============================================================================
+   Linen-theme retints — mute saturated Tailwind utility colours to plum/
+   mauve equivalents so they sit harmoniously on the cool lavender ground.
+   ============================================================================= */
+
+[data-theme="aria-linen"] .text-red-400,
+[data-theme="aria-linen"] .text-red-500   { color: #A45A6E !important; }
+[data-theme="aria-linen"] .text-rose-400,
+[data-theme="aria-linen"] .text-rose-500  { color: #A45A6E !important; }
+[data-theme="aria-linen"] .text-amber-400,
+[data-theme="aria-linen"] .text-amber-500 { color: #957040 !important; }
+[data-theme="aria-linen"] .text-amber-700 { color: #7A5C30 !important; }
+[data-theme="aria-linen"] .text-emerald-400,
+[data-theme="aria-linen"] .text-emerald-500,
+[data-theme="aria-linen"] .text-emerald-600 { color: #5E8A6A !important; }
+[data-theme="aria-linen"] .text-blue-400,
+[data-theme="aria-linen"] .text-blue-500  { color: #6E7EA0 !important; }
+[data-theme="aria-linen"] .text-violet-400,
+[data-theme="aria-linen"] .text-violet-500 { color: #8A6EA8 !important; }
+[data-theme="aria-linen"] .text-indigo-400 { color: #7A6E9A !important; }
+[data-theme="aria-linen"] .text-cyan-400  { color: #5E8A88 !important; }
+
+[data-theme="aria-linen"] .bg-red-400     { background-color: rgba(164,90,110,0.7) !important; }
+[data-theme="aria-linen"] .bg-red-500\/10 { background-color: rgba(164,90,110,0.10) !important; }
+[data-theme="aria-linen"] .bg-red-500\/20 { background-color: rgba(164,90,110,0.18) !important; }
+[data-theme="aria-linen"] .bg-amber-400\/5  { background-color: rgba(149,112,64,0.07) !important; }
+[data-theme="aria-linen"] .bg-amber-400\/10 { background-color: rgba(149,112,64,0.12) !important; }
+[data-theme="aria-linen"] .bg-amber-400\/15 { background-color: rgba(149,112,64,0.16) !important; }
+[data-theme="aria-linen"] .bg-amber-400\/20 { background-color: rgba(149,112,64,0.20) !important; }
+[data-theme="aria-linen"] .bg-amber-500\/20 { background-color: rgba(149,112,64,0.22) !important; }
+[data-theme="aria-linen"] .bg-emerald-400 { background-color: rgba(94,138,106,0.7) !important; }
+[data-theme="aria-linen"] .bg-emerald-500\/20 { background-color: rgba(94,138,106,0.20) !important; }
+[data-theme="aria-linen"] .bg-blue-400    { background-color: rgba(110,126,160,0.7) !important; }
+
+[data-theme="aria-linen"] .border-red-500\/20 { border-color: rgba(164,90,110,0.25) !important; }
+[data-theme="aria-linen"] .border-red-400\/30 { border-color: rgba(164,90,110,0.30) !important; }
+[data-theme="aria-linen"] .border-amber-400\/30 { border-color: rgba(149,112,64,0.30) !important; }
+[data-theme="aria-linen"] .border-amber-400\/40 { border-color: rgba(149,112,64,0.40) !important; }
+[data-theme="aria-linen"] .border-amber-400\/50 { border-color: rgba(149,112,64,0.50) !important; }
+[data-theme="aria-linen"] .border-amber-400\/60 { border-color: rgba(149,112,64,0.60) !important; }
+
+[data-theme="aria-linen"] .ring-amber-400     { --tw-ring-color: rgba(149,112,64,0.80) !important; }
+[data-theme="aria-linen"] .ring-amber-400\/50 { --tw-ring-color: rgba(149,112,64,0.50) !important; }
+
+[data-theme="aria-linen"] .hover\:text-amber-400:hover { color: #957040 !important; }
+[data-theme="aria-linen"] .hover\:text-red-400:hover   { color: #A45A6E !important; }
+[data-theme="aria-linen"] .hover\:border-amber-400:hover { border-color: rgba(149,112,64,0.60) !important; }
+[data-theme="aria-linen"] .hover\:bg-red-400\/10:hover   { background-color: rgba(164,90,110,0.10) !important; }
 
 /* =============================================================================
    Page background — pixel dawn sky + tiled star/cloud texture
@@ -330,6 +402,34 @@ body {
 
 [data-theme="aria-berries"] { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF1CB 60%, #B7A3E3) 0%, #FFF1CB 100%); }
 [data-theme="aria-chai"]     { --aria-page-bg: linear-gradient(160deg, color-mix(in srgb, #FFF0DD 60%, #E2A16F) 0%, #FFF0DD 100%); }
+
+/* Linen page bg — woven linen texture + paper noise + soft lavender wash.
+   All CSS-only (SVG filters), no raster assets. Dark-mode-swappable via
+   changing the color matrix values in the feTurbulence layers.
+   Stack (front → back):
+   1. Fine crosshatch — horizontal + vertical threads, very subtle
+   2. SVG fractal noise — organic grain variation
+   3. Soft radial vignette — warm center, cooler edges
+   4. Solid lavender-white base */
+[data-theme="aria-linen"] {
+  --aria-page-bg:
+    repeating-linear-gradient(0deg,
+      rgba(61,53,69,0.03) 0 0.5px,
+      transparent 0.5px 4px),
+    repeating-linear-gradient(90deg,
+      rgba(61,53,69,0.025) 0 0.5px,
+      transparent 0.5px 4px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.21 0 0 0 0 0.27 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23l)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 70% 55% at 50% 35%,
+      #F8F5FA 0%,
+      #F4F0F6 50%,
+      #EDE8F2 100%);
+  --aria-page-bg-size:
+    4px 4px,
+    4px 4px,
+    200px 200px,
+    100% 100%;
+}
 
 /* Cafe page bg — bookshelf-behind-notebook backdrop. Order from front
    to back (top of stack renders over the next):
@@ -599,6 +699,47 @@ body {
   display: none !important;
 }
 
+/* Linen theme — letterpress teabag card. Drops the crosshatch weave for
+   a matte paper-grain-only surface with plum-tinted inset shadows that
+   read as "pressed into thick card stock." */
+[data-theme="aria-linen"] .teabag-card.pixel-card,
+[data-theme="aria-linen"] .teabag-card {
+  background-color: #FDFBFE !important;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.21 0 0 0 0 0.27 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23p)'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom,
+      rgba(253, 251, 254, 0.9) 0%,
+      rgba(253, 251, 254, 0) 30%,
+      rgba(155, 125, 184, 0.04) 100%) !important;
+  background-size:
+    180px 180px,
+    100% 100% !important;
+  background-position: 0 0, 0 0 !important;
+  box-shadow:
+    inset 0 2px 4px rgba(61,53,69,0.08),
+    inset 0 -1px 0 rgba(61,53,69,0.04),
+    inset 0 0 0 1px rgba(61,53,69,0.06) !important;
+}
+
+/* Linen theme — softer pixel-card shadows (plum-tinted, more diffuse) */
+[data-theme="aria-linen"] .pixel-card {
+  border-color: color-mix(in srgb, #3D3545 10%, #FDFBFE);
+  box-shadow:
+    0 1px 3px rgba(61,53,69,0.06),
+    0 4px 12px -3px rgba(61,53,69,0.08),
+    0 8px 24px -6px rgba(61,53,69,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+/* Linen theme — stitches use plum instead of brown */
+[data-theme="aria-linen"] .teabag-stitches {
+  background: repeating-linear-gradient(
+    to right,
+    rgba(61, 53, 69, 0.35) 0 5px,
+    transparent 5px 9px
+  ) !important;
+}
+
 /* Stitched bottom seam — drawn inside the bag, just above the bottom edge.
    Sits behind text because the Card content is positioned later in flow.
    Dashed line via repeating-linear-gradient (cheap + theme-agnostic). */
@@ -616,6 +757,48 @@ body {
   pointer-events: none;
   border-radius: 1px;
   z-index: 1;
+}
+
+/* Teabag string — hangs from tag to bag body */
+.teabag-string {
+  width: 3px;
+  height: 38px;
+  background: linear-gradient(to bottom, #B8AE98 0%, #CEC4AE 55%, #DED4BE 100%);
+  border-radius: 1px;
+}
+
+[data-theme="aria-linen"] .teabag-string {
+  width: 1.5px;
+  background: linear-gradient(to bottom, #B8ADB8 0%, #C8C0CA 55%, #D4CCD6 100%);
+}
+
+/* Focus page action buttons */
+.focus-btn-capture {
+  width: 64px;
+  height: 72px;
+  background: linear-gradient(180deg, #D0DDE6 0%, #B0C4D0 100%);
+  border: 2px solid #8A9EAD;
+  box-shadow: 0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+[data-theme="aria-linen"] .focus-btn-capture {
+  background: linear-gradient(180deg, #E4DEE8 0%, #CEC4D6 100%);
+  border-color: #A89EB0;
+  box-shadow: 0 2px 8px rgba(61,53,69,0.10), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+
+.focus-btn-done {
+  width: 64px;
+  height: 72px;
+  background: linear-gradient(180deg, #EDE2CC 0%, #D4BC8A 100%);
+  border: 2px solid #C4A882;
+  box-shadow: 0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,248,224,0.4);
+}
+
+[data-theme="aria-linen"] .focus-btn-done {
+  background: linear-gradient(180deg, #DDD6E4 0%, #C4B8D0 100%);
+  border-color: #A89EB0;
+  box-shadow: 0 2px 8px rgba(61,53,69,0.10), inset 0 1px 0 rgba(255,255,255,0.5);
 }
 
 /* Bag pendulum sway — pivots at top center so the string + bag swing as one.
@@ -897,6 +1080,41 @@ body {
 }
 
 /* =============================================================================
+   Header pill — top navigation bar
+   ============================================================================= */
+
+.header-pill {
+  height: 54px;
+  background: linear-gradient(180deg, #F5ECD7 0%, #E8DCC8 100%);
+  border: 2.5px solid color-mix(in srgb, var(--aria-text) 22%, transparent);
+  border-radius: 16px;
+  max-width: 360px;
+  box-shadow:
+    0 3px 12px rgba(40,24,10,0.16),
+    0 1px 4px rgba(40,24,10,0.10),
+    inset 0 1px 0 rgba(255,248,224,0.4);
+}
+
+.header-pill-bonus {
+  background: linear-gradient(135deg, rgba(251,191,36,0.4) 0%, rgba(180,130,20,0.3) 100%);
+  border: 2.5px solid rgba(180,130,20,0.5);
+}
+
+[data-theme="aria-linen"] .header-pill {
+  background: linear-gradient(180deg, #FDFBFE 0%, #F4F0F6 100%);
+  border: 1.5px solid color-mix(in srgb, #3D3545 12%, transparent);
+  box-shadow:
+    0 2px 10px rgba(61,53,69,0.08),
+    0 1px 3px rgba(61,53,69,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+[data-theme="aria-linen"] .header-pill-bonus {
+  background: linear-gradient(135deg, rgba(184,160,196,0.35) 0%, rgba(155,125,184,0.25) 100%);
+  border: 1.5px solid rgba(155,125,184,0.4);
+}
+
+/* =============================================================================
    Cafe shelf — illustrated nav objects
    ============================================================================= */
 
@@ -970,6 +1188,47 @@ body {
 .cafe-shelf-icon svg {
   width: 100%;
   height: 100%;
+}
+
+/* Tea-box front panel — the visible face of the box holding teabags */
+.tea-box-front {
+  height: 40px;
+  background:
+    repeating-linear-gradient(1.5deg,
+      rgba(50,30,10,0) 0px,
+      rgba(50,30,10,0.06) 2px,
+      rgba(50,30,10,0) 4px),
+    repeating-linear-gradient(0deg,
+      rgba(60,38,18,0) 0px,
+      rgba(60,38,18,0.11) 1px,
+      rgba(60,38,18,0) 5px,
+      rgba(255,238,206,0.09) 9px,
+      rgba(60,38,18,0) 14px),
+    linear-gradient(180deg, #C49A66 0%, #A57A48 100%);
+  border-radius: 4px 4px 7px 7px;
+  border: 1.5px solid #7A5A30;
+  border-top-color: #C9A26E;
+  border-bottom-width: 2px;
+  box-shadow: inset 0 5px 7px -4px rgba(45,26,8,0.5);
+  z-index: 3;
+}
+
+[data-theme="aria-linen"] .tea-box-front {
+  background:
+    repeating-linear-gradient(1.5deg,
+      rgba(61,53,69,0) 0px,
+      rgba(61,53,69,0.04) 2px,
+      rgba(61,53,69,0) 4px),
+    repeating-linear-gradient(0deg,
+      rgba(61,53,69,0) 0px,
+      rgba(61,53,69,0.07) 1px,
+      rgba(61,53,69,0) 5px,
+      rgba(253,251,254,0.05) 9px,
+      rgba(61,53,69,0) 14px),
+    linear-gradient(180deg, #B8ADBE 0%, #9A8FA3 100%);
+  border-color: #8A8494;
+  border-top-color: #C4BACC;
+  box-shadow: inset 0 5px 7px -4px rgba(61,53,69,0.35);
 }
 
 /* Tea-box drawers — wooden compartments below the box */
@@ -1122,6 +1381,73 @@ body {
     rgba(216, 160, 154, 0.65) 50%,
     rgba(216, 160, 154, 0.55) 75%,
     rgba(216, 160, 154, 0) 100%);
+}
+
+/* Linen — lavender hairline accent */
+[data-theme="aria-linen"] .pride-stripe {
+  background: linear-gradient(to right,
+    rgba(155, 125, 184, 0) 0%,
+    rgba(155, 125, 184, 0.35) 25%,
+    rgba(155, 125, 184, 0.45) 50%,
+    rgba(155, 125, 184, 0.35) 75%,
+    rgba(155, 125, 184, 0) 100%);
+}
+
+/* Linen — plum-tinted input shadows */
+[data-theme="aria-linen"] .pixel-input-lift {
+  box-shadow:
+    0 1px 2px rgba(61,53,69,0.05),
+    0 3px 8px -2px rgba(61,53,69,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.6) !important;
+}
+[data-theme="aria-linen"] .pixel-input-lift:focus {
+  box-shadow:
+    0 1px 2px rgba(61,53,69,0.05),
+    0 5px 12px -3px rgba(61,53,69,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    0 0 0 2px color-mix(in srgb, #9B7DB8 35%, transparent) !important;
+}
+
+/* Linen — tea-box wood shifted to grey-lavender driftwood */
+[data-theme="aria-linen"] .tea-box-drawers {
+  border-color: #8A8494;
+}
+[data-theme="aria-linen"] .tea-box-drawer {
+  color: rgba(61,53,69,0.7);
+  background:
+    repeating-linear-gradient(1.5deg,
+      rgba(61,53,69,0) 0px,
+      rgba(61,53,69,0.04) 2px,
+      rgba(61,53,69,0) 4px),
+    repeating-linear-gradient(0deg,
+      rgba(61,53,69,0) 0px,
+      rgba(61,53,69,0.06) 1px,
+      rgba(61,53,69,0) 5px,
+      rgba(253,251,254,0.05) 9px,
+      rgba(61,53,69,0) 14px),
+    linear-gradient(180deg, #B8ADBE 0%, #9A8FA3 100%);
+  box-shadow: inset 0 3px 5px -3px rgba(61,53,69,0.35);
+}
+[data-theme="aria-linen"] .tea-box-drawer + .tea-box-drawer {
+  border-left-color: rgba(61,53,69,0.25);
+}
+[data-theme="aria-linen"] .tea-box-drawer:hover,
+[data-theme="aria-linen"] .tea-box-drawer:focus-visible {
+  color: rgba(61,53,69,0.85);
+  background:
+    repeating-linear-gradient(1.5deg,
+      rgba(61,53,69,0) 0px,
+      rgba(61,53,69,0.04) 2px,
+      rgba(61,53,69,0) 4px),
+    repeating-linear-gradient(0deg,
+      rgba(61,53,69,0) 0px,
+      rgba(61,53,69,0.06) 1px,
+      rgba(61,53,69,0) 5px),
+    linear-gradient(180deg, #C4BACC 0%, #A89EB0 100%);
+}
+[data-theme="aria-linen"] .tea-box-drawer:active {
+  color: rgba(61,53,69,0.95);
+  box-shadow: inset 0 2px 6px -1px rgba(61,53,69,0.40);
 }
 
 /* =============================================================================

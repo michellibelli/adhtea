@@ -396,12 +396,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 marginTop: -1, position: 'relative', zIndex: 1,
               }}
             >
-              <div style={{
-                width: 3,
-                height: 38,
-                background: 'linear-gradient(to bottom, #B8AE98 0%, #CEC4AE 55%, #DED4BE 100%)',
-                borderRadius: 1,
-              }} />
+              <div className="teabag-string" />
 
               {/* Bonus glow ring + clipped card. max-w keeps the bag taller-than-
                   wide on every breakpoint; extra horizontal padding keeps title
@@ -503,13 +498,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{
-                  width: 64, height: 72,
-                  background: 'linear-gradient(180deg, #D0DDE6 0%, #B0C4D0 100%)',
-                  border: '2px solid #8A9EAD',
-                  boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,255,255,0.3)',
-                }}
+                className="focus-btn-capture flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
               >
                 <svg viewBox="-2 20 60 62" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 50, height: 52 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
@@ -539,13 +528,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{
-                  width: 64, height: 72,
-                  background: 'linear-gradient(180deg, #EDE2CC 0%, #D4BC8A 100%)',
-                  border: '2px solid #C4A882',
-                  boxShadow: '0 3px 8px rgba(60,40,20,0.14), inset 0 1px 0 rgba(255,248,224,0.4)',
-                }}
+                className="focus-btn-done flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
               >
                 <svg viewBox="-2 18 114 68" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 54, height: 32 }}>
                   <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#C4A878" stroke="#8A7050" strokeWidth={2} />

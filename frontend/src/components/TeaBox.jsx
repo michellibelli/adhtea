@@ -141,31 +141,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         </div>
 
         {/* Box front panel */}
-        <div
-          className="absolute left-0 right-0 bottom-0"
-          style={{
-            height: 40,
-            background: `
-              repeating-linear-gradient(1.5deg,
-                rgba(50,30,10,0) 0px,
-                rgba(50,30,10,0.06) 2px,
-                rgba(50,30,10,0) 4px),
-              repeating-linear-gradient(0deg,
-                rgba(60,38,18,0) 0px,
-                rgba(60,38,18,0.11) 1px,
-                rgba(60,38,18,0) 5px,
-                rgba(255,238,206,0.09) 9px,
-                rgba(60,38,18,0) 14px),
-              linear-gradient(180deg, #C49A66 0%, #A57A48 100%)
-            `,
-            borderRadius: '4px 4px 7px 7px',
-            border: '1.5px solid #7A5A30',
-            borderTopColor: '#C9A26E',
-            borderBottomWidth: 2,
-            boxShadow: 'inset 0 5px 7px -4px rgba(45,26,8,0.5)',
-            zIndex: 3,
-          }}
-        />
+        <div className="tea-box-front absolute left-0 right-0 bottom-0" />
       </div>
 
       {/* Drawers — three equally sized compartments below the box,
