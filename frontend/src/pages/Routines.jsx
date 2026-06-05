@@ -3,6 +3,7 @@ import { getRoutines, createRoutine, updateRoutine, deleteRoutine, getMissedRout
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
+import { InlineSkeletonCards, PageError } from '../components/PageState'
 
 const FREQ_LABELS  = { daily: 'Daily', weekdays: 'Weekdays', weekends: 'Weekends', weekly: 'Weekly', custom: 'Custom' }
 const TIME_LABELS  = { anytime: 'Anytime', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' }
@@ -154,15 +155,20 @@ export default function Routines() {
   const [routines, setRoutines] = useState([])
   const [missedCount, setMissedCount] = useState(0)
   const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
 
-  useEffect(() => {
+  function load() {
+    setLoading(true); setError(null)
     Promise.all([getRoutines(), getMissedRoutines()])
       .then(([r, m]) => { setRoutines(r); setMissedCount(m.length) })
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(load, [])
 
   async function handleSave() {
     const data = {
@@ -244,8 +250,10 @@ export default function Routines() {
           />
         )}
 
-        {loading ? (
-          <p className="text-sm text-ui-subtext text-center py-8">Loading…</p>
+        {error ? (
+          <PageError onRetry={load} />
+        ) : loading ? (
+          <InlineSkeletonCards />
         ) : active.length === 0 && !showForm ? (
           <Card className="text-center px-8 py-12 mt-4">
             <div className="text-4xl mb-4">↻</div>

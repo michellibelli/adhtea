@@ -7,6 +7,7 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
+import { PageLoading, PageError } from '../components/PageState'
 
 
 // ---------------------------------------------------------------------------
@@ -87,6 +88,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
   const [medication, setMedication] = useState([])
   const [medLogs,    setMedLogs]    = useState({})   // schedule_id → log
   const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
   const [saving,     setSaving]     = useState(false)
   const [saved,      setSaved]      = useState(false)
   const [form,       setForm]       = useState(EMPTY_FORM)
@@ -97,8 +99,9 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
   const [checkinSaving, setCheckinSaving] = useState(false)
   const [checkinDone,   setCheckinDone]   = useState(false)
 
-  useEffect(() => {
-    async function fetchAll() {
+  function fetchAll() {
+    setLoading(true); setError(null)
+    ;(async () => {
       try {
         const [todayLog, cap, rawMeds] = await Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
         const meds = await migrateLegacyMedNames(rawMeds, userId)
@@ -120,13 +123,13 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
           meds.map(m => getMedicationTodayLog(m.id).then(l => { if (l) ml[m.id] = l }))
         )
         setMedLogs(ml)
-      } catch (err) { console.error(err) }
+      } catch (err) { console.error(err); setError(true) }
       finally { setLoading(false) }
-    }
-    fetchAll()
-    // Mount-only fetch; userId is stable for the session.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    })()
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(fetchAll, [])
 
   async function handleSave() {
     setSaving(true)
@@ -174,9 +177,8 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
     } catch (err) { console.error(err) }
   }
 
-  if (loading) {
-    return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">Loading…</p></div>
-  }
+  if (loading) return <PageLoading />
+  if (error) return <PageError onRetry={fetchAll} />
 
   // In gate mode, the bottom nav is hidden and there's no way out except
   // saving the log. Renders a banner up top + a "Continue" CTA at the

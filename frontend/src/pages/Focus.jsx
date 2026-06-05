@@ -7,6 +7,7 @@ import Button from '../components/Button'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
 import { TAG_COLORS } from '../utils/taskColors'
 import TeaBox from '../components/TeaBox'
+import { PageError } from '../components/PageState'
 
 
 const TEA_PUNS = [
@@ -129,6 +130,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState(null)
   const [leaving,     setLeaving]     = useState(false)
   const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'fade'
   const punRef = useRef('')
@@ -145,11 +147,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   })
 
   const fetchAll = useCallback(async () => {
+    setError(null)
     try {
-      // Always fetch bonus alongside today. Display gating uses pickNext() —
-      // a non-empty today list can still have nothing visible (timed routines
-      // more than 5 min out are hidden), so deciding bonus-fetch from
-      // list.length missed the case "no visible task but list has a hidden routine".
       const [list, done, bonus] = await Promise.all([
         getToday(), getDoneToday(), getBonusTasks(),
       ])
@@ -157,10 +156,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       setDoneTodayBase(done.length)
       setLocalDone(0)
       setBonusTasks(bonus)
-      // No need to clear selectedId here: a refetched list that no longer
-      // contains the selected task makes `tasks.find(selectedId)` undefined,
-      // so focus falls back to pickNext on its own.
-    } catch (err) { console.error(err) }
+    } catch (err) { console.error(err); setError(true) }
     finally { setLoading(false) }
   }, [])
 
@@ -290,6 +286,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   if (loading) {
     return <div className="aria-page flex items-center justify-center"><p className="text-sm text-ui-subtext">…</p></div>
   }
+  if (error) return <PageError onRetry={fetchAll} />
 
   // All done — no today tasks AND no bonus tasks
   if (!task) {
