@@ -6,7 +6,7 @@ regression in the math is caught before it changes anyone's surfaced
 """
 
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -127,7 +127,7 @@ def test_due_beyond_window_no_bonus(client, auth_headers, db_session):
 def test_stalled_project_boosts_its_tasks(client, auth_headers, db_session):
     user = _user(db_session)
     # Project created 30 days ago, no completions
-    old_create = datetime.utcnow() - timedelta(days=30)
+    old_create = datetime.now(timezone.utc) - timedelta(days=30)
     p = Project(user_id=user.id, title="Stalled", status="active", created_at=old_create)
     db_session.add(p)
     db_session.commit()
@@ -147,7 +147,7 @@ def test_active_project_no_boost(client, auth_headers, db_session):
     db_session.refresh(p)
     # A done task today on this project — proves recent completion
     _mk_task(db_session, user.id, project_id=p.id, status=TaskStatus.done,
-             completed_at=datetime.utcnow())
+             completed_at=datetime.now(timezone.utc))
 
     t = _mk_task(db_session, user.id, project_id=p.id)
     stall = project_stall_map(db_session, user.id, TODAY)
@@ -181,7 +181,7 @@ def test_push_count_subtracts(client, auth_headers, db_session):
 
 def test_age_creep_increments_weekly(client, auth_headers, db_session):
     user = _user(db_session)
-    very_old = datetime.utcnow() - timedelta(days=70)
+    very_old = datetime.now(timezone.utc) - timedelta(days=70)
     t = _mk_task(db_session, user.id, created_at=very_old)
     r = compute_score(t, today_local=TODAY, now_local=NOON)
     # 70 days = 10 buckets × 3 = 30, capped at INBOX_AGE_CAP (15)
@@ -190,7 +190,7 @@ def test_age_creep_increments_weekly(client, auth_headers, db_session):
 
 def test_age_creep_zero_for_new_tasks(client, auth_headers, db_session):
     user = _user(db_session)
-    t = _mk_task(db_session, user.id, created_at=datetime.utcnow())
+    t = _mk_task(db_session, user.id, created_at=datetime.now(timezone.utc))
     r = compute_score(t, today_local=TODAY, now_local=NOON)
     assert "age_boost" not in r["components"]
 
@@ -248,7 +248,7 @@ def test_snooze_increments_push_count(client, auth_headers, db_session):
     user = _user(db_session)
     t = _mk_task(db_session, user.id)
     start = t.push_count or 0
-    until = (datetime.utcnow() + timedelta(days=2)).isoformat()
+    until = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
     r = client.post(f"/tasks/{t.id}/snooze", json={"snooze_until": until}, headers=auth_headers)
     assert r.status_code == 200
     db_session.refresh(t)
@@ -426,7 +426,7 @@ def test_run_overflow_clears_due_date(client, auth_headers, db_session):
     body = r.json()
     assert len(body["overflow"]) > 0
     overflow_id = body["overflow"][0]["id"]
-    overflow_task = db_session.query(Task).get(overflow_id)
+    overflow_task = db_session.get(Task, overflow_id)
     assert overflow_task.due_date is None
     assert overflow_task.status == TaskStatus.inbox
 

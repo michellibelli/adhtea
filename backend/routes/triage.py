@@ -25,7 +25,7 @@ caches results onto Task rows.
 """
 
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -197,7 +197,7 @@ def recompute_user_scores(db: Session, user_id: int, today_local: date, now_loca
         result = compute_score(t, today_local=today_local, now_local=now_naive, stall_map=stall)
         t.score = result["total"]
         t.score_components = json.dumps(result["components"])
-        t.score_updated_at = datetime.utcnow()
+        t.score_updated_at = datetime.now(timezone.utc)
     if rows:
         db.commit()
     return len(rows)
