@@ -196,7 +196,7 @@ function AppShell() {
               <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(288 12 12)" />
               <circle cx="12" cy="12" r="2.8" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.6} />
             </svg>
-            <img className="header-flower-pressed" src="/pressed-flower.svg" alt="" width={30} height={30} />
+            <img className="header-flower-pressed" src="/pressed-flower.svg" alt="" width={34} height={34} />
           </div>
           {/* Center — logo */}
           <button
