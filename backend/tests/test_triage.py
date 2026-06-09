@@ -10,9 +10,10 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from models import Domain, Project, Task, TaskStatus, TaskType, TaskWeight, User
+from models import CapacitySnapshot, Domain, Project, Task, TaskStatus, TaskType, TaskWeight, User
 from routes.triage import (
     compute_score,
+    capacity_tier,
     project_stall_map,
     recompute_user_scores,
     PRIORITY_WEIGHTS,
@@ -24,6 +25,13 @@ from routes.triage import (
     PUSH_PENALTY_PER_COUNT,
     INBOX_AGE_CAP,
     SAME_DAY_CREATE_BONUS,
+    BASE_BUDGET_UNITS,
+    CAPACITY_TIER_LOW,
+    CAPACITY_TIER_HIGH,
+    CAPACITY_FIT_HEAVY_PENALTY,
+    CAPACITY_FIT_LIGHT_BONUS,
+    ROUTINE_DRAIN_PER_INSTANCE,
+    ROUTINE_DRAIN_CAP,
 )
 
 
@@ -602,5 +610,193 @@ def test_resolve_overflow_keeps_today(client, auth_headers, db_session):
     db_session.refresh(t)
     assert t.status == TaskStatus.today
     assert t.due_date == date.today()
+
+
+# ---------------------------------------------------------------------------
+# Capacity-aware selection (Phase 3.7)
+# ---------------------------------------------------------------------------
+
+def _mk_snapshot(db, user_id, overall, *, log_date=None, exec_cap=None):
+    """Create/replace today's CapacitySnapshot with a chosen overall value.
+
+    Only `overall` matters for budget + tier; the battery fields are filled
+    with the same value so the row is valid (all are NOT NULL).
+    """
+    log_date = log_date or date.today()
+    v = float(overall)
+    existing = db.query(CapacitySnapshot).filter(
+        CapacitySnapshot.user_id == user_id,
+        CapacitySnapshot.log_date == log_date,
+    ).first()
+    if existing:
+        db.delete(existing)
+        db.commit()
+    snap = CapacitySnapshot(
+        user_id=user_id, log_date=log_date,
+        sleep_battery=v, nutrition_battery=v, physical_battery=v,
+        emotional_battery=v, environment_battery=v,
+        executive_capacitor=float(exec_cap) if exec_cap is not None else v,
+        overall=v,
+    )
+    db.add(snap)
+    db.commit()
+    return snap
+
+
+def _mk_routine_today(db, user_id):
+    """A routine instance scheduled for today (counts toward routine drain)."""
+    return _mk_task(
+        db, user_id,
+        task_type=TaskType.routine, status=TaskStatus.today,
+        scheduled_date=datetime.combine(date.today(), datetime.min.time()),
+    )
+
+
+# --- tier helper -----------------------------------------------------------
+
+def test_capacity_tier_buckets():
+    assert capacity_tier(CAPACITY_TIER_LOW - 1) == "low"
+    assert capacity_tier(CAPACITY_TIER_LOW) == "medium"      # boundary = medium
+    assert capacity_tier((CAPACITY_TIER_LOW + CAPACITY_TIER_HIGH) / 2) == "medium"
+    assert capacity_tier(CAPACITY_TIER_HIGH) == "medium"     # boundary = medium
+    assert capacity_tier(CAPACITY_TIER_HIGH + 1) == "high"
+
+
+# --- capacity_fit scoring lever -------------------------------------------
+
+def test_capacity_fit_penalizes_heavy_on_low_day(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, weight=TaskWeight.heavy)
+    r = compute_score(t, today_local=TODAY, now_local=NOON, cap_tier="low")
+    assert r["components"].get("capacity_fit") == CAPACITY_FIT_HEAVY_PENALTY
+
+
+def test_capacity_fit_rewards_light_on_low_day(client, auth_headers, db_session):
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, weight=TaskWeight.light)
+    r = compute_score(t, today_local=TODAY, now_local=NOON, cap_tier="low")
+    assert r["components"].get("capacity_fit") == CAPACITY_FIT_LIGHT_BONUS
+
+
+def test_capacity_fit_silent_on_medium_day(client, auth_headers, db_session):
+    user = _user(db_session)
+    heavy = _mk_task(db_session, user.id, weight=TaskWeight.heavy)
+    light = _mk_task(db_session, user.id, weight=TaskWeight.light)
+    for t in (heavy, light):
+        r = compute_score(t, today_local=TODAY, now_local=NOON, cap_tier="medium")
+        assert "capacity_fit" not in r["components"]
+
+
+def test_capacity_fit_default_tier_is_medium(client, auth_headers, db_session):
+    """Omitting cap_tier must not change historical scores (no fit component)."""
+    user = _user(db_session)
+    t = _mk_task(db_session, user.id, weight=TaskWeight.heavy)
+    r = compute_score(t, today_local=TODAY, now_local=NOON)
+    assert "capacity_fit" not in r["components"]
+
+
+def test_low_day_light_beats_heavy(client, auth_headers, db_session):
+    """On a low day an otherwise-equal light task outscores a heavy one."""
+    user = _user(db_session)
+    light = _mk_task(db_session, user.id, priority="normal", weight=TaskWeight.light)
+    heavy = _mk_task(db_session, user.id, priority="normal", weight=TaskWeight.heavy)
+    s_light = compute_score(light, today_local=TODAY, now_local=NOON, cap_tier="low")
+    s_heavy = compute_score(heavy, today_local=TODAY, now_local=NOON, cap_tier="low")
+    assert s_light["total"] > s_heavy["total"]
+
+
+# --- budget driven by overall capacity ------------------------------------
+
+def test_budget_scales_with_overall_capacity(client, auth_headers, db_session):
+    user = _user(db_session)
+    _mk_snapshot(db_session, user.id, 30)   # low overall
+    r = client.post("/triage/preview", headers=auth_headers)
+    budget = r.json()["days"][0]["budget"]
+    assert budget == pytest.approx(BASE_BUDGET_UNITS * 0.30)
+
+
+def test_higher_capacity_places_more_today(client, auth_headers, db_session):
+    user = _user(db_session)
+    for _ in range(6):
+        _mk_task(db_session, user.id, priority="normal", weight=TaskWeight.medium)
+
+    _mk_snapshot(db_session, user.id, 20)
+    low = client.post("/triage/preview", headers=auth_headers).json()
+    _mk_snapshot(db_session, user.id, 100)
+    high = client.post("/triage/preview", headers=auth_headers).json()
+
+    assert len(high["days"][0]["items"]) > len(low["days"][0]["items"])
+
+
+# --- routine load drains task budget --------------------------------------
+
+def test_routine_drain_reported_per_day(client, auth_headers, db_session):
+    user = _user(db_session)
+    for _ in range(3):
+        _mk_routine_today(db_session, user.id)
+    r = client.post("/triage/preview", headers=auth_headers)
+    drain = r.json()["days"][0]["routine_drain"]
+    assert drain == pytest.approx(3 * ROUTINE_DRAIN_PER_INSTANCE)
+
+
+def test_routine_drain_caps(client, auth_headers, db_session):
+    user = _user(db_session)
+    for _ in range(20):     # 20 × 0.5 = 10, far over the cap
+        _mk_routine_today(db_session, user.id)
+    r = client.post("/triage/preview", headers=auth_headers)
+    assert r.json()["days"][0]["routine_drain"] == pytest.approx(ROUTINE_DRAIN_CAP)
+
+
+def test_routine_drain_reduces_today_placement(client, auth_headers, db_session):
+    """A heavy-routine morning leaves less room for tasks on today."""
+    user = _user(db_session)
+    _mk_snapshot(db_session, user.id, 30)   # base budget = 6 units
+    for _ in range(5):
+        _mk_task(db_session, user.id, priority="normal", weight=TaskWeight.medium)
+
+    before = client.post("/triage/preview", headers=auth_headers).json()
+    placed_before = len(before["days"][0]["items"])
+
+    for _ in range(6):                      # drain caps at 4 units
+        _mk_routine_today(db_session, user.id)
+    after = client.post("/triage/preview", headers=auth_headers).json()
+    placed_after = len(after["days"][0]["items"])
+
+    assert placed_after < placed_before
+
+
+def test_apply_ordered_reports_routine_drain(client, auth_headers, db_session):
+    user = _user(db_session)
+    for _ in range(2):
+        _mk_routine_today(db_session, user.id)
+    t = _mk_task(db_session, user.id)
+    r = client.post(
+        "/triage/apply-ordered",
+        json={"ordered_task_ids": [t.id]},
+        headers=auth_headers,
+    )
+    assert r.json()["routine_drain"] == pytest.approx(2 * ROUTINE_DRAIN_PER_INSTANCE)
+
+
+# --- recompute applies the user's tier ------------------------------------
+
+def test_recompute_applies_capacity_tier(client, auth_headers, db_session):
+    """Cached scores reflect the low-day heavy penalty."""
+    user = _user(db_session)
+    _mk_snapshot(db_session, user.id, 25)   # low
+    heavy = _mk_task(db_session, user.id, priority="normal", weight=TaskWeight.heavy)
+    recompute_user_scores(db_session, user.id, date.today(), datetime.now())
+    db_session.refresh(heavy)
+    assert json.loads(heavy.score_components).get("capacity_fit") == CAPACITY_FIT_HEAVY_PENALTY
+
+
+# --- capacity tier exposed on the snapshot endpoint -----------------------
+
+def test_capacity_today_returns_tier(client, auth_headers, db_session):
+    user = _user(db_session)
+    _mk_snapshot(db_session, user.id, 25)
+    r = client.get("/capacity/today", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["tier"] == "low"
 
 

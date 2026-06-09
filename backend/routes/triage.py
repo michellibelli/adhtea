@@ -72,6 +72,34 @@ PUSH_PENALTY_PER_COUNT = -5
 # get lost in the list.
 SAME_DAY_CREATE_BONUS = 300
 
+# ---------------------------------------------------------------------------
+# Capacity-aware selection (Phase 3.7)
+#
+# The bin-pack already shrinks the day's budget by measured capacity. These
+# levers add a *gentle* bias so a low-capacity day favors light work and
+# de-emphasizes heavy lifts — the user can still choose a hard thing, it just
+# doesn't dominate the auto-placement. Keeps the "warm, never clinical" tone.
+# ---------------------------------------------------------------------------
+CAPACITY_TIER_LOW = 40.0          # overall < this  → "low"  day
+CAPACITY_TIER_HIGH = 70.0         # overall > this  → "high" day
+CAPACITY_FIT_HEAVY_PENALTY = -40  # heavy tasks lose this on a low day
+CAPACITY_FIT_LIGHT_BONUS = 10     # light tasks gain this on a low day
+
+# Routine load drains task budget: routines don't compete in the bin-pack, but
+# a heavy-routine morning still costs real attention. Each due routine instance
+# shaves a little task budget, capped so a long routine list can't zero the day.
+ROUTINE_DRAIN_PER_INSTANCE = 0.5
+ROUTINE_DRAIN_CAP = 4.0
+
+
+def capacity_tier(overall: float) -> str:
+    """Bucket an overall-capacity number into low / medium / high."""
+    if overall < CAPACITY_TIER_LOW:
+        return "low"
+    if overall > CAPACITY_TIER_HIGH:
+        return "high"
+    return "medium"
+
 
 def project_stall_map(db: Session, user_id: int, today_local: date) -> dict[int, bool]:
     """Map of project_id → True when the project hasn't seen a completion
@@ -111,12 +139,16 @@ def compute_score(
     today_local: date,
     now_local: datetime,
     stall_map: Optional[dict[int, bool]] = None,
+    cap_tier: str = "medium",
 ) -> dict:
     """Return {'total': float, 'components': dict[str,int]} for a task.
 
     `stall_map` is the precomputed result of project_stall_map for the
     user — pass it in when scoring many tasks so each one isn't doing
     its own SQL roundtrip for project completion history.
+
+    `cap_tier` is the user's capacity tier today (low/medium/high). On a low
+    day it gently biases the list toward light work; medium/high are no-ops.
     """
     c: dict[str, int] = {}
 
@@ -169,6 +201,16 @@ def compute_score(
     if task.push_count:
         c["push_penalty"] = PUSH_PENALTY_PER_COUNT * task.push_count
 
+    # Capacity fit — gentle low-day bias. Heavy lifts lose ground, light work
+    # gains a touch, so the auto-placement leans toward what's actually doable
+    # when the user is depleted. Still surfaceable if they choose it.
+    if cap_tier == "low":
+        w = getattr(task.weight, "value", task.weight) if task.weight else "medium"
+        if w == "heavy":
+            c["capacity_fit"] = CAPACITY_FIT_HEAVY_PENALTY
+        elif w == "light":
+            c["capacity_fit"] = CAPACITY_FIT_LIGHT_BONUS
+
     total = float(sum(c.values()))
     return {"total": total, "components": c}
 
@@ -183,6 +225,7 @@ def recompute_user_scores(db: Session, user_id: int, today_local: date, now_loca
     """
     from models import TaskType
     stall = project_stall_map(db, user_id, today_local)
+    tier = capacity_tier(_latest_capacity(db, user_id, today_local))
     rows = (
         db.query(Task)
         .filter(
@@ -194,7 +237,7 @@ def recompute_user_scores(db: Session, user_id: int, today_local: date, now_loca
     )
     now_naive = datetime.now() if now_local is None else now_local
     for t in rows:
-        result = compute_score(t, today_local=today_local, now_local=now_naive, stall_map=stall)
+        result = compute_score(t, today_local=today_local, now_local=now_naive, stall_map=stall, cap_tier=tier)
         t.score = result["total"]
         t.score_components = json.dumps(result["components"])
         t.score_updated_at = datetime.now(timezone.utc)
@@ -226,7 +269,12 @@ def recompute(
 # ---------------------------------------------------------------------------
 
 def _latest_capacity(db: Session, user_id: int, ref_date: date) -> float:
-    """Most recent CapacitySnapshot.executive_capacitor for the user, or default.
+    """Most recent CapacitySnapshot.overall for the user, or default.
+
+    Drives the day's budget. We use `overall` (the weighted blend of all five
+    batteries + the executive capacitor) rather than the executive capacitor
+    alone, so sleep/food/mood/environment all move the budget — not just the
+    novelty-fed capacitor.
 
     We use the latest snapshot as the projected capacity for ALL days in the
     rolling window. Real per-day variation is unknowable in advance; the
@@ -234,7 +282,7 @@ def _latest_capacity(db: Session, user_id: int, ref_date: date) -> float:
     feels different.
     """
     row = (
-        db.query(CapacitySnapshot.executive_capacitor)
+        db.query(CapacitySnapshot.overall)
         .filter(
             CapacitySnapshot.user_id == user_id,
             CapacitySnapshot.log_date <= ref_date,
@@ -243,6 +291,36 @@ def _latest_capacity(db: Session, user_id: int, ref_date: date) -> float:
         .first()
     )
     return float(row[0]) if row and row[0] is not None else DEFAULT_CAPACITY
+
+
+def _routine_drain_for_day(db: Session, user_id: int, day: date) -> float:
+    """Task-budget units consumed by the day's due routine instances.
+
+    Routines don't compete in the bin-pack (they happen passively), but a
+    heavy-routine morning still costs real attention. Each due routine instance
+    shaves a little task budget, capped at ROUTINE_DRAIN_CAP so a long routine
+    list can't zero out the day. Routine instances are only generated for the
+    current day, so future days in the window naturally see a 0 drain.
+    """
+    rows = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user_id,
+            Task.task_type == TaskType.routine,
+            Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
+        )
+        .all()
+    )
+    count = 0
+    for r in rows:
+        booked_day = None
+        if r.scheduled_date is not None:
+            booked_day = r.scheduled_date.date()
+        elif r.due_date is not None:
+            booked_day = r.due_date
+        if booked_day == day:
+            count += 1
+    return min(ROUTINE_DRAIN_CAP, count * ROUTINE_DRAIN_PER_INSTANCE)
 
 
 def _task_weight(task: Task) -> int:
@@ -291,16 +369,19 @@ def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime)
     decide whether to persist the placement.
     """
     capacity = _latest_capacity(db, user_id, today_local)
+    tier = capacity_tier(capacity)
     base_budget = BASE_BUDGET_UNITS * (capacity / 100.0)
 
     days = []
     for offset in range(ROLLING_WINDOW_DAYS):
         d = today_local + timedelta(days=offset)
         booked = _committed_weight_for_day(db, user_id, d)
+        drain = _routine_drain_for_day(db, user_id, d)
         days.append({
             "date": d,
             "budget": max(0.0, base_budget),
             "committed": booked,
+            "routine_drain": drain,
             "used": 0,
             "items": [],
         })
@@ -344,7 +425,7 @@ def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime)
     stall = project_stall_map(db, user_id, today_local)
     scored = []
     for t in unpinned:
-        r = compute_score(t, today_local=today_local, now_local=now_local, stall_map=stall)
+        r = compute_score(t, today_local=today_local, now_local=now_local, stall_map=stall, cap_tier=tier)
         scored.append((r["total"], t))
     scored.sort(key=lambda x: x[0], reverse=True)
 
@@ -353,7 +434,7 @@ def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime)
         w = _task_weight(task)
         placed = False
         for d in days:
-            if d["used"] + d["committed"] + w <= d["budget"]:
+            if d["used"] + d["committed"] + d["routine_drain"] + w <= d["budget"]:
                 d["items"].append(task)
                 d["used"] += w
                 placed = True
@@ -373,6 +454,7 @@ def _serialize_layout(days, overflow):
                 "date": d["date"].isoformat(),
                 "budget": d["budget"],
                 "committed": d["committed"],
+                "routine_drain": d["routine_drain"],
                 "used": d["used"],
                 "items": [TaskResponse.model_validate(t).model_dump(mode="json") for t in d["items"]],
             }
@@ -539,7 +621,8 @@ def apply_ordered(
     capacity = _latest_capacity(db, current_user.id, today_local)
     base_budget = BASE_BUDGET_UNITS * (capacity / 100.0)
     committed = _committed_weight_for_day(db, current_user.id, today_local)
-    remaining = max(0.0, base_budget - committed)
+    routine_drain = _routine_drain_for_day(db, current_user.id, today_local)
+    remaining = max(0.0, base_budget - committed - routine_drain)
 
     task_map = {}
     if body.ordered_task_ids:
@@ -582,6 +665,7 @@ def apply_ordered(
         "overflow": overflow_ids,
         "budget": base_budget,
         "committed": committed,
+        "routine_drain": routine_drain,
         "used": used,
     }
 

@@ -161,10 +161,16 @@ def get_today_capacity(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return db.query(CapacitySnapshot).filter(
+    snap = db.query(CapacitySnapshot).filter(
         CapacitySnapshot.user_id == current_user.id,
         CapacitySnapshot.log_date == date.today(),
     ).first()
+    if snap is None:
+        return None
+    from routes.triage import capacity_tier
+    resp = CapacitySnapshotResponse.model_validate(snap)
+    resp.tier = capacity_tier(snap.overall)
+    return resp
 
 
 # ---------------------------------------------------------------------------
