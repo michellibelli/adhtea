@@ -138,10 +138,7 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     if not user or not bcrypt.checkpw(req.password.encode(), user.hashed_password.encode()):
         raise HTTPException(status_code=401, detail="Could not sign in")
 
-    token_str = secrets.token_hex(32)
-    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
-    session = SessionToken(user_id=user.id, token=token_str, expires_at=expires)
-    db.add(session)
+    token_str = _make_session(user.id, db)
     db.commit()
 
     return LoginResponse(
@@ -357,10 +354,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         db.add(ActuatorCategory(user_id=user.id, name=p["name"], description=p["description"], is_preset=True))
     invite.used_by = user.id
     invite.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    token_str = secrets.token_hex(32)
-    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
-    session = SessionToken(user_id=user.id, token=token_str, expires_at=expires)
-    db.add(session)
+    token_str = _make_session(user.id, db)
     db.commit()
     return LoginResponse(token=token_str, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
 
