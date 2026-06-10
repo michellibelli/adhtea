@@ -331,23 +331,13 @@ body {
    3. Soft radial vignette — warm center, cooler edges
    4. Solid lavender-white base */
 [data-theme="aria-linen"] {
-  --aria-page-bg:
-    repeating-linear-gradient(0deg,
-      rgba(61,53,69,0.03) 0 0.5px,
-      transparent 0.5px 4px),
-    repeating-linear-gradient(90deg,
-      rgba(61,53,69,0.025) 0 0.5px,
-      transparent 0.5px 4px),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.21 0 0 0 0 0.27 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23l)'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse 70% 55% at 50% 35%,
-      #F8F5FA 0%,
-      #F4F0F6 50%,
-      #EDE8F2 100%);
-  --aria-page-bg-size:
-    4px 4px,
-    4px 4px,
-    200px 200px,
-    100% 100%;
+  --aria-page-bg: url("/linen-watercolor-bg.jpg");
+  --aria-page-bg-size: cover;
+}
+
+[data-theme="aria-linen"] .aria-page-bg {
+  filter: blur(1px);
+  opacity: 0.80;
 }
 
 /* Cafe page bg — bookshelf-behind-notebook backdrop. Order from front
@@ -1361,3 +1351,4 @@ html { scroll-behavior: smooth; }
 button, a { -webkit-tap-highlight-color: transparent; }
 
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+

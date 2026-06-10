@@ -213,14 +213,10 @@ function AppShell() {
               className="p-1 rounded-md hover:opacity-70 transition-opacity"
               aria-label="Settings"
             >
-              <svg viewBox="0 0 24 24" fill="none" style={{ width: 28, height: 32 }}>
-                <path d="M12 4 Q7.5 3 2.5 4 L2.5 20 Q7.5 19 12 20" fill="#B8A0C4" fillOpacity="0.08" stroke="#B8A0C4" strokeWidth={1.4} strokeLinejoin="round" />
-                <path d="M12 4 Q16.5 3 21.5 4 L21.5 20 Q16.5 19 12 20" fill="#B8A0C4" fillOpacity="0.08" stroke="#B8A0C4" strokeWidth={1.4} strokeLinejoin="round" />
-                <line x1="12" y1="4" x2="12" y2="20" stroke="#B8A0C4" strokeWidth={0.9} opacity="0.35" />
-                <line x1="5.5" y1="8.5" x2="10" y2="8.5" stroke="#B8A0C4" strokeWidth={0.8} opacity="0.3" />
-                <line x1="5.5" y1="11.5" x2="9" y2="11.5" stroke="#B8A0C4" strokeWidth={0.8} opacity="0.3" />
-                <line x1="5.5" y1="14.5" x2="10" y2="14.5" stroke="#B8A0C4" strokeWidth={0.8} opacity="0.3" />
-                <ellipse cx="17" cy="11" rx="2.2" ry="2.8" fill="#B8A0C4" fillOpacity="0.1" stroke="#B8A0C4" strokeWidth={0.8} opacity="0.4" />
+              <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" style={{ width: 26, height: 26 }}>
+                <line x1="4" y1="7" x2="20" y2="7" stroke="var(--aria-text)" strokeWidth={2} opacity="0.45" />
+                <line x1="4" y1="12" x2="20" y2="12" stroke="var(--aria-text)" strokeWidth={2} opacity="0.45" />
+                <path d="M4 17 Q8 15.5 12 17 Q16 18.5 20 17" stroke="var(--aria-text)" strokeWidth={2} opacity="0.45" fill="none" />
               </svg>
             </button>
           </div>
