@@ -156,7 +156,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       setDoneTodayBase(done.length)
       setLocalDone(0)
       setBonusTasks(bonus)
-    } catch (err) { console.error(err); setError(true) }
+    } catch (err) {
+      console.error(err)
+      if (import.meta.env.DEV) {
+        setTasks([{ id: 0, title: 'Read Messages (email, whatsapp, slack)', task_type: 'routine', status: 'today', priority: null, due_date: new Date().toISOString().slice(0,10), due_time: '08:00', sort_order: 1 }])
+      } else {
+        setError(true)
+      }
+    }
     finally { setLoading(false) }
   }, [])
 
@@ -317,13 +324,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 flex flex-col px-4 pt-1 md:pt-8 pb-8 max-w-sm mx-auto w-full">
+      <div className="flex-1 grid px-4 pb-4 max-w-sm mx-auto w-full" style={{ gridTemplateRows: '1fr auto', minHeight: 0 }}>
 
-        {/* Card area — bag + action row + tea-box stack together at the
-            TOP of the column (justify-start) so the whole unit sits
-            directly under the focus bar / top header instead of
-            floating at the bottom of the page. */}
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-start" style={{ gap: 16, paddingTop: '2vh' }}>
+          {/* Teabag zone — vertically centered in space above tea box */}
+          <div className="flex items-center justify-center min-h-0">
           {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center ${
             celebrate ? ''
@@ -486,10 +490,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             )}
 
           </div>{/* end relative wrapper */}
+          </div>{/* end teabag zone */}
 
-          {/* Shared 3-icon action row — same on mobile + desktop. Sits
-              directly under the bag, with the tea-box directly under it.
-              Spacing controlled by the card area's gap-3. */}
           {/* Tea box flanked by Capture (left) and Done (right) */}
           <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
               <button
@@ -544,8 +546,6 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 </svg>
               </button>
           </div>
-
-        </div>
 
       </div>
 

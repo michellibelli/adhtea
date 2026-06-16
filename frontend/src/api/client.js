@@ -18,6 +18,7 @@ export function clearToken() {
 }
 
 export function isLoggedIn() {
+  if (import.meta.env.DEV) return true
   return !!getToken()
 }
 
@@ -91,6 +92,7 @@ async function request(method, path, body = undefined, isForm = false) {
   const res = await fetch(`${BASE_URL}${path}`, opts)
 
   if (res.status === 401) {
+    if (import.meta.env.DEV) throw new Error('Auth required (dev mode — skipping reload)')
     clearToken()
     window.location.reload()
     return
