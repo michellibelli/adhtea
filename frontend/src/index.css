@@ -651,6 +651,19 @@ body {
     inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
+/* Linen theme — softer pixel-btn shadows (plum-tinted, matching pixel-card) */
+[data-theme="aria-linen"] .pixel-btn {
+  border-color: color-mix(in srgb, #3D3545 12%, #FDFBFE) !important;
+  box-shadow:
+    0 1px 2px rgba(61,53,69,0.06),
+    0 3px 8px -1px rgba(61,53,69,0.09);
+}
+[data-theme="aria-linen"] .pixel-btn:hover {
+  box-shadow:
+    0 1px 2px rgba(61,53,69,0.06),
+    0 5px 14px -2px rgba(61,53,69,0.12);
+}
+
 /* Linen theme — stitches use plum instead of brown */
 [data-theme="aria-linen"] .teabag-stitches {
   background: repeating-linear-gradient(
@@ -1044,6 +1057,10 @@ body {
 [data-theme="aria-linen"] .header-flower-geo { display: none; }
 [data-theme="aria-linen"] .header-flower-pressed { display: block; }
 
+/* Header menu icon — hamburger with petal-curve bottom line */
+.header-menu-stroke { opacity: 0.45; }
+[data-theme="aria-linen"] .header-menu-stroke { opacity: 0.6; }
+
 /* =============================================================================
    Cafe shelf — illustrated nav objects
    ============================================================================= */
@@ -1342,6 +1359,80 @@ body {
 [data-theme="aria-linen"] .tea-box-drawer:active {
   color: rgba(61,53,69,0.95);
   box-shadow: inset 0 2px 6px -1px rgba(61,53,69,0.40);
+}
+
+/* =============================================================================
+   Range inputs — themed track + thumb for sliders (Daily limits, etc.)
+   ============================================================================= */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--aria-border);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--aria-primary);
+  border: 2px solid var(--aria-surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--aria-primary);
+  border: 2px solid var(--aria-surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+/* Settings toggle switch — theme-aware */
+.settings-toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 200ms;
+}
+.settings-toggle[aria-pressed="true"] {
+  background: var(--aria-primary);
+}
+.settings-toggle[aria-pressed="false"] {
+  background: var(--aria-border);
+}
+.settings-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  transition: transform 200ms;
+}
+.settings-toggle[aria-pressed="true"] .settings-toggle-knob {
+  transform: translateX(20px);
+}
+
+/* Settings nav card — hover lift for clickable navigation items */
+.settings-nav-card {
+  transition: box-shadow 160ms ease-out, transform 100ms ease-out;
+}
+.settings-nav-card:hover {
+  transform: translateY(-1px);
+}
+.settings-nav-card:active {
+  transform: translateY(0px);
 }
 
 /* =============================================================================

@@ -324,10 +324,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 grid px-4 pb-4 max-w-sm mx-auto w-full" style={{ gridTemplateRows: '1fr auto', minHeight: 0 }}>
+      <div className="flex-1 grid gap-3 px-4 max-w-sm mx-auto w-full" style={{ gridTemplateRows: '1fr auto', minHeight: 0, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
 
-          {/* Teabag zone — vertically centered in space above tea box */}
-          <div className="flex items-center justify-center min-h-0">
+        {/* Teabag zone — vertically centered in space above tea box */}
+        <div className="flex items-center justify-center min-h-0">
           {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center ${
             celebrate ? ''
@@ -490,10 +490,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             )}
 
           </div>{/* end relative wrapper */}
-          </div>{/* end teabag zone */}
+        </div>{/* end teabag zone */}
 
-          {/* Tea box flanked by Capture (left) and Done (right) */}
-          <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
+        {/* Tea box flanked by Capture (left) and Done (right) */}
+        <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
@@ -545,7 +545,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                   </defs>
                 </svg>
               </button>
-          </div>
+        </div>
 
       </div>
 

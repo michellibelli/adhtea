@@ -214,9 +214,9 @@ function AppShell() {
               aria-label="Settings"
             >
               <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" style={{ width: 26, height: 26 }}>
-                <line x1="4" y1="7" x2="20" y2="7" stroke="var(--aria-text)" strokeWidth={2} opacity="0.45" />
-                <line x1="4" y1="12" x2="20" y2="12" stroke="var(--aria-text)" strokeWidth={2} opacity="0.45" />
-                <path d="M4 17 Q8 15.5 12 17 Q16 18.5 20 17" stroke="var(--aria-text)" strokeWidth={2} opacity="0.45" fill="none" />
+                <line className="header-menu-stroke" x1="4" y1="7" x2="20" y2="7" stroke="var(--aria-text)" strokeWidth={2} />
+                <line className="header-menu-stroke" x1="4" y1="12" x2="20" y2="12" stroke="var(--aria-text)" strokeWidth={2} />
+                <path className="header-menu-stroke" d="M4 17 Q8 15.5 12 17 Q16 18.5 20 17" stroke="var(--aria-text)" strokeWidth={2} fill="none" />
               </svg>
             </button>
           </div>

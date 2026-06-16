@@ -343,20 +343,34 @@ export default function Settings({ onNavigate, user }) {
 
   return (
     <div className="aria-page">
-      <div className="px-4 pt-8 pb-8 max-w-lg mx-auto w-full">
+      <div className="px-4 pt-8 max-w-lg mx-auto w-full" style={{ paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))' }}>
 
-        <h1 className="text-2xl font-semibold text-ui-text mb-6">Menu</h1>
+        <h1 className="text-2xl font-semibold text-ui-text mb-6" style={{ fontFamily: 'var(--font-pixel)' }}>Menu</h1>
 
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Tasks</h2>
           <div className="space-y-2">
-            <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('tournament')}>
-              <p className="text-sm font-medium text-ui-text">Triage 🍵</p>
-              <p className="text-xs text-ui-subtext mt-0.5">Bin-pack the next 7 days by score; pin items that must happen on a specific day</p>
+            <Card className="settings-nav-card px-5 py-4" onClick={() => onNavigate?.('tournament')}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ui-text">Triage 🍵</p>
+                  <p className="text-xs text-ui-subtext mt-0.5">Bin-pack the next 7 days by score</p>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18, opacity: 0.3, flexShrink: 0 }}>
+                  <path d="M9 6l6 6-6 6" stroke="var(--aria-text)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </Card>
-            <Card className="px-5 py-4 hover:opacity-80 transition-opacity" onClick={() => onNavigate?.('tasks')}>
-              <p className="text-sm font-medium text-ui-text">All tasks</p>
-              <p className="text-xs text-ui-subtext mt-0.5">Browse, search, and batch-schedule</p>
+            <Card className="settings-nav-card px-5 py-4" onClick={() => onNavigate?.('tasks')}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ui-text">All tasks</p>
+                  <p className="text-xs text-ui-subtext mt-0.5">Browse, search, and batch-schedule</p>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18, opacity: 0.3, flexShrink: 0 }}>
+                  <path d="M9 6l6 6-6 6" stroke="var(--aria-text)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </Card>
           </div>
         </section>
@@ -401,15 +415,15 @@ export default function Settings({ onNavigate, user }) {
           </div>
         </section>
 
-        <section>
-          <Card className="px-5 py-4">
-            <button
-              onClick={handleLogout}
-              className="text-sm text-red-400 hover:opacity-70 transition-opacity font-medium"
-            >
-              Sign out
-            </button>
-          </Card>
+        <div className="pride-stripe my-6" />
+
+        <section className="mb-6">
+          <button
+            onClick={handleLogout}
+            className="text-sm text-red-400 hover:opacity-70 transition-opacity font-medium"
+          >
+            Sign out
+          </button>
         </section>
 
       </div>
@@ -470,14 +484,14 @@ function BuildChipToggle() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-ui-text">Show build chip</p>
-          <p className="text-xs text-ui-subtext mt-0.5">Tiny top-right tag showing the deployed build number.</p>
+          <p className="text-xs text-ui-subtext mt-0.5">Tiny bottom-right tag showing the deployed build number.</p>
         </div>
         <button
           onClick={toggle}
           aria-pressed={show}
-          className={`relative w-11 h-6 rounded-full transition-colors ${show ? 'bg-ui-accent' : 'bg-ui-border'}`}
+          className="settings-toggle"
         >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${show ? 'translate-x-5' : ''}`} />
+          <span className="settings-toggle-knob" />
         </button>
       </div>
     </Card>
