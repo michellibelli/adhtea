@@ -332,12 +332,12 @@ body {
    4. Solid lavender-white base */
 [data-theme="aria-linen"] {
   --aria-page-bg:
-    radial-gradient(ellipse 65% 50% at 0% 0%, rgba(180, 160, 210, 0.22) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 60% at 100% 0%, rgba(175, 155, 205, 0.18) 0%, transparent 65%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(185, 165, 210, 0.22) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 55% at 0% 100%, rgba(170, 150, 200, 0.18) 0%, transparent 70%),
-    radial-gradient(ellipse 30% 25% at 50% 50%, rgba(250, 247, 252, 0.5) 0%, transparent 100%),
-    linear-gradient(to bottom, #FAF7FC 0%, #F7F2FA 50%, #F5F0F8 100%);
+    radial-gradient(ellipse 70% 55% at 0% 0%, rgba(170, 140, 200, 0.45) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 65% at 100% 0%, rgba(165, 135, 195, 0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 65% 55% at 100% 100%, rgba(175, 145, 205, 0.45) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 0% 100%, rgba(160, 130, 190, 0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 30% at 50% 50%, rgba(250, 247, 252, 0.6) 0%, transparent 100%),
+    linear-gradient(to bottom, #F8F3FC 0%, #F2ECF6 50%, #EDE6F2 100%);
   --aria-page-bg-size: 100% 100%;
 }
 
