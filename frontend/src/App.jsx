@@ -290,6 +290,7 @@ export default function App() {
           pointerEvents: 'none', textAlign: 'right', lineHeight: '1.3', opacity: 0.55,
         }}>
           <div>{typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
+          <a href="https://www.vecteezy.com" target="_blank" rel="noopener noreferrer" style={{ pointerEvents: 'auto', color: 'inherit', textDecoration: 'none' }}>Vecteezy.com</a>
         </div>
       )}
       {authed
