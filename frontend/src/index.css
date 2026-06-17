@@ -334,16 +334,10 @@ body {
 [data-theme="aria-linen"] {
   --aria-page-bg:
     /* Linen weave texture — fine crosshatch grain */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='none'/%3E%3Cline x1='0' y1='0' x2='12' y2='0' stroke='%23C8B8D4' stroke-width='0.3' opacity='0.35'/%3E%3Cline x1='0' y1='4' x2='12' y2='4' stroke='%23C8B8D4' stroke-width='0.25' opacity='0.25'/%3E%3Cline x1='0' y1='8' x2='12' y2='8' stroke='%23C8B8D4' stroke-width='0.3' opacity='0.30'/%3E%3Cline x1='0' y1='0' x2='0' y2='12' stroke='%23C8B8D4' stroke-width='0.25' opacity='0.20'/%3E%3Cline x1='4' y1='0' x2='4' y2='12' stroke='%23C8B8D4' stroke-width='0.2' opacity='0.15'/%3E%3Cline x1='8' y1='0' x2='8' y2='12' stroke='%23C8B8D4' stroke-width='0.25' opacity='0.20'/%3E%3C/svg%3E"),
-    /* Soft dye variation — uneven lavender wash like hand-dyed cotton */
-    radial-gradient(ellipse 80% 70% at 25% 20%, rgba(195, 175, 215, 0.18) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 75% 80%, rgba(185, 165, 205, 0.15) 0%, transparent 65%),
-    radial-gradient(ellipse 70% 50% at 80% 15%, rgba(190, 170, 210, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 65% at 15% 85%, rgba(188, 168, 208, 0.14) 0%, transparent 65%),
-    /* Base cotton — warm lavender-white */
-    linear-gradient(to bottom, #F6F0FA 0%, #F2EBF6 50%, #EFE8F4 100%);
-  --aria-page-bg-size: 12px 12px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
-  --aria-page-bg-pos: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='none'/%3E%3Cline x1='0' y1='0' x2='12' y2='0' stroke='%23C8B8D4' stroke-width='0.3' opacity='0.35'/%3E%3Cline x1='0' y1='4' x2='12' y2='4' stroke='%23C8B8D4' stroke-width='0.25' opacity='0.25'/%3E%3Cline x1='0' y1='8' x2='12' y2='8' stroke='%23C8B8D4' stroke-width='0.3' opacity='0.30'/%3E%3Cline x1='0' y1='0' x2='0' y2='12' stroke='%23C8B8D4' stroke-width='0.25' opacity='0.20'/%3E%3Cline x1='4' y1='0' x2='4' y2='12' stroke='%23C8B8D4' stroke-width='0.2' opacity='0.15'/%3E%3Cline x1='8' y1='0' x2='8' y2='12' stroke='%23C8B8D4' stroke-width='0.25' opacity='0.20'/%3E%3C/svg%3E");
+  --aria-page-bg-size: 12px 12px;
+  --aria-page-bg-pos: 0 0;
+  --aria-body-bg: #F2EBF6;
 }
 
 /* Paper grain over watercolor — simulates pigment sitting in paper fibers */
