@@ -324,10 +324,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
   return (
     <div className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
-      <div className="flex-1 grid gap-3 px-4 max-w-sm mx-auto w-full" style={{ gridTemplateRows: '1fr auto', minHeight: 0, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 flex flex-col px-4 max-w-sm mx-auto w-full" style={{ gap: 16, minHeight: 0, paddingTop: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
 
-        {/* Teabag zone — vertically centered in space above tea box */}
-        <div className="flex items-center justify-center min-h-0">
+        {/* Teabag zone */}
+        <div className="flex justify-center min-h-0">
           {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center ${
             celebrate ? ''
@@ -349,26 +349,26 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               {(() => {
                 const isProject = !!task?.project_name
                 const colors = isProject ? TAG_COLORS.project : (TAG_COLORS[task?.task_type] || TAG_COLORS.task)
-                const tagH = isProject ? 54 : 43
+                const tagH = isProject ? 84 : 66
                 return (
                   <div
                     onClick={() => !celebrate && setShowEdit(true)}
                     title="Edit task"
                     style={{
-                      width: 80, height: tagH,
+                      width: 130, height: tagH,
                       background: colors.bg,
                       border: `2px solid ${colors.border}`,
-                      borderRadius: 7,
+                      borderRadius: 10,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: `2px 2px 0 ${colors.shadow}`,
+                      boxShadow: `3px 3px 0 ${colors.shadow}`,
                       cursor: celebrate ? 'default' : 'pointer',
                     }}
                   >
-                    <span style={{ color: colors.text, lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                    <span style={{ color: colors.text, lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '6px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                       {isProject ? (
                         <>
-                          <span style={{ fontSize: 16 }}>Project</span>
-                          <span style={{ fontWeight: 500, fontSize: 10, opacity: 0.9, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                          <span style={{ fontSize: 28 }}>Project</span>
+                          <span style={{ fontWeight: 500, fontSize: 18, opacity: 0.9, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                             {task.project_name}
                           </span>
                         </>
@@ -376,10 +376,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                         <>
                           {(() => {
                             const name = TAG_NAMES[task?.task_type] || 'Task'
-                            const fs = name.length <= 4 ? 10 : name.length <= 5 ? 9 : 8
+                            const fs = name.length <= 4 ? 20 : name.length <= 5 ? 18 : 16
                             return <span style={{ fontSize: fs }}>{name}</span>
                           })()}
-                          {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 8, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
+                          {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 14, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
                         </>
                       )}
                     </span>

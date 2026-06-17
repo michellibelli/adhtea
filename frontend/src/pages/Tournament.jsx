@@ -24,7 +24,7 @@ import EditTaskSheet from '../components/EditTaskSheet'
 import { PageLoading, PageError } from '../components/PageState'
 import { markTriageDone } from '../utils/triage'
 
-const MAX_TODAY = 15
+const FALLBACK_MAX_TODAY = 15
 const MAX_TOTAL = 20
 
 function todayIso() {
@@ -267,6 +267,8 @@ export default function Tournament({ onDone }) {
   const [overflowItems, setOverflowItems] = useState(null)
   const [showWhyId,   setShowWhyId]   = useState(null)
   const [addingTask,  setAddingTask]  = useState(false)
+  const [capacity,    setCapacity]    = useState(null)
+  const [showOverWarning, setShowOverWarning] = useState(false)
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -277,6 +279,8 @@ export default function Tournament({ onDone }) {
     setLoading(true); setError(null)
     try {
       const data = await previewTriage()
+      if (data.today_capacity) setCapacity(data.today_capacity)
+      const maxToday = data.today_capacity?.max_slots ?? FALLBACK_MAX_TODAY
       const flat = [...data.days.flatMap(d => d.items), ...data.overflow]
       const seen = new Set()
       const unique = flat.filter(t => {
@@ -287,7 +291,7 @@ export default function Tournament({ onDone }) {
       unique.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       setAllTasks(unique)
       const iso = todayIso()
-      const today = unique.filter(t => t.status === 'today' || t.due_date === iso).slice(0, MAX_TODAY)
+      const today = unique.filter(t => t.status === 'today' || t.due_date === iso).slice(0, maxToday)
       setTriageTasks(today)
     } catch (e) {
       setError(e?.message || 'Could not load triage')
@@ -299,6 +303,7 @@ export default function Tournament({ onDone }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { refresh() }, [refresh])
 
+  const maxToday = capacity?.max_slots ?? FALLBACK_MAX_TODAY
   const triageIds = useMemo(() => new Set(triageTasks.map(t => t.id)), [triageTasks])
 
   const upNextSlots = Math.max(0, MAX_TOTAL - triageTasks.length)
@@ -317,7 +322,7 @@ export default function Tournament({ onDone }) {
   // ── Handlers ──
 
   async function handleCreateTask(title) {
-    if (addingTask || triageTasks.length >= MAX_TODAY) return
+    if (addingTask || triageTasks.length >= maxToday) return
     setAddingTask(true); setError(null)
     try {
       const iso = todayIso()
@@ -332,7 +337,7 @@ export default function Tournament({ onDone }) {
   }
 
   function handlePickExisting(task) {
-    if (triageTasks.length >= MAX_TODAY) return
+    if (triageTasks.length >= maxToday) return
     if (triageIds.has(task.id)) return
     const iso = todayIso()
     const updated = { ...task, due_date: iso, status: 'today' }
@@ -342,7 +347,7 @@ export default function Tournament({ onDone }) {
   }
 
   async function handlePromote(task) {
-    if (triageTasks.length >= MAX_TODAY) return
+    if (triageTasks.length >= maxToday) return
     const iso = todayIso()
     const updated = { ...task, due_date: iso, status: 'today' }
     setTriageTasks(prev => [...prev, updated])
@@ -384,7 +389,7 @@ export default function Tournament({ onDone }) {
     const isFromUpNext = !triageIds.has(active.id)
     const isOverToday = triageIds.has(over.id)
 
-    if (isFromUpNext && isOverToday && triageTasks.length < MAX_TODAY) {
+    if (isFromUpNext && isOverToday && triageTasks.length < maxToday) {
       const task = allTasks.find(t => t.id === active.id)
       if (!task) return
       const iso = todayIso()
@@ -401,7 +406,7 @@ export default function Tournament({ onDone }) {
 
     if (isFromUpNext) {
       const task = allTasks.find(t => t.id === active.id)
-      if (task && triageTasks.length < MAX_TODAY) handlePromote(task)
+      if (task && triageTasks.length < maxToday) handlePromote(task)
       return
     }
 
@@ -421,8 +426,13 @@ export default function Tournament({ onDone }) {
     } finally { setBusy(false) }
   }
 
-  async function handleApply() {
+  async function handleApply(force = false) {
+    if (!force && capacity && triageTasks.length > maxToday) {
+      setShowOverWarning(true)
+      return
+    }
     setBusy(true); setError(null)
+    setShowOverWarning(false)
     try {
       const result = await applyOrderedTriage(triageTasks.map(t => t.id))
       if (result.overflow && result.overflow.length > 0) {
@@ -480,13 +490,47 @@ export default function Tournament({ onDone }) {
           </div>
         </div>
 
+        {/* Capacity bar */}
+        {capacity && (
+          <div className="mb-3 px-0.5">
+            <div className="flex items-center justify-between text-[10px] text-ui-subtext mb-1">
+              <span>Capacity: {Math.round(capacity.remaining)} of {Math.round(capacity.budget)} units free</span>
+              {capacity.routine_drain > 0 && <span>{capacity.routine_drain} used by routines</span>}
+            </div>
+            <div className="h-1.5 rounded-full bg-ui-border/40 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, ((capacity.budget - capacity.remaining) / capacity.budget) * 100)}%`,
+                  background: triageTasks.length > maxToday ? '#D97706' : 'var(--aria-accent, #8B7355)',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Over-capacity warning */}
+        {showOverWarning && (
+          <Card className="px-4 py-3 mb-3 border-amber-400/50 bg-amber-400/10">
+            <p className="text-sm text-ui-text font-medium mb-1">Over capacity</p>
+            <p className="text-xs text-ui-subtext mb-3">
+              You have {triageTasks.length} tasks but capacity allows {maxToday}.
+              Apply anyway, or go back and trim.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowOverWarning(false)}>Go back</Button>
+              <Button size="sm" onClick={() => handleApply(true)}>Apply anyway</Button>
+            </div>
+          </Card>
+        )}
+
         {/* ── Today section ── */}
         <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider mb-2 px-0.5">
-          Today ({triageTasks.length}/{MAX_TODAY})
+          Today ({triageTasks.length}/{maxToday})
         </p>
 
         {/* Add new task input */}
-        {triageTasks.length < MAX_TODAY && (
+        {triageTasks.length < maxToday && (
           <NewTaskInput
             allTasks={allTasks}
             triageIds={triageIds}
@@ -534,7 +578,7 @@ export default function Tournament({ onDone }) {
                       onSnooze={handleSnooze}
                       onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
                       onPromote={handlePromote}
-                      canPromote={triageTasks.length < MAX_TODAY}
+                      canPromote={triageTasks.length < maxToday}
                       onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
                       showWhy={showWhyId === t.id}
                     />

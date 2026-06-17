@@ -447,8 +447,18 @@ def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime)
 
 def _serialize_layout(days, overflow):
     """Convert the bin-pack output into JSON-friendly response shape."""
+    today = days[0] if days else None
+    today_remaining = max(0.0, today["budget"] - today["committed"] - today["routine_drain"]) if today else 0.0
+    avg_weight = WEIGHT_UNITS["medium"]
     return {
         "window_days": ROLLING_WINDOW_DAYS,
+        "today_capacity": {
+            "budget": today["budget"] if today else 0,
+            "committed": today["committed"] if today else 0,
+            "routine_drain": today["routine_drain"] if today else 0,
+            "remaining": today_remaining,
+            "max_slots": int(today_remaining // avg_weight) if avg_weight else 0,
+        },
         "days": [
             {
                 "date": d["date"].isoformat(),

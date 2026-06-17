@@ -704,7 +704,6 @@ def get_today(
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
     archive_past_appointments(current_user, db)
-    promote_due_tasks(current_user, db)
     demote_misclassified_today(current_user, db)
     demote_domain_violations(current_user, db)
     _maybe_sync_gcal(current_user.id, db)
