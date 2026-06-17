@@ -134,8 +134,8 @@ def test_due_beyond_window_no_bonus(client, auth_headers, db_session):
 
 def test_stalled_project_boosts_its_tasks(client, auth_headers, db_session):
     user = _user(db_session)
-    # Project created 30 days ago, no completions
-    old_create = datetime.now(timezone.utc) - timedelta(days=30)
+    # Project created 30 days before test's TODAY, no completions
+    old_create = NOON - timedelta(days=30)
     p = Project(user_id=user.id, title="Stalled", status="active", created_at=old_create)
     db_session.add(p)
     db_session.commit()
