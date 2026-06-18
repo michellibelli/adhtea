@@ -418,3 +418,44 @@ class CapacitySnapshot(Base):
     executive_capacitor = Column(Float, nullable=False)
     overall = Column(Float, nullable=False)
     computed_at = Column(DateTime, default=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Weekly Snapshot (Phase 6 — PID nudge system)
+# ---------------------------------------------------------------------------
+
+class WeeklySnapshot(Base):
+    __tablename__ = "weekly_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    week_start = Column(Date, nullable=False, index=True)
+
+    avg_sleep = Column(Float, nullable=True)
+    avg_meals = Column(Float, nullable=True)
+    exercise_days = Column(Integer, nullable=True)
+    check_in_days = Column(Integer, nullable=True)
+    weekdays_in_period = Column(Integer, nullable=True)
+    tasks_completed = Column(Integer, nullable=True)
+    tasks_pushed = Column(Integer, nullable=True)
+    stalled_projects = Column(Text, nullable=True)
+    overall_capacity_avg = Column(Float, nullable=True)
+    pid_state = Column(Text, nullable=True)
+    computed_at = Column(DateTime, default=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Nudge Log (Phase 6 — tracks delivered nudges + user responses)
+# ---------------------------------------------------------------------------
+
+class NudgeLog(Base):
+    __tablename__ = "nudge_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    nudge_type = Column(String(20), nullable=False)
+    variable = Column(String(30), nullable=False)
+    message = Column(Text, nullable=True)
+    shown_at = Column(DateTime, default=utcnow, index=True)
+    response = Column(String(20), nullable=True)
+    response_at = Column(DateTime, nullable=True)

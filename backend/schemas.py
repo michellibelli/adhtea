@@ -472,3 +472,41 @@ class ProjectDetailResponse(BaseModel):
     tasks: list[ProjectTaskSummary]
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Insights / PID Nudge (Phase 6)
+# ---------------------------------------------------------------------------
+
+class WeeklySnapshotResponse(BaseModel):
+    id: int
+    user_id: int
+    week_start: date
+    avg_sleep: Optional[float]
+    avg_meals: Optional[float]
+    exercise_days: Optional[int]
+    check_in_days: Optional[int]
+    weekdays_in_period: Optional[int]
+    tasks_completed: Optional[int]
+    tasks_pushed: Optional[int]
+    stalled_projects: Optional[list[int]] = None
+    overall_capacity_avg: Optional[float]
+    pid_state: Optional[dict] = None
+    computed_at: datetime
+    insight_copy: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class NudgeResponse(BaseModel):
+    id: int
+    nudge_type: str
+    variable: str
+    message: str
+    shown_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class NudgeRespondRequest(BaseModel):
+    response: str

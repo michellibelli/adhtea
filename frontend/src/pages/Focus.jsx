@@ -8,6 +8,9 @@ import { minutesUntil, isTimedVisible } from '../utils/timing'
 import { TAG_COLORS } from '../utils/taskColors'
 import TeaBox from '../components/TeaBox'
 import { PageError } from '../components/PageState'
+import NudgeModal from '../components/NudgeModal'
+import WeeklyInsightCard from '../components/WeeklyInsightCard'
+import { getNudge } from '../api/insights'
 
 
 const TEA_PUNS = [
@@ -139,6 +142,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   const [showSnooze,    setShowSnooze]    = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
+  const [pendingNudge,  setPendingNudge]  = useState(null)
+  const nudgeRef = useRef(null)
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
   const [bonusDone,     setBonusDone]     = useState(() => {
@@ -211,6 +216,21 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
     }
   }
 
+  function nudgeCooldownOk() {
+    const COOLDOWN_MS = 2 * 60 * 60 * 1000
+    const last = Number(localStorage.getItem('aria_last_nudge_ts') || '0')
+    return Date.now() - last >= COOLDOWN_MS
+  }
+
+  function finishTransition(pending) {
+    setCelebrate(false)
+    setLeaving(true)
+    celebrationTimersRef.current = [
+      setTimeout(() => setLeaving(false), 300),
+    ]
+    if (pending && !pending.wasBonus) fetchAll()
+  }
+
   function skipCelebration() {
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = []
@@ -224,12 +244,22 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       }
     }
     setCelebrate(false)
-    setLeaving(true)
-    // 300ms blank gap, then fade in next card
-    celebrationTimersRef.current = [
-      setTimeout(() => setLeaving(false), 300),
-    ]
-    if (pending && !pending.wasBonus) fetchAll()
+
+    const nudge = nudgeRef.current
+    nudgeRef.current = null
+    if (nudge && nudgeCooldownOk()) {
+      setPendingNudge({ ...nudge, _pending: pending })
+      return
+    }
+
+    finishTransition(pending)
+  }
+
+  function handleNudgeDismiss() {
+    const pending = pendingNudge?._pending || null
+    localStorage.setItem('aria_last_nudge_ts', String(Date.now()))
+    setPendingNudge(null)
+    finishTransition(pending)
   }
 
   async function handleComplete() {
@@ -249,6 +279,10 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
       })
     }
     completeTask(taskId)
+    nudgeRef.current = null
+    if (nudgeCooldownOk()) {
+      getNudge().then((n) => { nudgeRef.current = n }).catch(() => {})
+    }
     setCelebrate('dunk')
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = [
@@ -492,6 +526,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
           </div>{/* end relative wrapper */}
         </div>{/* end teabag zone */}
 
+        {!celebrate && <WeeklyInsightCard />}
+
         {/* Tea box flanked by Capture (left) and Done (right) */}
         <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
               <button
@@ -551,6 +587,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task?.domain_name} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
+      {pendingNudge && <NudgeModal nudge={pendingNudge} onDismiss={handleNudgeDismiss} />}
     </div>
   )
 }

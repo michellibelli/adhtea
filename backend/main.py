@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, domains, triage
+from routes import projects, domains, triage, insights
 
 load_dotenv()
 
@@ -124,6 +124,7 @@ def _migrate(target_engine=None):
                 "domains", "projects", "tasks", "routines", "self_care_logs",
                 "medication_schedules", "medication_logs", "invite_tokens",
                 "google_calendar_tokens", "capacity_snapshots",
+                "weekly_snapshots", "nudge_logs",
             ):
                 conn.execute(text(f"ALTER TABLE {_table} ENABLE ROW LEVEL SECURITY"))
             conn.commit()
@@ -164,6 +165,7 @@ app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
 app.include_router(domains.router)
 app.include_router(triage.router)
+app.include_router(insights.router)
 
 
 @app.get("/health")
