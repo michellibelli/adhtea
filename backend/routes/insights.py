@@ -64,21 +64,15 @@ def _serialize_snapshot(snap: WeeklySnapshot, insight_copy: str | None = None) -
     return d
 
 
-@router.post("/compute-weekly", response_model=WeeklySnapshotResponse)
-def compute_weekly(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    today = _user_today(current_user)
-    ws = _week_start(today)
-    window_start = ws
-    window_end = min(ws + timedelta(days=6), today)
+def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklySnapshot, str]:
+    today = _user_today(user)
+    window_end = min(target_ws + timedelta(days=6), today)
 
     logs = (
         db.query(SelfCareLog)
         .filter(
-            SelfCareLog.user_id == current_user.id,
-            SelfCareLog.log_date >= window_start,
+            SelfCareLog.user_id == user.id,
+            SelfCareLog.log_date >= target_ws,
             SelfCareLog.log_date <= window_end,
         )
         .all()
@@ -88,20 +82,18 @@ def compute_weekly(
     meal_vals = [l.meals for l in logs if l.meals is not None]
     exercise_days = sum(1 for l in logs if l.exercise)
     check_in_days = len(logs)
-    weekdays = _count_weekdays(window_start, window_end)
+    weekdays = _count_weekdays(target_ws, window_end)
 
     avg_sleep = sum(sleep_vals) / len(sleep_vals) if sleep_vals else None
     avg_meals = sum(meal_vals) / len(meal_vals) if meal_vals else None
 
-    checkin_rate = check_in_days / weekdays if weekdays > 0 else 0
-
-    day_start = datetime(window_start.year, window_start.month, window_start.day)
+    day_start = datetime(target_ws.year, target_ws.month, target_ws.day)
     day_end = datetime(window_end.year, window_end.month, window_end.day, 23, 59, 59)
 
     tasks_completed = (
         db.query(func.count(Task.id))
         .filter(
-            Task.owner_id == current_user.id,
+            Task.owner_id == user.id,
             Task.status == TaskStatus.done,
             Task.completed_at >= day_start,
             Task.completed_at <= day_end,
@@ -112,21 +104,21 @@ def compute_weekly(
     tasks_pushed = (
         db.query(func.count(Task.id))
         .filter(
-            Task.owner_id == current_user.id,
+            Task.owner_id == user.id,
             Task.status != TaskStatus.deleted,
             Task.push_count >= 3,
         )
         .scalar()
     ) or 0
 
-    stall_map = project_stall_map(db, current_user.id, today)
+    stall_map = project_stall_map(db, user.id, today)
     stalled_ids = [pid for pid, stalled in stall_map.items() if stalled]
 
     caps = (
         db.query(CapacitySnapshot)
         .filter(
-            CapacitySnapshot.user_id == current_user.id,
-            CapacitySnapshot.log_date >= window_start,
+            CapacitySnapshot.user_id == user.id,
+            CapacitySnapshot.log_date >= target_ws,
             CapacitySnapshot.log_date <= window_end,
         )
         .all()
@@ -136,14 +128,15 @@ def compute_weekly(
     prior = (
         db.query(WeeklySnapshot)
         .filter(
-            WeeklySnapshot.user_id == current_user.id,
-            WeeklySnapshot.week_start < ws,
+            WeeklySnapshot.user_id == user.id,
+            WeeklySnapshot.week_start < target_ws,
         )
         .order_by(WeeklySnapshot.week_start.desc())
         .first()
     )
     prior_pid = json.loads(prior.pid_state) if prior and prior.pid_state else None
 
+    checkin_rate = check_in_days / weekdays if weekdays > 0 else 0
     current_averages = {
         "sleep": avg_sleep or 0,
         "meals": avg_meals or 0,
@@ -158,8 +151,8 @@ def compute_weekly(
     snap = (
         db.query(WeeklySnapshot)
         .filter(
-            WeeklySnapshot.user_id == current_user.id,
-            WeeklySnapshot.week_start == ws,
+            WeeklySnapshot.user_id == user.id,
+            WeeklySnapshot.week_start == target_ws,
         )
         .first()
     )
@@ -178,8 +171,8 @@ def compute_weekly(
         snap.computed_at = utcnow()
     else:
         snap = WeeklySnapshot(
-            user_id=current_user.id,
-            week_start=ws,
+            user_id=user.id,
+            week_start=target_ws,
             avg_sleep=avg_sleep,
             avg_meals=avg_meals,
             exercise_days=exercise_days,
@@ -195,6 +188,45 @@ def compute_weekly(
 
     db.commit()
     db.refresh(snap)
+    return snap, insight_copy
+
+
+def _ensure_current_snapshot(db: Session, user: User) -> WeeklySnapshot | None:
+    today = _user_today(user)
+    ws = _week_start(today)
+    existing = (
+        db.query(WeeklySnapshot)
+        .filter(
+            WeeklySnapshot.user_id == user.id,
+            WeeklySnapshot.week_start == ws,
+        )
+        .first()
+    )
+    if existing:
+        return None
+    has_logs = (
+        db.query(SelfCareLog.id)
+        .filter(
+            SelfCareLog.user_id == user.id,
+            SelfCareLog.log_date >= ws,
+            SelfCareLog.log_date <= min(ws + timedelta(days=6), today),
+        )
+        .first()
+    )
+    if not has_logs:
+        return None
+    snap, _ = _compute_snapshot(db, user, ws)
+    return snap
+
+
+@router.post("/compute-weekly", response_model=WeeklySnapshotResponse)
+def compute_weekly(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    week_start: date | None = None,
+):
+    ws = week_start if week_start else _week_start(_user_today(current_user))
+    snap, insight_copy = _compute_snapshot(db, current_user, ws)
     return _serialize_snapshot(snap, insight_copy)
 
 
@@ -203,6 +235,8 @@ def get_weekly(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    _ensure_current_snapshot(db, current_user)
+
     snap = (
         db.query(WeeklySnapshot)
         .filter(WeeklySnapshot.user_id == current_user.id)
@@ -238,6 +272,8 @@ def get_nudge(
 
     if today.weekday() >= 5:
         return None
+
+    _ensure_current_snapshot(db, current_user)
 
     snap = (
         db.query(WeeklySnapshot)

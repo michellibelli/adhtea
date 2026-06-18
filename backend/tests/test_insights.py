@@ -133,6 +133,23 @@ class TestComputeWeekly:
         r = client.post("/insights/compute-weekly", headers=auth_headers)
         assert r.json()["tasks_completed"] == 0
 
+    def test_week_start_param(self, client, auth_headers):
+        target = date(2026, 6, 8)
+        for offset in range(5):
+            d = target + timedelta(days=offset)
+            client.post("/self-care/log", json={
+                "log_date": d.isoformat(),
+                "sleep_hours": 6.5,
+                "sleep_quality": 3,
+                "meals": 2,
+                "mood": 3,
+            }, headers=auth_headers)
+        r = client.post(f"/insights/compute-weekly?week_start={target.isoformat()}", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["week_start"] == target.isoformat()
+        assert data["avg_sleep"] == 6.5
+
 
 # ---------------------------------------------------------------------------
 # /insights/weekly
@@ -159,6 +176,22 @@ class TestGetWeekly:
         data = r.json()
         assert data is not None
         assert data["avg_sleep"] == 7.0
+
+    def test_auto_computes_when_no_snapshot(self, client, auth_headers):
+        today = date.today()
+        client.post("/self-care/log", json={
+            "log_date": today.isoformat(),
+            "sleep_hours": 8.0,
+            "sleep_quality": 5,
+            "meals": 3,
+            "mood": 4,
+        }, headers=auth_headers)
+        r = client.get("/insights/weekly", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data is not None
+        assert data["avg_sleep"] == 8.0
+        assert data["pid_state"] is not None
 
 
 # ---------------------------------------------------------------------------

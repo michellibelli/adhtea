@@ -3,6 +3,7 @@ import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
 import { getMedication, createMedication, updateMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
 import { getMedName, setMedName } from '../utils/medicationStore'
 import { createTask } from '../api/tasks'
+import { getWeekly } from '../api/insights'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -98,6 +99,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
   const [checkinText,   setCheckinText]   = useState('')
   const [checkinSaving, setCheckinSaving] = useState(false)
   const [checkinDone,   setCheckinDone]   = useState(false)
+  const [insightCopy,   setInsightCopy]   = useState(null)
 
   function fetchAll() {
     setLoading(true); setError(null)
@@ -130,6 +132,17 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(fetchAll, [])
+
+  useEffect(() => {
+    if (!gateMode) return
+    let cancelled = false
+    getWeekly()
+      .then((data) => {
+        if (!cancelled && data?.insight_copy) setInsightCopy(data.insight_copy)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [gateMode])
 
   async function handleSave() {
     setSaving(true)
@@ -194,6 +207,11 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
               Quick log first — your capacity for today drives what Triage
               surfaces next.
             </p>
+            {insightCopy && (
+              <p className="text-xs text-ui-text mt-2 pt-2 border-t border-ui-accent/20 leading-relaxed">
+                {insightCopy}
+              </p>
+            )}
           </div>
         )}
 
