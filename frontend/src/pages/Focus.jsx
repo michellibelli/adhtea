@@ -540,7 +540,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 style={isLinen ? { position: 'absolute', left: -80, bottom: -10 } : undefined}
               >
                 {isLinen ? (
-                  <img src="/flowers/tea-kettle-desat.png" alt="Capture" className="focus-wc-img" style={{ width: 91, height: 91 }} />
+                  <img src="/flowers/tea-kettle-desat.png?v=2" alt="Capture" className="focus-wc-img" style={{ width: 91, height: 91 }} />
                 ) : (
                 <svg viewBox="-2 20 60 62" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 50, height: 52 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
@@ -574,7 +574,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 style={isLinen ? { position: 'absolute', right: -85, bottom: -10 } : undefined}
               >
                 {isLinen ? (
-                  <img src="/flowers/tea-cup-desat.png" alt="Done" className="focus-wc-img" style={{ width: 91, height: 91 }} />
+                  <img src="/flowers/tea-cup-desat.png?v=2" alt="Done" className="focus-wc-img" style={{ width: 91, height: 91 }} />
                 ) : (
                 <svg viewBox="-2 18 114 68" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 54, height: 32 }}>
                   <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#C4A878" stroke="#8A7050" strokeWidth={2} />
