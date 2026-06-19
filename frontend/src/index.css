@@ -340,6 +340,40 @@ body {
   --aria-body-bg: #F2EBF6;
 }
 
+/* Linen floral decorations — side vines + bottom garland.
+   Hidden by default; Linen theme reveals them. */
+.linen-flower-banner {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  height: 140px;
+  background: url('/linen-flower-banner.png') center bottom / contain no-repeat;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.82;
+}
+.linen-side-vines {
+  display: none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.linen-vine-img {
+  position: absolute;
+  opacity: 0.5;
+  pointer-events: none;
+}
+[data-theme="aria-linen"] .linen-flower-banner,
+[data-theme="aria-linen"] .linen-side-vines {
+  display: block;
+}
+
 /* Paper grain over watercolor — simulates pigment sitting in paper fibers */
 [data-theme="aria-linen"] .aria-page-bg::after {
   content: '';

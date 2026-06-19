@@ -282,6 +282,19 @@ export default function App() {
   return (
     <ThemeProvider>
       <div className="aria-page-bg" aria-hidden="true" />
+      <div className="linen-flower-banner" aria-hidden="true" />
+      <div className="linen-side-vines" aria-hidden="true">
+        {/* Left vine */}
+        <img className="linen-vine-img" src="/flowers/leaf_3-removebg-preview.png" alt="" style={{ left: -8, top: '8%', width: 50, transform: 'rotate(-15deg)' }} />
+        <img className="linen-vine-img" src="/flowers/leaf_7-removebg-preview.png" alt="" style={{ left: -5, top: '30%', width: 50, transform: 'rotate(10deg)' }} />
+        <img className="linen-vine-img" src="/flowers/flower_5-removebg-preview.png" alt="" style={{ left: -10, top: '52%', width: 50, transform: 'rotate(-10deg)' }} />
+        <img className="linen-vine-img" src="/flowers/leaf_5-removebg-preview.png" alt="" style={{ left: -5, top: '74%', width: 50, transform: 'rotate(5deg)' }} />
+        {/* Right vine */}
+        <img className="linen-vine-img" src="/flowers/leaf_6-removebg-preview.png" alt="" style={{ right: -5, top: '12%', width: 45, transform: 'scaleX(-1) rotate(-15deg)' }} />
+        <img className="linen-vine-img" src="/flowers/leaf_4-removebg-preview.png" alt="" style={{ right: -5, top: '35%', width: 45, transform: 'scaleX(-1) rotate(10deg)' }} />
+        <img className="linen-vine-img" src="/flowers/leaf_2-removebg-preview.png" alt="" style={{ right: -8, top: '55%', width: 45, transform: 'scaleX(-1) rotate(-5deg)' }} />
+        <img className="linen-vine-img" src="/flowers/leaf_7-removebg-preview.png" alt="" style={{ right: -5, top: '75%', width: 50, transform: 'scaleX(-1) rotate(15deg)' }} />
+      </div>
       {showChip && (
         <div style={{
           position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom))', right: 6, zIndex: 9999,
