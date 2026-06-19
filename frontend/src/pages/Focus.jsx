@@ -537,7 +537,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
                 className={isLinen ? 'focus-btn-wc active:scale-95 transition-all' : 'focus-btn-capture flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all'}
-                style={isLinen ? { position: 'absolute', left: -80, bottom: 0 } : undefined}
+                style={isLinen ? { position: 'absolute', left: -80, bottom: -10 } : undefined}
               >
                 {isLinen ? (
                   <img src="/flowers/tea-kettle-desat.png" alt="Capture" className="focus-wc-img" style={{ width: 91, height: 91 }} />
@@ -571,7 +571,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                 onClick={handleComplete}
                 aria-label="Done"
                 className={isLinen ? 'focus-btn-wc active:scale-95 transition-all' : 'focus-btn-done flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all'}
-                style={isLinen ? { position: 'absolute', right: -80, bottom: 0 } : undefined}
+                style={isLinen ? { position: 'absolute', right: -85, bottom: -10 } : undefined}
               >
                 {isLinen ? (
                   <img src="/flowers/tea-cup-desat.png" alt="Done" className="focus-wc-img" style={{ width: 91, height: 91 }} />
