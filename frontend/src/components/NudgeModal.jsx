@@ -48,6 +48,7 @@ export default function NudgeModal({ nudge, onDismiss }) {
     >
       <Card
         className="px-6 py-5 max-w-sm w-full"
+        style={{ background: 'color-mix(in srgb, var(--aria-surface) 80%, transparent)' , backdropFilter: 'blur(8px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3 mb-3">

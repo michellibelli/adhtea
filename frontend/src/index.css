@@ -769,6 +769,20 @@ body {
   box-shadow: 0 2px 8px rgba(61,53,69,0.10), inset 0 1px 0 rgba(255,255,255,0.5);
 }
 
+.focus-btn-wc {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+}
+.focus-wc-img {
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(61,53,69,0.15));
+  transition: transform 0.15s;
+}
+.focus-btn-wc:hover .focus-wc-img { transform: scale(1.08); }
+
 /* Bag pendulum sway — pivots at top center so the string + bag swing as one.
    Tag is NOT inside the sway wrapper so it stays still where the string
    meets the (imaginary) cup rim above. */

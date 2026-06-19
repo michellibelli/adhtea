@@ -223,7 +223,7 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="pt-[64px]">
+      <main className="pt-[64px] relative z-[2]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} />}

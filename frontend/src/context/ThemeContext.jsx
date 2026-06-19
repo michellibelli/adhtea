@@ -11,7 +11,7 @@ export const THEMES = [
 ]
 
 const STORAGE_KEY = 'aria_theme'
-const DEFAULT_THEME = 'aria-cafe'
+const DEFAULT_THEME = 'aria-linen'
 
 function readStoredTheme() {
   const v = localStorage.getItem(STORAGE_KEY)

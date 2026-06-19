@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useContext } from 'react'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
 import EditTaskSheet from '../components/EditTaskSheet'
@@ -11,6 +11,7 @@ import { PageError } from '../components/PageState'
 import NudgeModal from '../components/NudgeModal'
 import WeeklyInsightCard from '../components/WeeklyInsightCard'
 import { getNudge } from '../api/insights'
+import { ThemeContext } from '../context/ThemeContext'
 
 
 const TEA_PUNS = [
@@ -144,6 +145,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [pendingNudge,  setPendingNudge]  = useState(null)
   const nudgeRef = useRef(null)
+  const { theme } = useContext(ThemeContext)
+  const isLinen = theme === 'aria-linen'
   const [localDone,     setLocalDone]     = useState(0)
   const [doneTodayBase, setDoneTodayBase] = useState(0)
   const [bonusDone,     setBonusDone]     = useState(() => {
@@ -529,15 +532,18 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
         {!celebrate && <WeeklyInsightCard />}
 
         {/* Tea box flanked by Capture (left) and Done (right) */}
-        <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: 380, zIndex: 5 }}>
+        <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: isLinen ? 220 : 380, zIndex: 5 }}>
               <button
                 onClick={() => onNavigate?.('capture')}
                 aria-label="Capture"
-                className="focus-btn-capture flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                className={isLinen ? 'focus-btn-wc active:scale-95 transition-all' : 'focus-btn-capture flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all'}
+                style={isLinen ? { position: 'absolute', left: -80, bottom: 0 } : undefined}
               >
+                {isLinen ? (
+                  <img src="/flowers/tea-kettle-desat.png" alt="Capture" className="focus-wc-img" style={{ width: 91, height: 91 }} />
+                ) : (
                 <svg viewBox="-2 20 60 62" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 50, height: 52 }}>
                   <ellipse cx="26" cy="55" rx="18" ry="24" fill="url(#kettleGrad)" stroke="#8A9EAD" strokeWidth={1.5} />
-                  {/* Plus sign */}
                   <line x1="26" y1="47" x2="26" y2="63" stroke="#4A5E6D" strokeWidth={2.5} opacity="0.5" />
                   <line x1="18" y1="55" x2="34" y2="55" stroke="#4A5E6D" strokeWidth={2.5} opacity="0.5" />
                   <ellipse cx="26" cy="32" rx="11" ry="3" fill="#D4C8B0" stroke="#8A9EAD" strokeWidth={1.5} />
@@ -556,6 +562,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                     </linearGradient>
                   </defs>
                 </svg>
+                )}
               </button>
               <div className="flex-1 min-w-0">
                 <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
@@ -563,8 +570,12 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
               <button
                 onClick={handleComplete}
                 aria-label="Done"
-                className="focus-btn-done flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                className={isLinen ? 'focus-btn-wc active:scale-95 transition-all' : 'focus-btn-done flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all'}
+                style={isLinen ? { position: 'absolute', right: -80, bottom: 0 } : undefined}
               >
+                {isLinen ? (
+                  <img src="/flowers/tea-cup-desat.png" alt="Done" className="focus-wc-img" style={{ width: 91, height: 91 }} />
+                ) : (
                 <svg viewBox="-2 18 114 68" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: 54, height: 32 }}>
                   <ellipse cx="52" cy="77" rx="36" ry="5.5" fill="#C4A878" stroke="#8A7050" strokeWidth={2} />
                   <path d="M 20 22 L 84 22 L 76 71 L 28 71 Z" fill="url(#cupGrad)" stroke="#8A7050" strokeWidth={2.5} />
@@ -580,6 +591,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                     </linearGradient>
                   </defs>
                 </svg>
+                )}
               </button>
         </div>
 
