@@ -359,7 +359,10 @@ body {
 .linen-side-vines {
   display: none;
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100svh;
   pointer-events: none;
   z-index: 1;
   overflow: hidden;
@@ -372,6 +375,12 @@ body {
 [data-theme="aria-linen"] .linen-flower-banner,
 [data-theme="aria-linen"] .linen-side-vines {
   display: block;
+}
+
+/* Push page content above the fixed flower banner so the last
+   items are never hidden behind it on mobile. */
+[data-theme="aria-linen"] main > .aria-page {
+  padding-bottom: 160px;
 }
 
 /* Paper grain over watercolor — simulates pigment sitting in paper fibers */
