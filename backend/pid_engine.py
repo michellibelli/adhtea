@@ -23,19 +23,19 @@ TARGETS = {
 NUDGE_MESSAGES = {
     "sleep": {
         "question": "Have you thought about winding down for sleep tonight? Even 15 minutes earlier helps \U0001f49b",
-        "positive": "Sleep held at {value}h this week — your mood tracked with it \U0001f49b",
+        "positive": "Nice — sleep is trending up \U0001f49b",
     },
     "meals": {
         "question": "Have you eaten? Even a snack counts \U0001f49b",
-        "positive": "You hit {value} meals on average this week — nourished and steady \U0001f49b",
+        "positive": "Nourished and steady — keep it up \U0001f49b",
     },
     "exercise": {
         "question": "Could you take a short walk today? Even 10 minutes counts \U0001f49b",
-        "positive": "You moved {value} days this week — your body says thank you \U0001f49b",
+        "positive": "Great job getting some exercise! Keep going \U0001f49b",
     },
     "checkin": {
         "question": "Morning check-in helps me help you — one minute? \U0001f49b",
-        "positive": "You checked in {value} out of {total} weekdays — consistency is building \U0001f49b",
+        "positive": "Check-in consistency is building \U0001f49b",
     },
 }
 
@@ -83,7 +83,27 @@ def compute_pid_state(
     return result
 
 
-def rank_nudges(pid_state: dict) -> list[dict]:
+def _progress_tag(var: str, averages: dict | None) -> str:
+    if not averages:
+        return ""
+    if var == "sleep":
+        val = averages.get("sleep", 0)
+        return f" (avg {round(val, 1)}h — target {TARGETS['sleep']['target']}h)"
+    if var == "meals":
+        val = averages.get("meals", 0)
+        return f" (avg {round(val, 1)}/day — target {int(TARGETS['meals']['target'])})"
+    if var == "exercise":
+        val = int(averages.get("exercise", 0))
+        target = int(TARGETS["exercise"]["target"])
+        return f" ({val} of {target} days this week)"
+    if var == "checkin":
+        val = int(averages.get("checkin_days", 0))
+        total = int(averages.get("weekdays", 5))
+        return f" ({val} of {total} weekdays)"
+    return ""
+
+
+def rank_nudges(pid_state: dict, current_averages: dict | None = None) -> list[dict]:
     ranked = []
     for var, state in pid_state.items():
         score = state["score"]
@@ -99,6 +119,8 @@ def rank_nudges(pid_state: dict) -> list[dict]:
             message = msgs.get("positive", "")
         else:
             message = msgs.get("question", "")
+
+        message += _progress_tag(var, current_averages)
 
         ranked.append({
             "variable": var,

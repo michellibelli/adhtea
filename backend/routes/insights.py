@@ -313,7 +313,14 @@ def get_nudge(
         return None
 
     pid_state = json.loads(snap.pid_state)
-    ranked = rank_nudges(pid_state)
+    averages = {
+        "sleep": snap.avg_sleep or 0,
+        "meals": snap.avg_meals or 0,
+        "exercise": snap.exercise_days or 0,
+        "checkin_days": snap.check_in_days or 0,
+        "weekdays": snap.weekdays_in_period or 5,
+    }
+    ranked = rank_nudges(pid_state, averages)
     if not ranked:
         return None
 

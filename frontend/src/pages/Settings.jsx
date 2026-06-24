@@ -415,6 +415,23 @@ export default function Settings({ onNavigate, user }) {
           </div>
         </section>
 
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Attributions</h2>
+          <Card className="px-5 py-4">
+            <p className="text-xs text-ui-subtext leading-relaxed">
+              Watercolor textures and illustrations by{' '}
+              <a
+                href="https://www.vecteezy.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ui-accent underline underline-offset-2 hover:opacity-70 transition-opacity"
+              >
+                Vecteezy.com
+              </a>
+            </p>
+          </Card>
+        </section>
+
         <div className="pride-stripe my-6" />
 
         <section className="mb-6">
