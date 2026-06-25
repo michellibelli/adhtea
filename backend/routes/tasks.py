@@ -423,6 +423,7 @@ def triage_summary(
     carry_forward(current_user, db)
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
+    promote_due_tasks(current_user, db)
     inbox_count = db.query(Task).filter(
         Task.owner_id == current_user.id, Task.status == TaskStatus.inbox
     ).count()
@@ -452,6 +453,7 @@ def get_critical_list(
     carry_forward(current_user, db)
     resolve_snoozes(current_user, db)
     generate_routine_instances(current_user, db)
+    promote_due_tasks(current_user, db)
     today_local = _app_today(current_user)
     active_statuses = [TaskStatus.inbox, TaskStatus.today]
     tasks = (
@@ -706,6 +708,7 @@ def get_today(
     archive_past_appointments(current_user, db)
     demote_misclassified_today(current_user, db)
     demote_domain_violations(current_user, db)
+    promote_due_tasks(current_user, db)
     _maybe_sync_gcal(current_user.id, db)
 
     tasks = (

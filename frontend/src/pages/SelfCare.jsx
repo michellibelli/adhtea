@@ -36,6 +36,59 @@ function TapRow({ options, labels, value, onChange }) {
 }
 
 
+function MedCard({ med, userId, taken, onLogTaken }) {
+  const [editing, setEditing] = useState(false)
+  const displayName = getMedName(userId, med.id, med.name)
+  const nameIsLocal = displayName !== med.name
+  const times = med.reminder_times ? med.reminder_times.split(',').map(t => t.trim()) : []
+  const [draft, setDraft] = useState(displayName)
+
+  function startEdit() { setDraft(displayName); setEditing(true) }
+
+  function saveEdit() {
+    const trimmed = draft.trim()
+    if (trimmed) setMedName(userId, med.id, trimmed)
+    setEditing(false)
+  }
+
+  return (
+    <Card className="px-4 py-3 flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        {editing ? (
+          <form onSubmit={e => { e.preventDefault(); saveEdit() }} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              autoFocus
+              onBlur={saveEdit}
+              className="flex-1 min-w-0 text-sm font-medium bg-transparent text-ui-text border-b border-ui-accent outline-none py-0.5"
+            />
+          </form>
+        ) : (
+          <button type="button" onClick={startEdit} className="text-left">
+            <p className="text-sm font-medium text-ui-text">{displayName}</p>
+            {!nameIsLocal && (
+              <p className="text-[10px] text-ui-subtext/50 italic">tap to set name on this device</p>
+            )}
+          </button>
+        )}
+        {times.length > 0 && (
+          <p className="text-xs text-ui-subtext mt-0.5">{times.join(' · ')}</p>
+        )}
+      </div>
+      {taken ? (
+        <span className="text-xs text-ui-accent font-medium flex-shrink-0">Taken</span>
+      ) : (
+        <Button size="sm" onClick={onLogTaken} className="flex-shrink-0">
+          Mark taken
+        </Button>
+      )}
+    </Card>
+  )
+}
+
+
 // ---------------------------------------------------------------------------
 // One-time migration: pre-3.9.13 meds were stored with real names server-side.
 // On first load after deploy, copy the real name into localStorage and rename
@@ -384,32 +437,15 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
             <p className="text-sm text-ui-subtext">No medication configured.</p>
           ) : (
             <div className="space-y-2">
-              {medication.map(med => {
-                const taken = !!medLogs[med.id]
-                const displayName = getMedName(userId, med.id, med.name)
-                const nameIsLocal = displayName !== med.name
-                const times = med.reminder_times ? med.reminder_times.split(',').map(t => t.trim()) : []
-                return (
-                  <Card key={med.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ui-text">{displayName}</p>
-                      {!nameIsLocal && (
-                        <p className="text-[10px] text-ui-subtext/50 italic">name not on this device</p>
-                      )}
-                      {times.length > 0 && (
-                        <p className="text-xs text-ui-subtext mt-0.5">⏰ {times.join(' · ')}</p>
-                      )}
-                    </div>
-                    {taken ? (
-                      <span className="text-xs text-ui-accent font-medium flex-shrink-0">✓ Taken</span>
-                    ) : (
-                      <Button size="sm" onClick={() => handleLogMed(med.id)} className="flex-shrink-0">
-                        Mark taken
-                      </Button>
-                    )}
-                  </Card>
-                )
-              })}
+              {medication.map(med => (
+                <MedCard
+                  key={med.id}
+                  med={med}
+                  userId={userId}
+                  taken={!!medLogs[med.id]}
+                  onLogTaken={() => handleLogMed(med.id)}
+                />
+              ))}
             </div>
           )}
         </div>
