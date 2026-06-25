@@ -404,8 +404,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                     <span style={{ color: colors.text, lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '6px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                       {isProject ? (
                         <>
-                          <span style={{ fontSize: 28 }}>Project</span>
-                          <span style={{ fontWeight: 500, fontSize: 18, opacity: 0.9, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                          <span style={{ fontSize: 16, opacity: 0.7, letterSpacing: '0.5px' }}>Project</span>
+                          <span style={{ fontWeight: 600, fontSize: 14, opacity: 0.9, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                             {task.project_name}
                           </span>
                         </>
@@ -458,14 +458,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                   </h2>
 
                   {task.location_detail && (
-                    <div className="mb-2 text-sm text-ui-subtext">
+                    <div className="mb-2 text-sm text-ui-text/70">
                       <span className="mr-1.5">📍</span>
                       <span>{task.location_detail}</span>
                     </div>
                   )}
 
                   {task.notes && (
-                    <p className="text-xs italic text-ui-subtext leading-relaxed border-t border-ui-border pt-3 mt-1 w-full line-clamp-2">
+                    <p className="text-xs italic text-ui-text/60 leading-relaxed border-t border-ui-border pt-3 mt-1 w-full line-clamp-2">
                       {task.notes}
                     </p>
                   )}
