@@ -105,26 +105,15 @@ function bonusKey() {
   return 'aria_bonus_done_' + new Date().toISOString().slice(0, 10)
 }
 
-function TeaCupBack() {
-  // Back of cup — renders BEHIND the bag (used during dunk animation)
+function TeaCup() {
   return (
-    <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
-      <ellipse cx="52" cy="22" rx="34" ry="4.5" fill="#DBA96A" opacity="0.55"/>
-      <path d="M 14 22 A 38 6.5 0 0 0 90 22" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
-    </svg>
-  )
-}
-
-function TeaCupFront() {
-  // Front of cup — renders IN FRONT of the bag (used during dunk animation)
-  return (
-    <svg width="150" height="117" viewBox="0 0 110 86" fill="none">
-      <ellipse cx="52" cy="77" rx="46" ry="7" fill="#EDD5A8" stroke="#C4A882" strokeWidth="2"/>
-      <path d="M 14 22 L 90 22 L 80 71 L 24 71 Z" fill="#F5ECD7" stroke="#C4A882" strokeWidth="2.5"/>
-      <path d="M 90 32 Q 108 32 108 50 Q 108 66 90 62" stroke="#C4A882" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
-      <ellipse cx="52" cy="22" rx="38" ry="6.5" fill="#EDD5A8" stroke="none"/>
-      <path d="M 14 22 A 38 6.5 0 0 1 90 22" stroke="#C4A882" strokeWidth="2.5" fill="none"/>
-    </svg>
+    <img
+      src="/flowers/tea-cup-desat.png"
+      alt=""
+      width="160"
+      height="125"
+      style={{ pointerEvents: 'none', userSelect: 'none' }}
+    />
   )
 }
 
@@ -136,7 +125,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState(null)
   const [leaving,     setLeaving]     = useState(false)
-  const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'fade'
+  const [celebrate,   setCelebrate]   = useState(false)  // false | 'dunk' | 'wipe'
   const punRef = useRef('')
   const completedTaskRef     = useRef(null)  // { taskId, wasBonus }
   const celebrationTimersRef = useRef([])
@@ -289,8 +278,8 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
     setCelebrate('dunk')
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = [
-      setTimeout(() => setCelebrate('fade'), 4600),
-      setTimeout(() => skipCelebration(),    5400),
+      setTimeout(() => setCelebrate('wipe'), 4600),
+      setTimeout(() => skipCelebration(),    6300),
     ]
   }
 
@@ -375,7 +364,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
                 inside the descending wrapper. */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1 } : celebrate === 'fade' ? { opacity: 0 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1 } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
 
             {/* Tag — outside sway-wrap so it stays still (where the string meets
                 the imaginary cup rim above). String + bag swing from here. */}
@@ -458,14 +447,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
                   </h2>
 
                   {task.location_detail && (
-                    <div className="mb-2 text-sm text-ui-text/70">
+                    <div className="mb-2 text-sm text-ui-text/85">
                       <span className="mr-1.5">📍</span>
                       <span>{task.location_detail}</span>
                     </div>
                   )}
 
                   {task.notes && (
-                    <p className="text-xs italic text-ui-text/60 leading-relaxed border-t border-ui-border pt-3 mt-1 w-full line-clamp-2">
+                    <p className="text-xs italic text-ui-text/75 leading-relaxed border-t border-ui-border pt-3 mt-1 w-full line-clamp-2">
                       {task.notes}
                     </p>
                   )}
@@ -479,46 +468,36 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
             </div>{/* end teabag unit */}
 
 
-            {/* Teacup back — behind bag, anchored to bottom of wrapper */}
-            {(celebrate === 'dunk' || celebrate === 'fade') && (
+            {/* Watercolor teacup — single image, appears behind bag */}
+            {(celebrate === 'dunk' || celebrate === 'wipe') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                width: 'fit-content', bottom: 80,
-                zIndex: 0, pointerEvents: 'none',
-                animation: celebrate === 'fade'
-                  ? 'cup-pun-fadeout 800ms ease-in forwards'
-                  : 'teacup-appear 400ms ease-out 800ms both, teacup-bounce 800ms ease-in-out 3570ms both',
+                width: 'fit-content', bottom: 70,
+                zIndex: 3, pointerEvents: 'none',
+                transform: 'translateX(0px)',
+                animation: 'teacup-appear 400ms ease-out 800ms both',
               }}>
-                <TeaCupBack />
+                <TeaCup />
               </div>
             )}
 
-            {/* Pun text — below the cup, still inside wrapper */}
-            {(celebrate === 'dunk' || celebrate === 'fade') && (
+            {/* Pun text — below the cup */}
+            {(celebrate === 'dunk' || celebrate === 'wipe') && (
               <div style={{
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                bottom: 60,
+                bottom: 50,
                 zIndex: 4, pointerEvents: 'none', textAlign: 'center',
-                animation: celebrate === 'fade'
-                  ? 'cup-pun-fadeout 800ms ease-in forwards'
-                  : 'pun-rise-below-cup 2400ms ease-out 1200ms both',
+                animation: 'pun-rise-below-cup 2400ms ease-out 1200ms both',
               }}>
                 {/* eslint-disable-next-line react-hooks/refs -- punRef set in handleComplete before this renders */}
-                <span className="text-lg font-semibold px-4" style={{ color: '#3D2B1F' }}>{punRef.current}</span>
+                <span className="pun-text px-4">{punRef.current}</span>
               </div>
             )}
 
-            {/* Teacup front — in front of bag */}
-            {(celebrate === 'dunk' || celebrate === 'fade') && (
-              <div style={{
-                position: 'absolute', left: 0, right: 0, margin: '0 auto',
-                width: 'fit-content', bottom: 80,
-                zIndex: 3, pointerEvents: 'none',
-                animation: celebrate === 'fade'
-                  ? 'cup-pun-fadeout 800ms ease-in forwards'
-                  : 'teacup-appear 400ms ease-out 800ms both, teacup-bounce 800ms ease-in-out 3570ms both',
-              }}>
-                <TeaCupFront />
+            {/* Brush wipe — painted over the scene, reveals left to right */}
+            {celebrate === 'wipe' && (
+              <div className="brush-wipe-overlay">
+                <img src="/flowers/brush-wipe.webp" alt="" className="brush-wipe-img" />
               </div>
             )}
 

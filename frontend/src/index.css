@@ -991,9 +991,29 @@ body {
 .animate-fade-in-up {
   animation: fade-in-up 300ms ease-out 800ms both;
 }
-@keyframes cup-pun-fadeout {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(0.92); }
+/* Brush stroke wipe — radial reveal from bottom-left, like paint in water */
+.brush-wipe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: visible;
+}
+.brush-wipe-img {
+  position: absolute;
+  bottom: -200px;
+  left: -30px;
+  width: 640px;
+  height: 640px;
+  object-fit: contain;
+  transform: rotate(40deg);
+  animation: brush-wipe-reveal 1500ms ease-out forwards;
+  clip-path: circle(0% at 15% 85%);
+}
+@keyframes brush-wipe-reveal {
+  0%   { clip-path: circle(0% at 15% 85%); opacity: 0.6; }
+  15%  { opacity: 1; }
+  100% { clip-path: circle(120% at 15% 85%); opacity: 1; }
 }
 @keyframes task-complete-out {
   from { opacity: 1; transform: translateX(0) scale(1); }
@@ -1010,26 +1030,31 @@ body {
 }
 
 @keyframes teabag-descend {
-  0%  { transform: translateY(0px)   scale(1);    opacity: 1; animation-timing-function: ease-in-out; }
-  12% { transform: translateY(-50px) scale(0.3);  opacity: 1; animation-timing-function: ease-in; }
-  36% { transform: translateY(20px)  scale(0.3);  opacity: 1; animation-timing-function: ease-out; }
-  53% { transform: translateY(-20px) scale(0.3);  opacity: 1; animation-timing-function: ease-in; }
-  70% { transform: translateY(10px)  scale(0.3);  opacity: 0.5; animation-timing-function: ease-out; }
-  80% { transform: translateY(15px)  scale(0.3);  opacity: 0; }
-  100%{ transform: translateY(15px)  scale(0.3);  opacity: 0; }
+  0%  { transform: translateX(0) translateY(0px)    scale(1);    opacity: 1; animation-timing-function: ease-in-out; }
+  12% { transform: translateX(-4px) translateY(-50px) scale(0.3);  opacity: 1; animation-timing-function: ease-in; }
+  36% { transform: translateX(-8px) translateY(20px)  scale(0.3);  opacity: 1; animation-timing-function: ease-out; }
+  53% { transform: translateX(-10px) translateY(-20px) scale(0.3);  opacity: 1; animation-timing-function: ease-in; }
+  70% { transform: translateX(-10px) translateY(10px)  scale(0.3);  opacity: 0.5; animation-timing-function: ease-out; }
+  80% { transform: translateX(-10px) translateY(15px)  scale(0.3);  opacity: 0; }
+  100%{ transform: translateX(-10px) translateY(15px)  scale(0.3);  opacity: 0; }
 }
 @keyframes teacup-appear {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes teacup-bounce {
-  0%   { transform: translateY(0);    }
-  28%  { transform: translateY(18px); }
-  58%  { transform: translateY(-9px); }
-  78%  { transform: translateY(6px);  }
-  90%  { transform: translateY(-3px); }
-  100% { transform: translateY(0);    }
+/* Pun text — handwritten watercolor feel */
+.pun-text {
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  font-weight: 700;
+  color: #6B5A4E;
+  opacity: 0.85;
+  letter-spacing: 0.3px;
 }
+[data-theme="aria-linen"] .pun-text {
+  color: #5C4F6B;
+}
+
 .animate-task-complete {
   animation: task-complete-out 350ms ease-in forwards;
   pointer-events: none;
