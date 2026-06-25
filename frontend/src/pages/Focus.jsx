@@ -279,7 +279,7 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = [
       setTimeout(() => setCelebrate('wipe'), 4600),
-      setTimeout(() => skipCelebration(),    6300),
+      setTimeout(() => skipCelebration(),    7100),
     ]
   }
 

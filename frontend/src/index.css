@@ -1007,7 +1007,7 @@ body {
   height: 640px;
   object-fit: contain;
   transform: rotate(40deg);
-  animation: brush-wipe-reveal 1500ms ease-out forwards;
+  animation: brush-wipe-reveal 2250ms ease-out forwards;
   clip-path: circle(0% at 15% 85%);
 }
 @keyframes brush-wipe-reveal {
