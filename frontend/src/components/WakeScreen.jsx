@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { warmUp } from '../api/client'
 import { createTask } from '../api/tasks'
 
-const PRIDE = 'linear-gradient(to right, #ED8E89, #F7B685, #F3EBA5, #94C691, #9BD6D9, #B4A8E0)'
 const TOTAL_WAIT = 60
 
 const DIARY_PROMPTS = [
@@ -13,21 +12,6 @@ const DIARY_PROMPTS = [
   'What are you carrying into today?',
 ]
 
-// Floating background art — position, size, duration, delay, rotation range
-const FLOAT_ART = [
-  { emoji: '🌸', top: '8%',  left: '7%',  size: 26, dur: 5.8, delay: 0,    rotA: -6,  rotB: 4  },
-  { emoji: '✦',  top: '14%', left: '78%', size: 18, dur: 4.4, delay: 1.2,  rotA: -3,  rotB: 6  },
-  { emoji: '🍦', top: '28%', left: '88%', size: 24, dur: 6.2, delay: 0.4,  rotA: -5,  rotB: 3  },
-  { emoji: '🐱', top: '42%', left: '5%',  size: 22, dur: 5.1, delay: 2.0,  rotA: -4,  rotB: 5  },
-  { emoji: '🍃', top: '58%', left: '82%', size: 20, dur: 4.9, delay: 0.8,  rotA: -8,  rotB: 3  },
-  { emoji: '⭐', top: '70%', left: '13%', size: 20, dur: 5.5, delay: 1.6,  rotA: -3,  rotB: 7  },
-  { emoji: '🌷', top: '80%', left: '70%', size: 24, dur: 6.0, delay: 0.3,  rotA: -5,  rotB: 4  },
-  { emoji: '🍬', top: '20%', left: '40%', size: 18, dur: 4.6, delay: 3.1,  rotA: -6,  rotB: 6  },
-  { emoji: '🌙', top: '88%', left: '38%', size: 22, dur: 5.3, delay: 1.0,  rotA: -4,  rotB: 4  },
-  { emoji: '✿',  top: '6%',  left: '52%', size: 16, dur: 4.2, delay: 2.5,  rotA: -5,  rotB: 5  },
-  { emoji: '🍄', top: '50%', left: '55%', size: 20, dur: 5.7, delay: 0.6,  rotA: -3,  rotB: 6  },
-  { emoji: '💜', top: '35%', left: '22%', size: 16, dur: 4.8, delay: 1.9,  rotA: -5,  rotB: 3  },
-]
 
 function toDateStr(d) {
   return d.toISOString().split('T')[0]
@@ -166,25 +150,6 @@ export default function WakeScreen({ onReady }) {
         className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
         style={{ background: '#FFFDF5' }}
       >
-        {/* Same floating art as wake phase */}
-        {FLOAT_ART.map((art, i) => (
-          <span
-            key={i}
-            className="float-art"
-            style={{
-              top: art.top, left: art.left,
-              '--bob-size':    `${art.size}px`,
-              '--bob-dur':     `${art.dur}s`,
-              '--bob-delay':   `${art.delay}s`,
-              '--bob-rot-a':   `${art.rotA}deg`,
-              '--bob-rot-b':   `${art.rotB}deg`,
-              '--bob-opacity': 0.45,
-            }}
-          >
-            {art.emoji}
-          </span>
-        ))}
-
         <div className="relative z-10 flex flex-col items-center">
           <img
             src="/adhTeaLogo.png"
@@ -203,29 +168,7 @@ export default function WakeScreen({ onReady }) {
       className="min-h-screen flex flex-col items-center justify-center px-6 pb-12 relative overflow-hidden"
       style={{ background: '#FFFDF5' }}
     >
-      <div className="fixed top-0 left-0 right-0 h-1" style={{ background: PRIDE }} />
-
-      {/* Floating background art */}
-      {FLOAT_ART.map((art, i) => (
-        <span
-          key={i}
-          className="float-art"
-          style={{
-            top: art.top,
-            left: art.left,
-            '--bob-size':    `${art.size}px`,
-            '--bob-dur':     `${art.dur}s`,
-            '--bob-delay':   `${art.delay}s`,
-            '--bob-rot-a':   `${art.rotA}deg`,
-            '--bob-rot-b':   `${art.rotB}deg`,
-            '--bob-opacity': 0.45,
-          }}
-        >
-          {art.emoji}
-        </span>
-      ))}
-
-      {/* Main content — above floaties */}
+      {/* Main content */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-xs">
 
         {/* Logo */}

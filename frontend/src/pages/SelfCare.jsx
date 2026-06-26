@@ -453,7 +453,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
         {/* Gate mode: prominent continue CTA, only enabled once the log
             exists (i.e. handleSave or pre-existing log loaded). */}
         {gateMode && (
-          <div className="mt-8">
+          <div className="mt-8 pb-48">
             <Button
               size="lg"
               className="w-full"

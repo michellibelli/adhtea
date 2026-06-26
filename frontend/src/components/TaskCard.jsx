@@ -11,6 +11,17 @@ import ProjectBadge from './ProjectBadge'
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 const WEIGHT_DOTS = { light: 1, medium: 2, heavy: 3 }
 
+function formatDueDate(iso) {
+  if (!iso) return null
+  const today = new Date(); today.setHours(0,0,0,0)
+  const d = new Date(iso + 'T00:00:00'); d.setHours(0,0,0,0)
+  const diff = Math.round((d - today) / 86400000)
+  if (diff < 0) return { label: diff === -1 ? 'Yesterday' : `${-diff}d overdue`, overdue: true }
+  if (diff === 0) return { label: 'Today', overdue: false }
+  if (diff === 1) return { label: 'Tomorrow', overdue: false }
+  return { label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), overdue: false }
+}
+
 const LOCATION_TYPES = [
   { id: 'zoom',    label: 'Zoom' },
   { id: 'signal',  label: 'Signal' },
@@ -273,6 +284,10 @@ export default function TaskCard({
   const [leaving,     setLeaving]     = useState(false)
 
   function handleComplete() {
+    if (variant === 'triage') {
+      onComplete?.(task.id)
+      return
+    }
     setLeaving(true)
     setTimeout(() => onComplete?.(task.id), 350)
   }
@@ -363,12 +378,15 @@ export default function TaskCard({
                     </span>
                   )}
 
-                  {task.due_time && (
-                    <span className="text-[10px] text-ui-subtext">{task.due_time}</span>
-                  )}
-                  {task.due_date && !task.due_time && (
-                    <span className="text-[10px] text-ui-subtext">{task.due_date}</span>
-                  )}
+                  {(() => {
+                    const dd = formatDueDate(task.due_date)
+                    if (!dd) return null
+                    return (
+                      <span className={`text-[10px] ${dd.overdue ? 'text-red-500 font-medium' : 'text-ui-subtext'}`}>
+                        {dd.label}{task.due_time ? ` · ${task.due_time}` : ''}
+                      </span>
+                    )
+                  })()}
                   {task.location_detail && (
                     <span className="text-[10px] text-ui-subtext truncate max-w-[120px]">📍 {task.location_detail}</span>
                   )}

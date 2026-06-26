@@ -44,17 +44,20 @@ function offsetDate(days) {
 
 // ── Sortable triage row ─────────────────────────────────────────────────────
 
-function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy }) {
+function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy, leaving }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: transition || 'transform 200ms ease, max-height 300ms ease, margin 300ms ease, opacity 300ms ease',
+    opacity: leaving ? 0 : isDragging ? 0.5 : 1,
+    maxHeight: leaving ? 0 : 200,
+    marginBottom: leaving ? 0 : undefined,
+    overflow: 'hidden',
     zIndex: isDragging ? 50 : 'auto',
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing mb-1.5">
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={leaving ? '' : 'cursor-grab active:cursor-grabbing mb-1.5'}>
       <TaskCard
         task={task}
         variant="triage"
@@ -269,6 +272,7 @@ export default function Tournament({ onDone }) {
   const [addingTask,  setAddingTask]  = useState(false)
   const [capacity,    setCapacity]    = useState(null)
   const [showOverWarning, setShowOverWarning] = useState(false)
+  const [leavingIds,  setLeavingIds]  = useState(new Set())
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -356,18 +360,22 @@ export default function Tournament({ onDone }) {
     catch (e) { setError(e?.message || 'Could not update task') }
   }
 
-  async function handleComplete(taskId) {
-    setTriageTasks(prev => prev.filter(t => t.id !== taskId))
-    setAllTasks(prev => prev.filter(t => t.id !== taskId))
-    try { await completeTask(taskId) }
-    catch (e) { setError(e?.message || 'Complete failed') }
+  function animateLeaveAndRemove(taskId, apiCall) {
+    setLeavingIds(prev => new Set(prev).add(taskId))
+    setTimeout(() => {
+      setTriageTasks(prev => prev.filter(t => t.id !== taskId))
+      setAllTasks(prev => prev.filter(t => t.id !== taskId))
+      setLeavingIds(prev => { const next = new Set(prev); next.delete(taskId); return next })
+    }, 300)
+    apiCall().catch(e => setError(e?.message || 'Action failed'))
   }
 
-  async function handleSnooze(taskId, isoDate) {
-    setTriageTasks(prev => prev.filter(t => t.id !== taskId))
-    setAllTasks(prev => prev.filter(t => t.id !== taskId))
-    try { await snoozeTask(taskId, isoDate) }
-    catch (e) { setError(e?.message || 'Snooze failed') }
+  function handleComplete(taskId) {
+    animateLeaveAndRemove(taskId, () => completeTask(taskId))
+  }
+
+  function handleSnooze(taskId, isoDate) {
+    animateLeaveAndRemove(taskId, () => snoozeTask(taskId, isoDate))
   }
 
   async function handleEditSave(patch) {
@@ -552,6 +560,7 @@ export default function Tournament({ onDone }) {
                 <SortableTriageRow
                   key={t.id}
                   task={t}
+                  leaving={leavingIds.has(t.id)}
                   onSnooze={handleSnooze}
                   onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
                   onComplete={handleComplete}
