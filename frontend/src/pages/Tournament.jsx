@@ -360,14 +360,14 @@ export default function Tournament({ onDone }) {
     catch (e) { setError(e?.message || 'Could not update task') }
   }
 
-  function animateLeaveAndRemove(taskId, apiCall) {
+  async function animateLeaveAndRemove(taskId, apiCall) {
     setLeavingIds(prev => new Set(prev).add(taskId))
-    setTimeout(() => {
-      setTriageTasks(prev => prev.filter(t => t.id !== taskId))
-      setAllTasks(prev => prev.filter(t => t.id !== taskId))
-      setLeavingIds(prev => { const next = new Set(prev); next.delete(taskId); return next })
-    }, 300)
-    apiCall().catch(e => setError(e?.message || 'Action failed'))
+    const apiDone = apiCall().catch(e => setError(e?.message || 'Action failed'))
+    const animDone = new Promise(r => setTimeout(r, 300))
+    await Promise.all([apiDone, animDone])
+    setTriageTasks(prev => prev.filter(t => t.id !== taskId))
+    setAllTasks(prev => prev.filter(t => t.id !== taskId))
+    setLeavingIds(prev => { const next = new Set(prev); next.delete(taskId); return next })
   }
 
   function handleComplete(taskId) {
