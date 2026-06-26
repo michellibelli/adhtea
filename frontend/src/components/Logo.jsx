@@ -8,7 +8,7 @@ export default function Logo({ size = 32 }) {
         alt=""
         width={imgSize}
         height={imgSize}
-        style={{ objectFit: 'contain' }}
+        style={{ objectFit: 'contain', transform: 'translate(2px, -2px)' }}
         aria-hidden="true"
       />
       <span

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const BUILD_CHIP_KEY = 'show_build_chip'
 function readShowBuildChip() {
@@ -10,6 +10,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
+import { createTask } from './api/tasks'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Signup from './pages/Signup'
@@ -43,6 +44,45 @@ async function getOpeningScreen() {
   return 'focus'
 }
 
+const DIARY_PROMPTS = [
+  'How are you feeling right now?',
+  "What's on your mind?",
+  'Any dreams, thoughts, or feelings to get out?',
+  'What does your body need today?',
+  'What are you carrying into today?',
+]
+
+function getDiaryConfig() {
+  const lastLog   = localStorage.getItem('aria_last_log_date')
+  const today     = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const hour      = new Date().getHours()
+  const isMorning = hour >= 5 && hour < 12
+
+  if (lastLog === today) {
+    return {
+      heading:     "You've already logged today.",
+      prompt:      DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)],
+      placeholder: 'thoughts, feelings, anything...',
+      noteTitle:   'Diary entry',
+    }
+  }
+  if (isMorning && lastLog !== yesterday) {
+    return {
+      heading:     'No log from yesterday.',
+      prompt:      'What did you do? Any wins, struggles, or moments worth remembering?',
+      placeholder: 'yesterday was...',
+      noteTitle:   'Yesterday recap',
+    }
+  }
+  return {
+    heading:     'While you wait —',
+    prompt:      'What have you done so far today?',
+    placeholder: 'or just wait, no pressure',
+    noteTitle:   'Morning check-in',
+  }
+}
+
 function AppShell() {
   const [screen, setScreen]                   = useState('focus')
   const [triageReturnTo, setTriageReturnTo]   = useState('focus')
@@ -54,15 +94,28 @@ function AppShell() {
   const [showCheckIn, setShowCheckIn]         = useState(false)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
-  // Headline stats pushed up from <Focus /> so the mobile top bar can
-  // render "Now / X done / Y left" beneath the capacity bar. Null when
-  // Focus isn't mounted or its data hasn't loaded yet.
   const [focusStats, setFocusStats]           = useState(null)
+  const [diaryEntry, setDiaryEntry]           = useState('')
+  const [diaryConfig]                         = useState(getDiaryConfig)
+  const [serverUp, setServerUp]               = useState(false)
+  const diaryRef = useRef('')
 
   useEffect(() => {
     getMe()
       .then(async (u) => {
         setUser(u)
+        setServerUp(true)
+
+        if (diaryRef.current.trim()) {
+          createTask({
+            title:     diaryConfig.noteTitle,
+            task_type: 'note',
+            notes:     diaryRef.current.trim(),
+          }).then(() => {
+            localStorage.setItem('aria_last_log_date', new Date().toISOString().split('T')[0])
+          }).catch(() => {})
+        }
+
         if (u.needs_alpha_challenge) {
           setNeedsAlphaChallenge(true)
           setReady(true)
@@ -77,12 +130,6 @@ function AppShell() {
         setScreen(opening)
         getTodayCapacity().then(setCapacity).catch(() => {})
 
-        // Morning check-in hard gate: every day, the user logs once before
-        // touching the rest of the app. Confidence in "do this next" requires
-        // knowing today's capacity — without a log the bin-pack budget is a
-        // guess. Gate only applies in the morning window (before 14:00) —
-        // if the user opens the app later in the day with no log yet, just
-        // let them in instead of forcing a stale "morning" check-in.
         try {
           const log = await getTodayLog()
           const hour = new Date().getHours()
@@ -90,8 +137,6 @@ function AppShell() {
           if (!log && isMorningWindow) {
             setShowCheckIn(true)
           } else if (log && isEODWindow(u)) {
-            // Morning log exists; still pop the EOD gate in the evening
-            // if there's no closing entry.
             setShowEOD(true)
           }
         } catch { /* non-blocking */ }
@@ -114,20 +159,41 @@ function AppShell() {
 
   if (!ready) {
     return (
-      <div className="aria-page flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3 -mt-12">
-          {/* Logo with three warm steam wisps rising off the tea leaf so the
-              wake splash reads as "brewing" instead of a blank hold. */}
-          <div className="relative">
+      <div className="aria-page flex flex-col items-center justify-center px-6 pb-12">
+        <div className="flex flex-col items-center w-full max-w-xs">
+
+          <div className="relative mb-4">
             <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.9s', '--steam-delay': '0s' }} />
             <span className="steam-wisp" style={{ left: 26, bottom: '92%', height: 22, background: 'rgba(120,110,90,0.40)', '--steam-dur': '3.4s', '--steam-delay': '0.7s' }} />
             <span className="steam-wisp" style={{ left: 17, bottom: '90%', height: 20, background: 'rgba(120,110,90,0.42)', '--steam-dur': '3.1s', '--steam-delay': '1.4s' }} />
             <Logo size={56} />
           </div>
+
           <p
-            className="text-sm text-ui-subtext"
-            style={{ fontFamily: 'var(--font-pixel)', fontStyle: 'italic', letterSpacing: '0.04em' }}
-          >brewing…</p>
+            className="text-sm text-ui-subtext mb-6"
+            style={{ fontFamily: 'Caveat, cursive', fontSize: 18, letterSpacing: '0.02em' }}
+          >{serverUp ? 'ready when you are' : 'brewing…'}</p>
+
+          <div className="w-full">
+            <div className="rounded-xl border border-ui-border/60 bg-ui-card/80 px-4 py-4 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold text-ui-accent uppercase tracking-widest mb-1">
+                {diaryConfig.heading}
+              </p>
+              <p className="text-sm text-ui-subtext mb-3">{diaryConfig.prompt}</p>
+              <textarea
+                value={diaryEntry}
+                onChange={(e) => { setDiaryEntry(e.target.value); diaryRef.current = e.target.value }}
+                placeholder={diaryConfig.placeholder}
+                rows={4}
+                className="w-full rounded-lg border border-ui-border/60 bg-ui-bg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors"
+              />
+              {diaryEntry.trim() && !serverUp && (
+                <p className="text-[10px] text-ui-accent mt-1.5">
+                  will be saved when server wakes
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     )
