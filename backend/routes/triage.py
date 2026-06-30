@@ -40,6 +40,9 @@ from models import (
 from schemas import TaskResponse, TriageApplyRequest, TriageOverflowRequest
 from routes.auth import get_current_user
 from routes.domain_utils import effective_rules, time_of_day_allowed
+from routes.tasks import (
+    archive_past_appointments, carry_forward, resolve_snoozes,
+)
 
 router = APIRouter(prefix="/triage", tags=["triage"])
 
@@ -488,6 +491,9 @@ def preview(
     tz = ZoneInfo(getattr(current_user, "timezone", None) or "America/Los_Angeles")
     now_local = datetime.now(tz).replace(tzinfo=None)
     today_local = now_local.date()
+    carry_forward(current_user, db)
+    resolve_snoozes(current_user, db)
+    archive_past_appointments(current_user, db)
     days, overflow = _bin_pack(db, current_user.id, today_local, now_local)
     return _serialize_layout(days, overflow)
 

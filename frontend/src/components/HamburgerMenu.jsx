@@ -1,6 +1,5 @@
 const NAV_ITEMS = [
   { id: 'today',    label: 'Today' },
-  { id: 'triage',   label: 'Triage' },
   { id: 'inbox',    label: 'Inbox' },
   { id: 'routines', label: 'Routines' },
   { id: 'selfcare', label: 'Self Care' },

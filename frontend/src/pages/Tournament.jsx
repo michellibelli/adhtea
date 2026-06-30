@@ -15,7 +15,7 @@ import { SmartPointerSensor } from '../utils/dnd'
 import {
   previewTriage, recomputeTriage, applyOrderedTriage, resolveOverflow,
 } from '../api/triage'
-import { createTask, snoozeTask, updateTask, reorderTasks, completeTask } from '../api/tasks'
+import { createTask, snoozeTask, updateTask, reorderTasks, completeTask, deleteTask } from '../api/tasks'
 import { createPortal } from 'react-dom'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -44,7 +44,7 @@ function offsetDate(days) {
 
 // ── Sortable triage row ─────────────────────────────────────────────────────
 
-function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy, leaving }) {
+function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onDelete, onWhy, showWhy, leaving }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -62,6 +62,7 @@ function SortableTriageRow({ task, onSnooze, onEdit, onComplete, onWhy, showWhy,
         task={task}
         variant="triage"
         onComplete={onComplete}
+        onDelete={onDelete}
         onSnooze={onSnooze}
         showScore
         showWhy={showWhy}
@@ -374,6 +375,10 @@ export default function Tournament({ onDone }) {
     animateLeaveAndRemove(taskId, () => completeTask(taskId))
   }
 
+  function handleDelete(taskId) {
+    animateLeaveAndRemove(taskId, () => deleteTask(taskId))
+  }
+
   function handleSnooze(taskId, isoDate) {
     animateLeaveAndRemove(taskId, () => snoozeTask(taskId, isoDate))
   }
@@ -564,6 +569,7 @@ export default function Tournament({ onDone }) {
                   onSnooze={handleSnooze}
                   onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
                   onComplete={handleComplete}
+                  onDelete={handleDelete}
                   onWhy={(id) => setShowWhyId(prev => prev === id ? null : id)}
                   showWhy={showWhyId === t.id}
                 />

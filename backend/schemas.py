@@ -375,9 +375,8 @@ class CapacitySnapshotResponse(BaseModel):
     executive_capacitor: float
     overall: float
     computed_at: datetime
-    # Capacity-aware selection (Phase 3.7): low / medium / high bucket derived
-    # from `overall`. Set by the route, not stored on the model.
     tier: str | None = None
+    max_slots: int | None = None
 
     model_config = {"from_attributes": True}
 

@@ -16,7 +16,7 @@ import Register from './pages/Register'
 import Signup from './pages/Signup'
 import AlphaChallenge from './pages/AlphaChallenge'
 import Capture from './pages/Capture'
-import Tournament from './pages/Tournament'
+// Tournament removed — triage merged into Today page
 import Focus from './pages/Focus'
 import Today from './pages/Today'
 import Inbox from './pages/Inbox'
@@ -85,7 +85,7 @@ function getDiaryConfig() {
 
 function AppShell() {
   const [screen, setScreen]                   = useState('focus')
-  const [triageReturnTo, setTriageReturnTo]   = useState('focus')
+  // triageReturnTo removed — triage merged into Today
   const [user, setUser]                       = useState(null)
   const [capacity, setCapacity]               = useState(null)
   const [carriedOver, setCarriedOver]         = useState(false)
@@ -147,15 +147,7 @@ function AppShell() {
 
   function handleLogout() { logout().then(() => window.location.reload()) }
 
-  function handleTriageDone() {
-    setScreen(triageReturnTo)
-    setCarriedOver(false)
-  }
-
-  function openTriage(returnTo = 'focus') {
-    setTriageReturnTo(returnTo)
-    setScreen('tournament')
-  }
+  // handleTriageDone + openTriage removed — triage merged into Today
 
   if (!ready) {
     return (
@@ -226,7 +218,7 @@ function AppShell() {
           gateMode
           onComplete={() => {
             setShowCheckIn(false)
-            openTriage('focus')
+            setScreen('today')
             getTodayCapacity().then(setCapacity).catch(() => {})
           }}
         />
@@ -291,9 +283,8 @@ function AppShell() {
 
       <main className="pt-[64px] relative z-[2]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
-        {screen === 'tournament' && <Tournament onDone={handleTriageDone} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onTriage={() => openTriage('focus')} onNavigate={setScreen} onStatsChange={setFocusStats} />}
-        {screen === 'today'    && <Today carriedOver={carriedOver} onTournament={() => openTriage('today')} onNavigate={setScreen} />}
+        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} onStatsChange={setFocusStats} />}
+        {screen === 'today'    && <Today carriedOver={carriedOver} onNavigate={setScreen} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}

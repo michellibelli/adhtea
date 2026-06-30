@@ -233,7 +233,7 @@ export default function Capture({ onNavigate }) {
     : saved === 'snapped'
     ? `✦ Rescheduled to ${savedDateLabel} — see your inbox`
     : saved
-    ? '✦ Captured — in your inbox for triage'
+    ? '✦ Captured — in your inbox'
     : ''
 
   return (

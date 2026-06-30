@@ -119,7 +119,7 @@ function TeaCup() {
 
 
 
-export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange }) {
+export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -333,14 +333,14 @@ export default function Focus({ onGoToList, onTriage, onNavigate, onStatsChange 
           <p className="text-sm text-ui-subtext mb-6">
             {totalDone > 0
               ? 'Your list is clear. Rest, or check your inbox for more.'
-              : 'Add something from Capture, or run triage to schedule from your inbox.'}
+              : 'Add something from Capture, or check Today to schedule from your inbox.'}
           </p>
           <div className="flex flex-col gap-2">
             {onGoToList && (
               <Button variant="secondary" onClick={onGoToList}>See full list</Button>
             )}
-            {onTriage && (
-              <Button variant="ghost" onClick={onTriage}>Open inbox →</Button>
+            {onNavigate && (
+              <Button variant="ghost" onClick={() => onNavigate('today')}>Open today →</Button>
             )}
           </div>
         </div>

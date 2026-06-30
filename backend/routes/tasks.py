@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, case
 from database import get_db
 from models import (
     Task, TaskStatus, TaskType, Priority, ActuatorCategory,
@@ -673,6 +673,14 @@ def get_inbox(
     # Lazy gcal sync if token exists and not synced today
     _maybe_sync_gcal(current_user.id, db)
     today = _app_today(current_user)
+    priority_rank = case(
+        (Task.priority == Priority.urgent, 0),
+        (Task.priority == Priority.high, 1),
+        (Task.priority == Priority.normal, 2),
+        (Task.priority == None, 2),
+        (Task.priority == Priority.low, 3),
+        else_=2,
+    )
     tasks = (
         db.query(Task)
         .filter(
@@ -687,7 +695,7 @@ def get_inbox(
                 Task.scheduled_date >= _day_start(current_user),
             ),
         )
-        .order_by(Task.created_at.asc())
+        .order_by(Task.due_date.asc().nullslast(), priority_rank, Task.created_at.asc())
         .all()
     )
     return tasks

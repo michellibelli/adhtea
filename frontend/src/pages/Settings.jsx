@@ -350,11 +350,11 @@ export default function Settings({ onNavigate, user }) {
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Tasks</h2>
           <div className="space-y-2">
-            <Card className="settings-nav-card px-5 py-4" onClick={() => onNavigate?.('tournament')}>
+            <Card className="settings-nav-card px-5 py-4" onClick={() => onNavigate?.('today')}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-ui-text">Triage 🍵</p>
-                  <p className="text-xs text-ui-subtext mt-0.5">Bin-pack the next 7 days by score</p>
+                  <p className="text-sm font-medium text-ui-text">Today 🍵</p>
+                  <p className="text-xs text-ui-subtext mt-0.5">Plan and work your day</p>
                 </div>
                 <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18, opacity: 0.3, flexShrink: 0 }}>
                   <path d="M9 6l6 6-6 6" stroke="var(--aria-text)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />

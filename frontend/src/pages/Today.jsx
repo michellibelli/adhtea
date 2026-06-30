@@ -23,7 +23,7 @@ import Button from '../components/Button'
 import { PageLoading, PageError } from '../components/PageState'
 import { isTimedVisible } from '../utils/timing'
 
-const MAX_TODAY = 15
+const FALLBACK_MAX_TODAY = 15
 const MAX_TOTAL = 20
 
 const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
@@ -91,7 +91,7 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete, comple
   )
 }
 
-export default function Today({ carriedOver = false, onTournament, onNavigate }) {
+export default function Today({ carriedOver = false, onNavigate }) {
   const [todayTasks, setTodayTasks] = useState([])
   const [inboxTasks, setInboxTasks] = useState([])
   const [doneTasks, setDone]        = useState([])
@@ -126,6 +126,8 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  const maxToday = capacity?.max_slots ?? FALLBACK_MAX_TODAY
+
   const timed = todayTasks
     .filter(t => t.task_type === 'appointment' || t.task_type === 'routine')
     .filter(isTimedVisible)
@@ -140,8 +142,8 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
     todayTasks.filter(t => t.task_type !== 'appointment' && t.task_type !== 'routine'),
     sortBy
   )
-  const todayVisible = regular.slice(0, MAX_TODAY)
-  const todayOverflow = regular.slice(MAX_TODAY)
+  const todayVisible = regular.slice(0, maxToday)
+  const todayOverflow = regular.slice(maxToday)
 
   const upNextSlots = Math.max(0, MAX_TOTAL - todayVisible.length - timed.length)
   const upNext = inboxTasks
@@ -189,7 +191,7 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
   }
 
   async function handlePromote(task) {
-    if (todayVisible.length >= MAX_TODAY) return
+    if (todayVisible.length >= maxToday) return
     setInboxTasks(prev => prev.filter(t => t.id !== task.id))
     setTodayTasks(prev => [...prev, task])
     try { await scheduleToday(task.id) }
@@ -233,11 +235,6 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
                   Routines
                 </Button>
               </>
-            )}
-            {onTournament && (
-              <Button variant="secondary" className="!px-2 !py-1.5" onClick={() => onTournament?.()}>
-                🍵 Triage
-              </Button>
             )}
           </div>
         </div>
@@ -293,7 +290,7 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
             <div>
               <div className="flex items-center justify-between mb-2 px-0.5">
                 <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">
-                  Today ({todayVisible.length}{todayOverflow.length > 0 ? `+${todayOverflow.length}` : ''}/{MAX_TODAY})
+                  Today ({todayVisible.length}{todayOverflow.length > 0 ? `+${todayOverflow.length}` : ''}/{maxToday})
                 </p>
                 {regular.length > 1 && (
                   <div className="flex gap-1">
@@ -360,6 +357,12 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
                   <div className="flex-1 h-px bg-ui-border" />
                 </div>
 
+                {todayVisible.length >= maxToday && (
+                  <p className="text-[11px] text-ui-subtext text-center px-2 -mt-2 mb-1">
+                    Today is full ({maxToday} tasks based on your capacity) — snooze or defer a task above to make room.
+                  </p>
+                )}
+
                 {/* ── Up Next section ── */}
                 <div className="space-y-3">
                   {upNext.map(task => (
@@ -377,7 +380,7 @@ export default function Today({ carriedOver = false, onTournament, onNavigate })
                           }}
                         />
                       </div>
-                      {todayVisible.length < MAX_TODAY && (
+                      {todayVisible.length < maxToday && (
                         <button
                           type="button"
                           onClick={() => handlePromote(task)}
