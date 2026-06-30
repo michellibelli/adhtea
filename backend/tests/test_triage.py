@@ -189,7 +189,7 @@ def test_push_count_subtracts(client, auth_headers, db_session):
 
 def test_age_creep_increments_weekly(client, auth_headers, db_session):
     user = _user(db_session)
-    very_old = datetime.now(timezone.utc) - timedelta(days=70)
+    very_old = datetime(TODAY.year, TODAY.month, TODAY.day, tzinfo=timezone.utc) - timedelta(days=70)
     t = _mk_task(db_session, user.id, created_at=very_old)
     r = compute_score(t, today_local=TODAY, now_local=NOON)
     # 70 days = 10 buckets × 3 = 30, capped at INBOX_AGE_CAP (15)

@@ -93,10 +93,16 @@ class TestPidEngine:
 # ---------------------------------------------------------------------------
 
 class TestComputeWeekly:
-    def _seed_selfcare(self, client, auth_headers, days_ago_list, sleep=7.0, meals=2, exercise=False):
+    def _week_start(self):
         today = date.today()
-        for days_ago in days_ago_list:
-            d = today - timedelta(days=days_ago)
+        return today - timedelta(days=today.weekday())
+
+    def _seed_selfcare(self, client, auth_headers, offsets_from_monday, sleep=7.0, meals=2, exercise=False):
+        ws = self._week_start()
+        for offset in offsets_from_monday:
+            d = ws + timedelta(days=offset)
+            if d > date.today():
+                continue
             client.post("/self-care/log", json={
                 "log_date": d.isoformat(),
                 "sleep_hours": sleep,
@@ -107,27 +113,35 @@ class TestComputeWeekly:
             }, headers=auth_headers)
 
     def test_creates_snapshot(self, client, auth_headers):
-        self._seed_selfcare(client, auth_headers, [0, 1, 2], sleep=7.0, meals=2)
+        ws = self._week_start()
+        # Seed Mon, Tue, Wed of current week (or up to today)
+        offsets = [i for i in range(3) if ws + timedelta(days=i) <= date.today()]
+        self._seed_selfcare(client, auth_headers, offsets, sleep=7.0, meals=2)
         r = client.post("/insights/compute-weekly", headers=auth_headers)
         assert r.status_code == 200
         data = r.json()
         assert data["avg_sleep"] == 7.0
         assert data["avg_meals"] == 2.0
-        assert data["check_in_days"] == 3
+        assert data["check_in_days"] == len(offsets)
         assert data["pid_state"] is not None
         assert data["insight_copy"] is not None
 
     def test_idempotent(self, client, auth_headers):
-        self._seed_selfcare(client, auth_headers, [0, 1], sleep=6.0, meals=1)
+        ws = self._week_start()
+        offsets = [i for i in range(2) if ws + timedelta(days=i) <= date.today()]
+        self._seed_selfcare(client, auth_headers, offsets, sleep=6.0, meals=1)
         r1 = client.post("/insights/compute-weekly", headers=auth_headers)
         r2 = client.post("/insights/compute-weekly", headers=auth_headers)
         assert r1.json()["id"] == r2.json()["id"]
 
     def test_counts_exercise_days(self, client, auth_headers):
-        self._seed_selfcare(client, auth_headers, [0, 1, 2], exercise=True)
-        self._seed_selfcare(client, auth_headers, [3, 4], exercise=False)
+        ws = self._week_start()
+        ex_offsets = [i for i in range(3) if ws + timedelta(days=i) <= date.today()]
+        no_offsets = [i for i in range(3, 5) if ws + timedelta(days=i) <= date.today()]
+        self._seed_selfcare(client, auth_headers, ex_offsets, exercise=True)
+        self._seed_selfcare(client, auth_headers, no_offsets, exercise=False)
         r = client.post("/insights/compute-weekly", headers=auth_headers)
-        assert r.json()["exercise_days"] == 3
+        assert r.json()["exercise_days"] == len(ex_offsets)
 
     def test_counts_tasks_completed(self, client, auth_headers, db_session):
         r = client.post("/insights/compute-weekly", headers=auth_headers)
