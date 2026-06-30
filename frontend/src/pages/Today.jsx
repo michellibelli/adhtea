@@ -23,19 +23,8 @@ import Button from '../components/Button'
 import { PageLoading, PageError } from '../components/PageState'
 import { isTimedVisible } from '../utils/timing'
 
-const FALLBACK_MAX_TODAY = 15
+const FALLBACK_MAX_TODAY = 10
 const MAX_TOTAL = 20
-
-const WEIGHTS = { light: 1, medium: 2, heavy: 3 }
-
-function computeLoad(tasks) {
-  if (!tasks.length) return { label: 'All clear',  color: '#6A7838', pct: 0,   level: 'clear' }
-  const sum = tasks.reduce((a, t) => a + (WEIGHTS[t.weight] || 2), 0)
-  if (sum <= 6)  return { label: 'Light day',   color: '#6A7838', pct: 25,  level: 'light' }
-  if (sum <= 12) return { label: 'Manageable',  color: '#5B7A9C', pct: 55,  level: 'manageable' }
-  if (sum <= 18) return { label: 'Heavy day',   color: '#A07A20', pct: 80,  level: 'heavy' }
-  return              { label: 'Overloaded',   color: '#B04A1D', pct: 100, level: 'overloaded' }
-}
 
 const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2, low: 3 }
 const DESIRE_RANK   = { high: 0, medium: 1, low: 2 }
@@ -142,15 +131,12 @@ export default function Today({ carriedOver = false, onNavigate }) {
     todayTasks.filter(t => t.task_type !== 'appointment' && t.task_type !== 'routine'),
     sortBy
   )
-  const todayVisible = regular.slice(0, maxToday)
-  const todayOverflow = regular.slice(maxToday)
+  const overCapacity = regular.length > maxToday
 
-  const upNextSlots = Math.max(0, MAX_TOTAL - todayVisible.length - timed.length)
+  const upNextSlots = Math.max(0, MAX_TOTAL - regular.length - timed.length)
   const upNext = inboxTasks
     .filter(t => t.task_type === 'task')
     .slice(0, upNextSlots)
-
-  const load = computeLoad(todayTasks)
 
   async function handleComplete(id) {
     setCompletingId(id)
@@ -191,7 +177,6 @@ export default function Today({ carriedOver = false, onNavigate }) {
   }
 
   async function handlePromote(task) {
-    if (todayVisible.length >= maxToday) return
     setInboxTasks(prev => prev.filter(t => t.id !== task.id))
     setTodayTasks(prev => [...prev, task])
     try { await scheduleToday(task.id) }
@@ -219,7 +204,7 @@ export default function Today({ carriedOver = false, onNavigate }) {
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-semibold text-ui-text">Today</h1>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            <span className="text-sm text-ui-subtext mr-1">{todayVisible.length + timed.length} today</span>
+            <span className="text-sm text-ui-subtext mr-1">{regular.length + timed.length} today</span>
             {onNavigate && (
               <>
                 <Button variant="secondary" className="!px-2 !py-1.5" onClick={() => onNavigate('capture')}>
@@ -241,19 +226,6 @@ export default function Today({ carriedOver = false, onNavigate }) {
 
         {/* Capacity */}
         <CapacityBar capacity={capacity} compact />
-
-        {/* Load bar */}
-        {todayTasks.length > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-xs mb-1 px-0.5">
-              <span className="text-ui-subtext">Load</span>
-              <span className="font-medium" style={{ color: load.color }}>{load.label}</span>
-            </div>
-            <div className="h-1 rounded-full bg-ui-border overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${load.pct}%`, background: load.color }} />
-            </div>
-          </div>
-        )}
 
         {/* Carried-over banner */}
         {carriedOver && (
@@ -289,8 +261,8 @@ export default function Today({ carriedOver = false, onNavigate }) {
             {/* ── Today section ── */}
             <div>
               <div className="flex items-center justify-between mb-2 px-0.5">
-                <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">
-                  Today ({todayVisible.length}{todayOverflow.length > 0 ? `+${todayOverflow.length}` : ''}/{maxToday})
+                <p className={`text-[10px] font-medium uppercase tracking-wider ${overCapacity ? 'text-amber-600' : 'text-ui-subtext'}`}>
+                  Today ({regular.length}/{maxToday})
                 </p>
                 {regular.length > 1 && (
                   <div className="flex gap-1">
@@ -312,13 +284,19 @@ export default function Today({ carriedOver = false, onNavigate }) {
                 )}
               </div>
 
+              {overCapacity && (
+                <p className="text-[11px] text-amber-600 px-0.5 mb-2">
+                  Over capacity — consider deferring {regular.length - maxToday} task{regular.length - maxToday > 1 ? 's' : ''} to stay on track.
+                </p>
+              )}
+
               {regular.length === 0 ? (
-                <p className="text-xs text-ui-subtext px-0.5">No tasks today — promote from below or run Triage.</p>
+                <p className="text-xs text-ui-subtext px-0.5">No tasks today — promote from below or add from Capture.</p>
               ) : sortBy === 'manual' ? (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={todayVisible.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={regular.map(t => t.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-3">
-                      {todayVisible.map(task => (
+                      {regular.map(task => (
                         <SortableTaskRow key={task.id} task={task}
                           onComplete={handleComplete} onSnooze={handleSnooze}
                           onDefer={handleDefer} onDelete={handleDelete}
@@ -330,7 +308,7 @@ export default function Today({ carriedOver = false, onNavigate }) {
                 </DndContext>
               ) : (
                 <div className="space-y-3">
-                  {todayVisible.map(task => (
+                  {regular.map(task => (
                     <div key={task.id} className={completingId === task.id ? 'animate-task-complete' : ''}>
                       <TaskCard task={task} variant="today"
                         onComplete={handleComplete} onSnooze={handleSnooze}
@@ -339,12 +317,6 @@ export default function Today({ carriedOver = false, onNavigate }) {
                     </div>
                   ))}
                 </div>
-              )}
-
-              {todayOverflow.length > 0 && (
-                <Card variant="ghost" className="px-4 py-3 text-center text-sm text-ui-subtext mt-3">
-                  {todayOverflow.length} more in today queue
-                </Card>
               )}
             </div>
 
@@ -356,12 +328,6 @@ export default function Today({ carriedOver = false, onNavigate }) {
                   <span className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Up Next</span>
                   <div className="flex-1 h-px bg-ui-border" />
                 </div>
-
-                {todayVisible.length >= maxToday && (
-                  <p className="text-[11px] text-ui-subtext text-center px-2 -mt-2 mb-1">
-                    Today is full ({maxToday} tasks based on your capacity) — snooze or defer a task above to make room.
-                  </p>
-                )}
 
                 {/* ── Up Next section ── */}
                 <div className="space-y-3">
@@ -380,16 +346,14 @@ export default function Today({ carriedOver = false, onNavigate }) {
                           }}
                         />
                       </div>
-                      {todayVisible.length < maxToday && (
-                        <button
-                          type="button"
-                          onClick={() => handlePromote(task)}
-                          title="Add to today"
-                          className="flex-shrink-0 mt-3 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
-                        >
-                          +
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handlePromote(task)}
+                        title="Add to today"
+                        className="flex-shrink-0 mt-3 w-7 h-7 rounded-full border border-ui-border flex items-center justify-center text-sm text-ui-subtext hover:border-ui-accent hover:text-ui-accent transition-colors"
+                      >
+                        +
+                      </button>
                     </div>
                   ))}
                 </div>

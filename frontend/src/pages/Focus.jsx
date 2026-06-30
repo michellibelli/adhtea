@@ -540,7 +540,7 @@ export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
                 )}
               </button>
               <div className="flex-1 min-w-0">
-                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
+                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} overCapacity={tasks.length > 10} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
               </div>
               <button
                 onClick={handleComplete}

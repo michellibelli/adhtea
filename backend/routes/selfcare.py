@@ -167,19 +167,10 @@ def get_today_capacity(
     ).first()
     if snap is None:
         return None
-    from routes.triage import (
-        capacity_tier, BASE_BUDGET_UNITS, WEIGHT_UNITS,
-        _committed_weight_for_day, _routine_drain_for_day,
-    )
+    from routes.triage import capacity_tier
     resp = CapacitySnapshotResponse.model_validate(snap)
     resp.tier = capacity_tier(snap.overall)
-    today_local = date.today()
-    base_budget = BASE_BUDGET_UNITS * (snap.overall / 100.0)
-    committed = _committed_weight_for_day(db, current_user.id, today_local)
-    routine_drain = _routine_drain_for_day(db, current_user.id, today_local)
-    remaining = max(0.0, base_budget - committed - routine_drain)
-    avg_weight = WEIGHT_UNITS["medium"]
-    resp.max_slots = int(remaining // avg_weight) if avg_weight else 0
+    resp.max_slots = max(1, round(10 * (snap.overall / 100.0)))
     return resp
 
 

@@ -583,13 +583,10 @@ function DailyLimitsSection({ user }) {
 
 const DAYS_LABEL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIMES_LABEL = { morning: 'morning', afternoon: 'afternoon', evening: 'evening' }
-const WEIGHTS_LABEL = { light: 'light', medium: 'medium', heavy: 'heavy' }
-
 function ruleSummary(rule) {
   const days = (rule.days && rule.days.length) ? rule.days.map(d => DAYS_LABEL[d]).join('/') : 'any day'
   const times = (rule.times && rule.times.length) ? rule.times.map(t => TIMES_LABEL[t]).join('/') : 'any time'
-  const weights = (rule.weights && rule.weights.length) ? rule.weights.map(w => WEIGHTS_LABEL[w]).join('/') : 'any size'
-  return `${days} · ${times} · ${weights}`
+  return `${days} · ${times}`
 }
 
 function DomainRuleEditor({ rule, onChange, onRemove }) {
@@ -627,23 +624,6 @@ function DomainRuleEditor({ rule, onChange, onRemove }) {
               onClick={() => toggleInList('times', v)}
               className={`px-2 py-1 rounded text-[10px] font-medium border transition-all ${
                 (rule.times || []).includes(v)
-                  ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                  : 'border-ui-border text-ui-subtext'
-              }`}
-            >{v}</button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="text-[10px] text-ui-subtext mb-1 uppercase tracking-wider">Sizes (empty = any)</p>
-        <div className="flex flex-wrap gap-1">
-          {['light','medium','heavy'].map(v => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => toggleInList('weights', v)}
-              className={`px-2 py-1 rounded text-[10px] font-medium border transition-all ${
-                (rule.weights || []).includes(v)
                   ? 'bg-ui-primary text-ui-primary-text border-transparent'
                   : 'border-ui-border text-ui-subtext'
               }`}

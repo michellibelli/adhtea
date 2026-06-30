@@ -243,7 +243,6 @@ export default function Projects() {
   const [showAddTask,  setShowAddTask]  = useState(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDue,   setNewTaskDue]   = useState('')
-  const [newTaskSize,  setNewTaskSize]  = useState('medium')
   const [addingTask,   setAddingTask]   = useState(false)
 
   const [editingTitle, setEditingTitle] = useState(null)
@@ -354,8 +353,7 @@ export default function Projects() {
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       const due = newTaskDue || tomorrow.toISOString().split('T')[0]
-      const weight = newTaskSize === 'small' ? 'light' : newTaskSize === 'large' ? 'heavy' : 'medium'
-      const task = await createTask({ title: newTaskTitle.trim(), project_id: projectId, due_date: due, weight })
+      const task = await createTask({ title: newTaskTitle.trim(), project_id: projectId, due_date: due })
       setDetail(prev => ({
         ...prev,
         [projectId]: { ...prev[projectId], tasks: [...(prev[projectId]?.tasks || []), task] },
@@ -709,28 +707,12 @@ export default function Projects() {
                                 />
                                 <DomainDateWarning date={newTaskDue} rules={domainRules} />
                               </div>
-                              <div className="flex gap-1">
-                                {[['small','Light'],['medium','Med'],['large','Heavy']].map(([val, lbl]) => (
-                                  <button
-                                    key={val}
-                                    type="button"
-                                    onClick={() => setNewTaskSize(val)}
-                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                      newTaskSize === val
-                                        ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                                        : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-                                    }`}
-                                  >
-                                    {lbl}
-                                  </button>
-                                ))}
-                              </div>
                             </div>
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => handleAddTask(project.id)} disabled={!newTaskTitle.trim() || addingTask}>
                                 {addingTask ? '…' : 'Add task'}
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => { setShowAddTask(null); setNewTaskTitle(''); setNewTaskDue(''); setNewTaskSize('medium') }}>
+                              <Button size="sm" variant="ghost" onClick={() => { setShowAddTask(null); setNewTaskTitle(''); setNewTaskDue('') }}>
                                 Cancel
                               </Button>
                             </div>

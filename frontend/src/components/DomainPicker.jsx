@@ -5,7 +5,6 @@ import { createDomain } from '../api/domains'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIMES = [['morning', 'Morn'], ['afternoon', 'Aft'], ['evening', 'Eve']]
-const WEIGHTS = [['light', 'Light'], ['medium', 'Medium'], ['heavy', 'Heavy']]
 
 /**
  * Domain selector pills + inline "Other" custom-domain editor.
@@ -21,7 +20,6 @@ export default function DomainPicker({ domains, value, onChange, onCreate }) {
   const [name, setName] = useState('')
   const [days, setDays] = useState(new Set([0,1,2,3,4,5,6]))
   const [times, setTimes] = useState(new Set())
-  const [weights, setWeights] = useState(new Set())
   const [saving, setSaving] = useState(false)
 
   function toggle(set, setter, key) {
@@ -37,13 +35,13 @@ export default function DomainPicker({ domains, value, onChange, onCreate }) {
       const rule = {
         days: [...days].sort(),
         times: times.size ? [...times] : null,
-        weights: weights.size ? [...weights] : null,
+        weights: null,
       }
       const created = await createDomain({ name: name.trim(), rules: [rule] })
       onCreate?.(created)
       onChange?.(created.id)
       setShowCustom(false)
-      setName(''); setDays(new Set([0,1,2,3,4,5,6])); setTimes(new Set()); setWeights(new Set())
+      setName(''); setDays(new Set([0,1,2,3,4,5,6])); setTimes(new Set())
     } finally { setSaving(false) }
   }
 
@@ -113,23 +111,6 @@ export default function DomainPicker({ domains, value, onChange, onCreate }) {
                   onClick={() => toggle(times, setTimes, val)}
                   className={`px-2 py-1 rounded text-[10px] font-medium border transition-all ${
                     times.has(val)
-                      ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                      : 'border-ui-border text-ui-subtext'
-                  }`}
-                >{lbl}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-[10px] text-ui-subtext mb-1 uppercase tracking-wider">Sizes (empty = any)</p>
-            <div className="flex flex-wrap gap-1">
-              {WEIGHTS.map(([val, lbl]) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => toggle(weights, setWeights, val)}
-                  className={`px-2 py-1 rounded text-[10px] font-medium border transition-all ${
-                    weights.has(val)
                       ? 'bg-ui-primary text-ui-primary-text border-transparent'
                       : 'border-ui-border text-ui-subtext'
                   }`}

@@ -9,7 +9,7 @@ import { Input, Textarea } from './Input'
 import ProjectBadge from './ProjectBadge'
 
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
-const WEIGHT_DOTS = { light: 1, medium: 2, heavy: 3 }
+
 
 function formatDueDate(iso) {
   if (!iso) return null
@@ -303,17 +303,6 @@ export default function TaskCard({
     setShowActions(false)
   }
 
-  const WEIGHT_CYCLE = ['light', 'medium', 'heavy']
-  const dots = WEIGHT_DOTS[task.weight] || 1
-
-  function cycleWeight(e) {
-    e.stopPropagation()
-    const cur = WEIGHT_CYCLE.indexOf(task.weight) ?? 0
-    const next = WEIGHT_CYCLE[(cur + 1) % 3]
-    setTask(t => ({ ...t, weight: next }))
-    updateTask(task.id, { weight: next }).catch(console.error)
-  }
-
   return (
     <>
       <Card className={`px-4 py-3 transition-all duration-300 ${leaving ? 'opacity-0 scale-95 translate-x-3' : 'opacity-100'} ${(task.push_count || 0) >= 5 ? 'border-amber-400/40' : ''}`}>
@@ -352,17 +341,6 @@ export default function TaskCard({
 
                 {/* Meta row */}
                 <div className="flex items-center gap-2 mt-1.5 ml-4 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={cycleWeight}
-                    title={`Difficulty: ${task.weight || 'medium'} — tap to change`}
-                    className="flex gap-0.5 p-0.5 -m-0.5 rounded hover:bg-ui-accent/10 transition-colors"
-                  >
-                    {[1, 2, 3].map((d) => (
-                      <div key={d} className={`w-1.5 h-1.5 rounded-full ${d <= dots ? 'bg-ui-accent' : 'bg-ui-border'}`} />
-                    ))}
-                  </button>
-
                   <ProjectBadge name={task.project_name} size="xs" />
 
                   {task.domain_name && (

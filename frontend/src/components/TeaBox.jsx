@@ -89,7 +89,7 @@ function Bag({ colors, active, gold, onClick, title }) {
 // Today; clicking a bag focuses that task on the Focus card (via onSelectTask)
 // so the user can act on a specific item — e.g. an 8am routine done at 9am
 // that the time-of-day window would otherwise keep off the card.
-export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, onOpen, onSelectTask, onNavigate }) {
+export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, overCapacity = false, onOpen, onSelectTask, onNavigate }) {
   const BOX_VISIBLE = 9
   const colored = orderedBags(tasks).slice(0, BOX_VISIBLE)
   const goldShown = Math.max(0, Math.min(goldCount, BOX_VISIBLE - colored.length))
@@ -141,7 +141,10 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         </div>
 
         {/* Box front panel */}
-        <div className="tea-box-front absolute left-0 right-0 bottom-0" />
+        <div
+          className="tea-box-front absolute left-0 right-0 bottom-0"
+          style={overCapacity ? { boxShadow: '0 0 8px 2px rgba(217,119,6,0.25)' } : undefined}
+        />
       </div>
 
       {/* Drawers — three equally sized compartments below the box,
