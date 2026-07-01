@@ -100,6 +100,7 @@ function AppShell() {
   const [showWake, setShowWake]               = useState(false)
   const [wakeReady, setWakeReady]             = useState(false)
   const [wakeDiary, setWakeDiary]             = useState('')
+  const wakePromptRef = useRef('')
   const diaryRef = useRef('')
   const prevScreenRef = useRef('focus')
 
@@ -155,6 +156,7 @@ function AppShell() {
       if (likelySleeping()) {
         setWakeDiary('')
         setWakeReady(false)
+        wakePromptRef.current = DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]
         setShowWake(true)
       }
     }
@@ -344,19 +346,19 @@ function AppShell() {
             >{wakeReady ? 'ready when you are' : 'brewing…'}</p>
 
             <div className="w-full">
-              <div className="rounded-xl border border-ui-border/60 bg-ui-card/80 px-4 py-4 backdrop-blur-sm">
+              <div className="rounded-xl border border-ui-border bg-ui-card px-4 py-4" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
                 <p className="text-[10px] font-semibold text-ui-accent uppercase tracking-widest mb-1">
                   While you wait —
                 </p>
                 <p className="text-sm text-ui-subtext mb-3">
-                  {DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]}
+                  {wakePromptRef.current}
                 </p>
                 <textarea
                   value={wakeDiary}
                   onChange={(e) => setWakeDiary(e.target.value)}
                   placeholder="or just wait, no pressure"
                   rows={4}
-                  className="w-full rounded-lg border border-ui-border/60 bg-ui-bg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors"
+                  className="w-full rounded-lg border border-ui-border bg-ui-bg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors"
                 />
                 {wakeDiary.trim() && !wakeReady && (
                   <p className="text-[10px] text-ui-accent mt-1.5">
