@@ -28,6 +28,7 @@ function getLastSuccess() {
 
 function markSuccess() {
   localStorage.setItem(LAST_SUCCESS_KEY, Date.now().toString())
+  window.dispatchEvent(new Event('aria:server-awake'))
 }
 
 export function likelySleeping() {

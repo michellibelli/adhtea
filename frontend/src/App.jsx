@@ -7,7 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn } from './api/client'
+import { isLoggedIn, likelySleeping } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { createTask } from './api/tasks'
@@ -97,7 +97,11 @@ function AppShell() {
   const [diaryEntry, setDiaryEntry]           = useState('')
   const [diaryConfig]                         = useState(getDiaryConfig)
   const [serverUp, setServerUp]               = useState(false)
+  const [showWake, setShowWake]               = useState(false)
+  const [wakeReady, setWakeReady]             = useState(false)
+  const [wakeDiary, setWakeDiary]             = useState('')
   const diaryRef = useRef('')
+  const prevScreenRef = useRef('focus')
 
   useEffect(() => {
     getMe()
@@ -143,6 +147,37 @@ function AppShell() {
       })
       .catch(() => setReady(true))
   }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    if (screen !== prevScreenRef.current) {
+      prevScreenRef.current = screen
+      if (likelySleeping()) {
+        setWakeDiary('')
+        setWakeReady(false)
+        setShowWake(true)
+      }
+    }
+  }, [screen, ready])
+
+  useEffect(() => {
+    if (!showWake) return
+    const onAwake = () => setWakeReady(true)
+    window.addEventListener('aria:server-awake', onAwake)
+    if (!likelySleeping()) setWakeReady(true)
+    return () => window.removeEventListener('aria:server-awake', onAwake)
+  }, [showWake])
+
+  function dismissWake() {
+    if (wakeDiary.trim()) {
+      createTask({
+        title: 'Diary entry',
+        task_type: 'note',
+        notes: wakeDiary.trim(),
+      }).catch(() => {})
+    }
+    setShowWake(false)
+  }
 
   function handleLogout() { logout().then(() => window.location.reload()) }
 
@@ -292,6 +327,61 @@ function AppShell() {
         {screen === 'tasks'     && <AllTasks />}
         {screen === 'projects'  && <Projects onNavigate={setScreen} />}
       </main>
+
+      {showWake && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 pb-12 bg-ui-bg/95 backdrop-blur-sm">
+          <div className="flex flex-col items-center w-full max-w-xs">
+            <div className="relative mb-4">
+              <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.9s', '--steam-delay': '0s' }} />
+              <span className="steam-wisp" style={{ left: 26, bottom: '92%', height: 22, background: 'rgba(120,110,90,0.40)', '--steam-dur': '3.4s', '--steam-delay': '0.7s' }} />
+              <span className="steam-wisp" style={{ left: 17, bottom: '90%', height: 20, background: 'rgba(120,110,90,0.42)', '--steam-dur': '3.1s', '--steam-delay': '1.4s' }} />
+              <Logo size={56} />
+            </div>
+
+            <p
+              className="text-sm text-ui-subtext mb-6"
+              style={{ fontFamily: 'Caveat, cursive', fontSize: 18, letterSpacing: '0.02em' }}
+            >{wakeReady ? 'ready when you are' : 'brewing…'}</p>
+
+            <div className="w-full">
+              <div className="rounded-xl border border-ui-border/60 bg-ui-card/80 px-4 py-4 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold text-ui-accent uppercase tracking-widest mb-1">
+                  While you wait —
+                </p>
+                <p className="text-sm text-ui-subtext mb-3">
+                  {DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]}
+                </p>
+                <textarea
+                  value={wakeDiary}
+                  onChange={(e) => setWakeDiary(e.target.value)}
+                  placeholder="or just wait, no pressure"
+                  rows={4}
+                  className="w-full rounded-lg border border-ui-border/60 bg-ui-bg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors"
+                />
+                {wakeDiary.trim() && !wakeReady && (
+                  <p className="text-[10px] text-ui-accent mt-1.5">
+                    will be saved when server wakes
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {wakeReady && (
+              <button
+                onClick={dismissWake}
+                className="mt-4 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300"
+                style={{
+                  background: 'var(--aria-accent)',
+                  color: 'var(--aria-bg)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                }}
+              >
+                {wakeDiary.trim() ? 'Save & continue' : 'Continue'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   )
