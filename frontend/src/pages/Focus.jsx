@@ -362,7 +362,7 @@ export default function Focus({ onGoToList, onNavigate }) {
             celebrate ? ''
             : leaving ? 'opacity-0'
             : 'transition-opacity duration-500 opacity-100'
-          }`}>
+          }`} style={{ marginLeft: -10 }}>
 
             {/* Bonus ribbon */}
             {isBonusMode && !celebrate && (
