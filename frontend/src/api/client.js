@@ -109,7 +109,6 @@ async function rawRequest(method, path, body, isForm) {
   }
 
   markSuccess()
-  flushQueues()
   if (res.status === 204) return null
   return res.json()
 }
@@ -203,6 +202,8 @@ async function flushQueues() {
 
   _flushing = false
 }
+
+setInterval(flushQueues, 30000)
 
 export const api = {
   get:      (path)       => request('GET',    path),

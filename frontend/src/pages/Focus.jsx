@@ -275,7 +275,7 @@ export default function Focus({ onGoToList, onNavigate }) {
     }
     completeTask(taskId)
     nudgeRef.current = null
-    if (nudgeCooldownOk()) {
+    if (!isBonusMode && nudgeCooldownOk()) {
       getNudge().then((n) => { nudgeRef.current = n }).catch(() => {})
     }
     setCelebrate('dunk')
