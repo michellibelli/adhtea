@@ -8,7 +8,7 @@ import { InlineSkeletonCards, PageError } from '../components/PageState'
 const FREQ_LABELS  = { daily: 'Daily', weekdays: 'Weekdays', weekends: 'Weekends', weekly: 'Weekly', custom: 'Custom' }
 const TIME_LABELS  = { anytime: 'Anytime', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' }
 const DAY_NAMES    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const EMPTY_FORM   = { title: '', frequency: 'daily', time_of_day: 'anytime', days_of_week: '', only_when_present: false, exact_time: '' }
+const EMPTY_FORM   = { title: '', notes: '', frequency: 'daily', time_of_day: 'anytime', days_of_week: '', only_when_present: false, exact_time: '' }
 
 
 // ---------------------------------------------------------------------------
@@ -55,6 +55,14 @@ function RoutineForm({ form, setForm, onSave, onCancel, editing = false }) {
         value={form.title}
         onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
         placeholder="Routine name"
+      />
+
+      <textarea
+        className="w-full text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2.5 text-ui-text outline-none focus:border-ui-accent transition-colors resize-none"
+        value={form.notes}
+        onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+        rows={2}
+        placeholder="Description (optional)"
       />
 
       <div>
@@ -173,6 +181,7 @@ export default function Routines() {
   async function handleSave() {
     const data = {
       ...form,
+      notes: form.notes?.trim() || null,
       days_of_week: (form.frequency === 'weekly' || form.frequency === 'custom')
         ? form.days_of_week || null
         : null,
@@ -196,6 +205,7 @@ export default function Routines() {
     setShowForm(false)
     setForm({
       title: r.title,
+      notes: r.notes || '',
       frequency: r.frequency,
       time_of_day: r.time_of_day,
       days_of_week: r.days_of_week || '',

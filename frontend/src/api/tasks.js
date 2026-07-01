@@ -1,11 +1,16 @@
-import { api } from './client'
+import { api, queueComplete, getPendingCompletes } from './client'
 
 // Capture
 export const createTask = (data) => api.post('/tasks', data)
 
 // Lists
 export const getInbox = () => api.get('/tasks/inbox')
-export const getToday = () => api.get('/tasks/today')
+export async function getToday() {
+  const tasks = await api.get('/tasks/today')
+  const pending = getPendingCompletes()
+  if (!pending.length) return tasks
+  return tasks.filter(t => !pending.includes(t.id))
+}
 export const getWaiting = () => api.get('/tasks/waiting')
 export const getDoneToday = () => api.get('/tasks/done')
 
@@ -13,12 +18,23 @@ export const getDoneToday = () => api.get('/tasks/done')
 export const getTriageSummary = () => api.get('/tasks/triage-summary')
 export const getCriticalList  = () => api.get('/tasks/critical-list')
 export const getBacklog       = () => api.get('/tasks/backlog')
-export const getBonusTasks    = () => api.get('/tasks/bonus')
+export async function getBonusTasks() {
+  const tasks = await api.get('/tasks/bonus')
+  const pending = getPendingCompletes()
+  if (!pending.length) return tasks
+  return tasks.filter(t => !pending.includes(t.id))
+}
 export const searchTasks      = (q) => api.get(`/tasks/search?q=${encodeURIComponent(q)}`)
 
 // Actions
 export const scheduleToday = (id, meta = {}) => api.post(`/tasks/${id}/schedule-today`, meta)
-export const completeTask = (id) => api.post(`/tasks/${id}/complete`)
+export async function completeTask(id) {
+  try {
+    return await api.post(`/tasks/${id}/complete`)
+  } catch {
+    queueComplete(id)
+  }
+}
 export const snoozeTask = (id, snooze_until) => api.post(`/tasks/${id}/snooze`, { snooze_until })
 export const unsnoozeTask = (id) => api.post(`/tasks/${id}/unsnooze`)
 export const deferTask = (id) => api.post(`/tasks/${id}/defer`)

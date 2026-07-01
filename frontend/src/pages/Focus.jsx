@@ -119,7 +119,7 @@ function TeaCup() {
 
 
 
-export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
+export default function Focus({ onGoToList, onNavigate }) {
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -181,20 +181,6 @@ export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
   const remaining   = activeList.length
   const totalDone   = doneTodayBase + localDone
 
-  // Push the page's headline stats up to App.jsx so the mobile top bar
-  // can render "Now / X done / Y left" under the capacity bar. Clear
-  // them on unmount so the slot doesn't leak Focus state into other
-  // screens that don't own the data.
-  useEffect(() => {
-    if (!onStatsChange) return
-    onStatsChange({
-      label: isBonusMode ? 'Bonus' : 'Now',
-      done: totalDone > 0 ? `${totalDone} done` : null,
-      remaining: isBonusMode ? `${remaining} bonus` : `${remaining} left`,
-      isBonus: isBonusMode,
-    })
-    return () => onStatsChange(null)
-  }, [onStatsChange, isBonusMode, totalDone, remaining])
 
   async function advance(fn) {
     setLeaving(true)
@@ -361,6 +347,15 @@ export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
             : 'transition-opacity duration-500 opacity-100'
           }`}>
 
+            {/* Bonus ribbon */}
+            {isBonusMode && !celebrate && (
+              <div className="bonus-ribbon-wrap">
+                <div className="bonus-ribbon-tail left" />
+                <div className="bonus-ribbon"><span>✦ BONUS ✦</span></div>
+                <div className="bonus-ribbon-tail right" />
+              </div>
+            )}
+
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
                 inside the descending wrapper. */}
@@ -426,13 +421,13 @@ export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
               <div className="teabag-string" />
 
               <div
-                className={`w-full min-w-[180px] max-w-[180px] mx-auto ${isBonusMode ? 'rounded-2xl ring-1 ring-amber-500/50 shadow-lg shadow-amber-500/15' : ''}`}
-                style={!isBonusMode ? {
+                className="w-full min-w-[180px] max-w-[180px] mx-auto"
+                style={{
                   filter: 'drop-shadow(3px 5px 6px rgba(60,40,20,0.32)) drop-shadow(0 1px 0 rgba(60,40,20,0.20))',
-                } : undefined}
+                }}
               >
                 <div style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%)' }}>
-                <Card className={`teabag-card${isBonusMode ? ' teabag-bonus' : ''} relative px-7 py-5 min-h-[260px] flex flex-col items-center justify-center text-center overflow-hidden`} style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className="teabag-card relative px-7 py-5 min-h-[260px] flex flex-col items-center justify-center text-center overflow-hidden" style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2"
@@ -467,6 +462,17 @@ export default function Focus({ onGoToList, onNavigate, onStatsChange }) {
             </div>{/* end sway wrapper */}
             </div>{/* end teabag unit */}
 
+            {/* Bonus sparkles — scattered around bag, fade in/out in place */}
+            {isBonusMode && !celebrate && (
+              <div className="bonus-sparkle-field" aria-hidden="true">
+                <span className="bonus-sparkle s1">✦</span>
+                <span className="bonus-sparkle s2">✦</span>
+                <span className="bonus-sparkle s3">✦</span>
+                <span className="bonus-sparkle s4">✦</span>
+                <span className="bonus-sparkle s5">✦</span>
+                <span className="bonus-sparkle s6">✦</span>
+              </div>
+            )}
 
             {/* Watercolor teacup — single image, appears behind bag */}
             {(celebrate === 'dunk' || celebrate === 'wipe') && (

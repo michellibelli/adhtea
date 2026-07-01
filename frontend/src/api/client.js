@@ -110,8 +110,53 @@ async function request(method, path, body = undefined, isForm = false) {
   }
 
   markSuccess()
+  flushCompletes()
   if (res.status === 204) return null
   return res.json()
+}
+
+// ---------------------------------------------------------------------------
+// Offline-resilient completion queue
+// Stores task IDs that were completed locally but failed to sync. Flushed
+// automatically whenever any API request succeeds (i.e. backend is awake).
+// ---------------------------------------------------------------------------
+
+const PENDING_KEY = 'aria_pending_completes'
+
+export function getPendingCompletes() {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]') }
+  catch { return [] }
+}
+
+function setPendingCompletes(ids) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify(ids))
+}
+
+export function queueComplete(taskId) {
+  const pending = getPendingCompletes()
+  if (!pending.includes(taskId)) {
+    pending.push(taskId)
+    setPendingCompletes(pending)
+  }
+}
+
+let _flushing = false
+
+async function flushCompletes() {
+  if (_flushing) return
+  const pending = getPendingCompletes()
+  if (!pending.length) return
+  _flushing = true
+  const stillPending = []
+  for (const id of pending) {
+    try {
+      await request('POST', `/tasks/${id}/complete`)
+    } catch {
+      stillPending.push(id)
+    }
+  }
+  setPendingCompletes(stillPending)
+  _flushing = false
 }
 
 export const api = {

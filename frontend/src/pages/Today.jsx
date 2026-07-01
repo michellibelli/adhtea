@@ -140,7 +140,7 @@ export default function Today({ carriedOver = false, onNavigate }) {
 
   async function handleComplete(id) {
     setCompletingId(id)
-    try { await completeTask(id) } catch (err) { console.error(err) }
+    completeTask(id)
     setTimeout(() => {
       setTodayTasks(prev => prev.filter(t => t.id !== id))
       setCompletingId(null)

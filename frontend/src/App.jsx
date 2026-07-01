@@ -94,7 +94,6 @@ function AppShell() {
   const [showCheckIn, setShowCheckIn]         = useState(false)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
-  const [focusStats, setFocusStats]           = useState(null)
   const [diaryEntry, setDiaryEntry]           = useState('')
   const [diaryConfig]                         = useState(getDiaryConfig)
   const [serverUp, setServerUp]               = useState(false)
@@ -241,7 +240,7 @@ function AppShell() {
         style={{ pointerEvents: 'none' }}
       >
         <div
-          className={`header-pill flex items-center gap-3 px-5 w-full backdrop-blur-md transition-colors duration-300${focusStats?.isBonus ? ' header-pill-bonus' : ''}`}
+          className="header-pill flex items-center gap-3 px-5 w-full backdrop-blur-md transition-colors duration-300"
           style={{ pointerEvents: 'auto' }}
         >
           {/* Left — flower accent (geometric on Cafe, pressed watercolor on Linen) */}
@@ -283,7 +282,7 @@ function AppShell() {
 
       <main className="pt-[64px] relative z-[2]">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} onStatsChange={setFocusStats} />}
+        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} />}
         {screen === 'today'    && <Today carriedOver={carriedOver} onNavigate={setScreen} />}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
