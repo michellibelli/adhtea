@@ -33,10 +33,11 @@ export const searchTasks      = (q) => api.get(`/tasks/search?q=${encodeURICompo
 // Actions
 export const scheduleToday = (id, meta = {}) => api.post(`/tasks/${id}/schedule-today`, meta)
 export async function completeTask(id) {
+  queueComplete(id)
   try {
     return await api.post(`/tasks/${id}/complete`)
   } catch {
-    queueComplete(id)
+    // already queued — will flush later
   }
 }
 export async function snoozeTask(id, snooze_until) {
