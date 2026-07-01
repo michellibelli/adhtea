@@ -174,7 +174,7 @@ export function queueSnooze(taskId, snoozeUntil) {
 let _flushing = false
 
 async function flushQueues() {
-  if (_flushing) return
+  if (_flushing || likelySleeping()) return
   const pendingCompletes = getPendingCompletes()
   const pendingSnoozes = getPendingSnoozes()
   if (!pendingCompletes.length && !pendingSnoozes.length) return
