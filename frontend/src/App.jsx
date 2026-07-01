@@ -103,6 +103,7 @@ function AppShell() {
   const wakePromptRef = useRef('')
   const diaryRef = useRef('')
   const prevScreenRef = useRef('focus')
+  const pageLoadedRef = useRef(false)
 
   useEffect(() => {
     getMe()
@@ -153,12 +154,24 @@ function AppShell() {
     if (!ready) return
     if (screen !== prevScreenRef.current) {
       prevScreenRef.current = screen
-      if (likelySleeping()) {
+      pageLoadedRef.current = false
+      const onLoad = () => { pageLoadedRef.current = true }
+      window.addEventListener('aria:server-awake', onLoad)
+      const openWake = () => {
         setWakeDiary('')
         setWakeReady(false)
         wakePromptRef.current = DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]
         setShowWake(true)
       }
+      if (likelySleeping()) {
+        openWake()
+      } else {
+        const timer = setTimeout(() => {
+          if (!pageLoadedRef.current) openWake()
+        }, 3000)
+        return () => { clearTimeout(timer); window.removeEventListener('aria:server-awake', onLoad) }
+      }
+      return () => window.removeEventListener('aria:server-awake', onLoad)
     }
   }, [screen, ready])
 

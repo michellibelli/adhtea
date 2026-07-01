@@ -364,7 +364,12 @@ export default function Focus({ onGoToList, onNavigate }) {
             : 'transition-opacity duration-500 opacity-100'
           }`}>
 
-            {/* Bonus ribbon */}
+            {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
+                During dunk the whole unit descends; the sway animation continues
+                inside the descending wrapper. */}
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
+
+            {/* Bonus ribbon — above tag */}
             {isBonusMode && !celebrate && (
               <div className="bonus-ribbon-wrap">
                 <div className="bonus-ribbon-tail left" />
@@ -372,11 +377,6 @@ export default function Focus({ onGoToList, onNavigate }) {
                 <div className="bonus-ribbon-tail right" />
               </div>
             )}
-
-            {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
-                During dunk the whole unit descends; the sway animation continues
-                inside the descending wrapper. */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
 
             {/* Tag — outside sway-wrap so it stays still (where the string meets
                 the imaginary cup rim above). String + bag swing from here. */}
