@@ -164,10 +164,12 @@ function AppShell() {
 
   useEffect(() => {
     if (!showWake) return
+    const check = () => { if (!likelySleeping()) setWakeReady(true) }
+    check()
+    const interval = setInterval(check, 500)
     const onAwake = () => setWakeReady(true)
     window.addEventListener('aria:server-awake', onAwake)
-    if (!likelySleeping()) setWakeReady(true)
-    return () => window.removeEventListener('aria:server-awake', onAwake)
+    return () => { clearInterval(interval); window.removeEventListener('aria:server-awake', onAwake) }
   }, [showWake])
 
   function dismissWake() {
@@ -331,7 +333,7 @@ function AppShell() {
       </main>
 
       {showWake && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 pb-12 bg-ui-bg">
+        <div className="aria-page fixed inset-0 z-50 flex flex-col items-center justify-center px-6 pb-12" style={{ background: 'var(--aria-surface)' }}>
           <div className="flex flex-col items-center w-full max-w-xs">
             <div className="relative mb-4">
               <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.9s', '--steam-delay': '0s' }} />
@@ -346,7 +348,7 @@ function AppShell() {
             >{wakeReady ? 'ready when you are' : 'brewing…'}</p>
 
             <div className="w-full">
-              <div className="rounded-xl border border-ui-border bg-ui-card px-4 py-4" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+              <div className="rounded-xl px-4 py-4" style={{ border: '1.5px solid var(--aria-border)', background: 'var(--aria-card, var(--aria-surface))', boxShadow: '0 2px 16px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
                 <p className="text-[10px] font-semibold text-ui-accent uppercase tracking-widest mb-1">
                   While you wait —
                 </p>
@@ -358,7 +360,8 @@ function AppShell() {
                   onChange={(e) => setWakeDiary(e.target.value)}
                   placeholder="or just wait, no pressure"
                   rows={4}
-                  className="w-full rounded-lg border border-ui-border bg-ui-bg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors"
+                  className="w-full rounded-lg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none transition-colors"
+                  style={{ border: '1.5px solid var(--aria-border)', background: 'var(--aria-surface)' }}
                 />
                 {wakeDiary.trim() && !wakeReady && (
                   <p className="text-[10px] text-ui-accent mt-1.5">
