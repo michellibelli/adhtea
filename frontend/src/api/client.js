@@ -109,7 +109,7 @@ async function rawRequest(method, path, body, isForm) {
   }
 
   markSuccess()
-  flushCompletes()
+  flushQueues()
   if (res.status === 204) return null
   return res.json()
 }
@@ -149,22 +149,58 @@ export function queueComplete(taskId) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Offline-resilient snooze queue
+// ---------------------------------------------------------------------------
+
+const PENDING_SNOOZE_KEY = 'aria_pending_snoozes'
+
+export function getPendingSnoozes() {
+  try { return JSON.parse(localStorage.getItem(PENDING_SNOOZE_KEY) || '[]') }
+  catch { return [] }
+}
+
+function setPendingSnoozes(items) {
+  localStorage.setItem(PENDING_SNOOZE_KEY, JSON.stringify(items))
+}
+
+export function queueSnooze(taskId, snoozeUntil) {
+  const pending = getPendingSnoozes()
+  if (!pending.some(s => s.id === taskId)) {
+    pending.push({ id: taskId, snooze_until: snoozeUntil })
+    setPendingSnoozes(pending)
+  }
+}
+
 let _flushing = false
 
-async function flushCompletes() {
+async function flushQueues() {
   if (_flushing) return
-  const pending = getPendingCompletes()
-  if (!pending.length) return
+  const pendingCompletes = getPendingCompletes()
+  const pendingSnoozes = getPendingSnoozes()
+  if (!pendingCompletes.length && !pendingSnoozes.length) return
   _flushing = true
-  const stillPending = []
-  for (const id of pending) {
+
+  const stillCompletes = []
+  for (const id of pendingCompletes) {
     try {
       await request('POST', `/tasks/${id}/complete`)
     } catch {
-      stillPending.push(id)
+      stillCompletes.push(id)
     }
   }
-  setPendingCompletes(stillPending)
+  setPendingCompletes(stillCompletes)
+
+  const stillSnoozes = []
+  for (const s of pendingSnoozes) {
+    try {
+      await request('POST', `/tasks/${s.id}/snooze`, { snooze_until: s.snooze_until })
+    } catch {
+      stillSnoozes.push(s)
+    }
+  }
+  setPendingSnoozes(stillSnoozes)
+
   _flushing = false
 }
 
