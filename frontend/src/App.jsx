@@ -329,7 +329,7 @@ function AppShell() {
       </main>
 
       {showWake && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 pb-12 bg-ui-bg/95 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 pb-12 bg-ui-bg">
           <div className="flex flex-col items-center w-full max-w-xs">
             <div className="relative mb-4">
               <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.9s', '--steam-delay': '0s' }} />
