@@ -362,7 +362,7 @@ export default function Focus({ onGoToList, onNavigate }) {
             celebrate ? ''
             : leaving ? 'opacity-0'
             : 'transition-opacity duration-500 opacity-100'
-          }`} style={{ marginLeft: -10 }}>
+          }`}>
 
             {/* Bonus ribbon */}
             {isBonusMode && !celebrate && (
@@ -484,7 +484,7 @@ export default function Focus({ onGoToList, onNavigate }) {
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
                 width: 'fit-content', bottom: 70,
                 zIndex: 3, pointerEvents: 'none',
-                transform: 'translateX(0px)',
+                transform: 'translateX(5px)',
                 animation: 'teacup-appear 400ms ease-out 800ms both',
               }}>
                 <TeaCup />
