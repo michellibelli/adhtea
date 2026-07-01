@@ -369,8 +369,8 @@ export default function Focus({ onGoToList, onNavigate }) {
                 inside the descending wrapper. */}
             <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
 
-            {/* Bonus ribbon — above tag */}
-            {isBonusMode && !celebrate && (
+            {/* Bonus ribbon — above tag, persists during animation */}
+            {isBonusMode && celebrate !== 'wipe' && (
               <div className="bonus-ribbon-wrap">
                 <div className="bonus-ribbon-tail left" />
                 <div className="bonus-ribbon"><span>✦ BONUS ✦</span></div>
@@ -482,8 +482,8 @@ export default function Focus({ onGoToList, onNavigate }) {
 
             </div>{/* end teabag unit */}
 
-            {/* Bonus sparkles — scattered around bag, fade in/out in place */}
-            {isBonusMode && !celebrate && (
+            {/* Bonus sparkles — scattered around bag, persist during animation */}
+            {isBonusMode && celebrate !== 'wipe' && (
               <div className="bonus-sparkle-field" aria-hidden="true">
                 <span className="bonus-sparkle s1">✦</span>
                 <span className="bonus-sparkle s2">✦</span>
