@@ -711,6 +711,118 @@ body {
   z-index: 1;
 }
 
+/* Watercolor wash tag — painted color on paper */
+.tag-wc {
+  position: relative;
+  width: 130px;
+  z-index: 5;
+}
+.tag-wc-inner {
+  position: relative;
+  padding: 10px 14px 14px;
+  text-align: center;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Paper grain — dark noise multiplied into wash */
+.tag-wc-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  opacity: 0.18;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  z-index: 2;
+}
+
+/* White speckle blobs — positioned via inline style per task */
+.tag-wc-speckles {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Painted color wash — radial gradient using task-type color */
+.tag-wc-inner::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 35% 25%,
+      var(--wash-color) 0%,
+      color-mix(in srgb, var(--wash-color) 70%, transparent) 35%,
+      color-mix(in srgb, var(--wash-color) 30%, transparent) 60%,
+      transparent 85%),
+    radial-gradient(ellipse at 70% 75%,
+      color-mix(in srgb, var(--wash-color) 50%, transparent) 0%,
+      color-mix(in srgb, var(--wash-color) 20%, transparent) 40%,
+      transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Soft painted edge bleed */
+.tag-wc .edge-bleed {
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at 50% 50%,
+    transparent 50%,
+    color-mix(in srgb, var(--wash-color) 10%, transparent) 65%,
+    color-mix(in srgb, var(--wash-color) 6%, transparent) 80%,
+    transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.tag-wc .tag-type {
+  position: relative;
+  z-index: 3;
+  font-weight: 700;
+  color: var(--wash-dark);
+  display: block;
+  text-shadow: 0 0.5px 0 rgba(255,250,240,0.4);
+}
+.tag-wc .tag-date {
+  position: relative;
+  z-index: 3;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--wash-dark);
+  opacity: 0.75;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Painted dot where string meets tag */
+.tag-wc .tag-dot {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--wash-color) 60%, transparent) 30%,
+    transparent 70%);
+  z-index: 6;
+}
+
+/* Task type wash colors */
+.tag-wc.wc-task        { --wash-color: #DAA38C; --wash-dark: #3D1E0E; }
+.tag-wc.wc-appointment { --wash-color: #94BEDF; --wash-dark: #102A40; }
+.tag-wc.wc-routine     { --wash-color: #98C9C0; --wash-dark: #163530; }
+.tag-wc.wc-note        { --wash-color: #B4B5D6; --wash-dark: #1E2050; }
+.tag-wc.wc-project     { --wash-color: #DBC587; --wash-dark: #3A2E0A; }
+
 /* Teabag string — hangs from tag to bag body */
 .teabag-string {
   width: 3px;

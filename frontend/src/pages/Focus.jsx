@@ -5,7 +5,6 @@ import EditTaskSheet from '../components/EditTaskSheet'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { minutesUntil, isTimedVisible } from '../utils/timing'
-import { TAG_COLORS } from '../utils/taskColors'
 import TeaBox from '../components/TeaBox'
 import { PageError } from '../components/PageState'
 import NudgeModal from '../components/NudgeModal'
@@ -45,6 +44,24 @@ const PRIORITY_BADGE = {
 }
 const TAG_NAMES = {
   task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note', project: 'Project',
+}
+
+function seededRandom(seed) {
+  let s = seed
+  return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647 }
+}
+
+function makeSpeckles(taskId) {
+  const rand = seededRandom(typeof taskId === 'number' ? taskId : 1)
+  const count = 4 + Math.floor(rand() * 3)
+  const blobs = []
+  for (let i = 0; i < count; i++) {
+    const x = rand() * 100
+    const y = rand() * 100
+    const r = 14 + rand() * 18
+    blobs.push(`radial-gradient(circle ${r}px at ${x}% ${y}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 45%, transparent 100%)`)
+  }
+  return blobs.join(',')
 }
 
 function tagDateLabel(task) {
@@ -369,41 +386,28 @@ export default function Focus({ onGoToList, onNavigate }) {
             >
               {(() => {
                 const isProject = !!task?.project_name
-                const colors = isProject ? TAG_COLORS.project : (TAG_COLORS[task?.task_type] || TAG_COLORS.task)
-                const tagH = isProject ? 84 : 66
+                const wcType = isProject ? 'project' : (task?.task_type || 'task')
+                const name = isProject ? 'Project' : (TAG_NAMES[task?.task_type] || 'Task')
+                const fs = name.length <= 4 ? 20 : name.length <= 5 ? 18 : 16
                 return (
                   <div
+                    className={`tag-wc wc-${wcType}`}
                     onClick={() => !celebrate && setShowEdit(true)}
                     title="Edit task"
-                    style={{
-                      width: 130, height: tagH,
-                      background: colors.bg,
-                      border: `2px solid ${colors.border}`,
-                      borderRadius: 10,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: `3px 3px 0 ${colors.shadow}`,
-                      cursor: celebrate ? 'default' : 'pointer',
-                    }}
+                    style={{ cursor: celebrate ? 'default' : 'pointer' }}
                   >
-                    <span style={{ color: colors.text, lineHeight: 1.25, userSelect: 'none', fontWeight: 700, textAlign: 'center', padding: '6px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                      {isProject ? (
-                        <>
-                          <span style={{ fontSize: 16, opacity: 0.7, letterSpacing: '0.5px' }}>Project</span>
-                          <span style={{ fontWeight: 600, fontSize: 14, opacity: 0.9, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                            {task.project_name}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          {(() => {
-                            const name = TAG_NAMES[task?.task_type] || 'Task'
-                            const fs = name.length <= 4 ? 20 : name.length <= 5 ? 18 : 16
-                            return <span style={{ fontSize: fs }}>{name}</span>
-                          })()}
-                          {tagDateLabel(task) && <span style={{ fontWeight: 400, fontSize: 14, opacity: 0.9 }}>{tagDateLabel(task)}</span>}
-                        </>
+                    <div className="edge-bleed" />
+                    <div className="tag-wc-inner">
+                      <div className="tag-wc-speckles" style={{ backgroundImage: makeSpeckles(task?.id) }} />
+                      <span className="tag-type" style={{ fontSize: fs }}>{name}</span>
+                      {isProject && (
+                        <span className="tag-date" style={{ fontWeight: 600, fontSize: 14, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {task.project_name}
+                        </span>
                       )}
-                    </span>
+                      {!isProject && tagDateLabel(task) && <span className="tag-date">{tagDateLabel(task)}</span>}
+                    </div>
+                    <div className="tag-dot" />
                   </div>
                 )
               })()}

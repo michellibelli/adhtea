@@ -77,7 +77,7 @@ async function _doWarmUp(onLog) {
   return false
 }
 
-async function request(method, path, body = undefined, isForm = false) {
+async function rawRequest(method, path, body, isForm) {
   const token = getToken()
   const headers = {}
   if (!isForm) headers['Content-Type'] = 'application/json'
@@ -103,9 +103,7 @@ async function request(method, path, body = undefined, isForm = false) {
     try {
       const err = await res.json()
       detail = err.detail || detail
-    } catch (_) {
-      // non-JSON error body — fall through with default detail
-    }
+    } catch (_) {}
     throw new Error(detail)
   }
 
@@ -113,6 +111,16 @@ async function request(method, path, body = undefined, isForm = false) {
   flushCompletes()
   if (res.status === 204) return null
   return res.json()
+}
+
+async function request(method, path, body = undefined, isForm = false) {
+  try {
+    return await rawRequest(method, path, body, isForm)
+  } catch (err) {
+    if (!likelySleeping()) throw err
+    await warmUp(() => {})
+    return rawRequest(method, path, body, isForm)
+  }
 }
 
 // ---------------------------------------------------------------------------

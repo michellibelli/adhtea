@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watercolor Tag — All Types</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Lora', serif;
+    background: #E8E0EC;
+    padding: 24px;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .mockup {
+    width: 240px;
+    height: 460px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+
+  .label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: 8px;
+    background: rgba(61,53,69,0.85);
+    color: #FAF7FC;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    z-index: 20;
+  }
+
+  .page {
+    width: 100%;
+    height: 100%;
+    background: #FAF7FC;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding-top: 50px;
+  }
+
+  .string {
+    width: 1.5px;
+    height: 20px;
+    background: linear-gradient(180deg, #A89080 0%, #C8B8A8 100%);
+    margin: 0 auto;
+    position: relative;
+    z-index: 4;
+  }
+
+  .bag-wrap {
+    position: relative;
+    z-index: 3;
+    filter: drop-shadow(3px 5px 6px rgba(60,40,20,0.32)) drop-shadow(0 1px 0 rgba(60,40,20,0.20));
+  }
+  .bag {
+    width: 140px;
+    height: 185px;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%);
+    background:
+      linear-gradient(180deg, rgba(255,252,240,0.9) 0%, rgba(240,220,180,0.6) 40%, rgba(190,160,110,0.5) 100%),
+      #FAF0E0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #3D3545;
+    box-shadow:
+      inset 0 2px 4px rgba(200,170,120,0.25),
+      inset 0 1px 0 rgba(255,250,220,0.4),
+      inset 0 -8px 14px -6px rgba(120,80,30,0.15);
+  }
+
+  /* ========================================= */
+  /* Watercolor wash tag — color painted on     */
+  /* ========================================= */
+  .tag-wc {
+    position: relative;
+    width: 120px;
+    z-index: 5;
+  }
+  .tag-wc-inner {
+    position: relative;
+    padding: 10px 14px 14px;
+    text-align: center;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* Paper grain — dark noise, multiplied into the wash */
+  .tag-wc-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    opacity: 0.18;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    z-index: 2;
+  }
+
+  /* White speckles — sparse bright dots over the wash.
+     --speckle-seed drives the SVG feTurbulence seed for unique clusters per tag. */
+  .tag-wc-speckles {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* Painted color wash — radial gradient using the task-type color.
+     CSS custom properties --wash-color and --wash-dark drive the tint. */
+  .tag-wc-inner::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 10px;
+    background:
+      radial-gradient(ellipse at 35% 25%,
+        var(--wash-color) 0%,
+        color-mix(in srgb, var(--wash-color) 70%, transparent) 35%,
+        color-mix(in srgb, var(--wash-color) 30%, transparent) 60%,
+        transparent 85%),
+      radial-gradient(ellipse at 70% 75%,
+        color-mix(in srgb, var(--wash-color) 50%, transparent) 0%,
+        color-mix(in srgb, var(--wash-color) 20%, transparent) 40%,
+        transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Soft painted edge bleed */
+  .tag-wc .edge-bleed {
+    position: absolute;
+    inset: -6px;
+    border-radius: 12px;
+    background: radial-gradient(ellipse at 50% 50%,
+      transparent 50%,
+      color-mix(in srgb, var(--wash-color) 10%, transparent) 65%,
+      color-mix(in srgb, var(--wash-color) 6%, transparent) 80%,
+      transparent 100%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .tag-wc .type {
+    position: relative;
+    z-index: 3;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--wash-dark);
+    display: block;
+    text-shadow: 0 0.5px 0 rgba(255,250,240,0.4);
+  }
+  .tag-wc .date {
+    position: relative;
+    z-index: 3;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--wash-dark);
+    opacity: 0.75;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* Painted dot where string meets tag */
+  .tag-wc .dot {
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      color-mix(in srgb, var(--wash-color) 60%, transparent) 30%,
+      transparent 70%);
+    z-index: 6;
+  }
+
+  /* Task type color vars */
+  .type-task        { --wash-color: #DAA38C; --wash-dark: #3D1E0E; }
+  .type-appointment { --wash-color: #94BEDF; --wash-dark: #102A40; }
+  .type-routine     { --wash-color: #98C9C0; --wash-dark: #163530; }
+  .type-note        { --wash-color: #B4B5D6; --wash-dark: #1E2050; }
+  .type-project     { --wash-color: #DBC587; --wash-dark: #3A2E0A; }
+</style>
+</head>
+<body>
+
+<!-- Task -->
+<div class="mockup">
+  <div class="page">
+    <div class="tag-wc type-task">
+      <div class="edge-bleed"></div>
+      <div class="tag-wc-inner">
+        <div class="tag-wc-speckles"></div>
+        <span class="type">Task</span>
+        <span class="date">Today</span>
+      </div>
+      <div class="dot"></div>
+    </div>
+    <div class="string"></div>
+    <div class="bag-wrap"><div class="bag">ISO Start</div></div>
+  </div>
+  <div class="label">Task — Dusty Rose</div>
+</div>
+
+<!-- Appointment -->
+<div class="mockup">
+  <div class="page">
+    <div class="tag-wc type-appointment">
+      <div class="edge-bleed"></div>
+      <div class="tag-wc-inner">
+        <div class="tag-wc-speckles"></div>
+        <span class="type">Appt</span>
+        <span class="date">2:30p</span>
+      </div>
+      <div class="dot"></div>
+    </div>
+    <div class="string"></div>
+    <div class="bag-wrap"><div class="bag">Dentist</div></div>
+  </div>
+  <div class="label">Appointment — Soft Sky</div>
+</div>
+
+<!-- Routine -->
+<div class="mockup">
+  <div class="page">
+    <div class="tag-wc type-routine">
+      <div class="edge-bleed"></div>
+      <div class="tag-wc-inner">
+        <div class="tag-wc-speckles"></div>
+        <span class="type">Routine</span>
+        <span class="date">8a</span>
+      </div>
+      <div class="dot"></div>
+    </div>
+    <div class="string"></div>
+    <div class="bag-wrap"><div class="bag">Read Messages</div></div>
+  </div>
+  <div class="label">Routine — Seafoam</div>
+</div>
+
+<!-- Note -->
+<div class="mockup">
+  <div class="page">
+    <div class="tag-wc type-note">
+      <div class="edge-bleed"></div>
+      <div class="tag-wc-inner">
+        <div class="tag-wc-speckles"></div>
+        <span class="type">Note</span>
+        <span class="date">Jun 30</span>
+      </div>
+      <div class="dot"></div>
+    </div>
+    <div class="string"></div>
+    <div class="bag-wrap"><div class="bag">Remember to...</div></div>
+  </div>
+  <div class="label">Note — Lavender</div>
+</div>
+
+<!-- Project -->
+<div class="mockup">
+  <div class="page">
+    <div class="tag-wc type-project">
+      <div class="edge-bleed"></div>
+      <div class="tag-wc-inner">
+        <div class="tag-wc-speckles"></div>
+        <span class="type">Project</span>
+        <span class="date">ISO 9001</span>
+      </div>
+      <div class="dot"></div>
+    </div>
+    <div class="string"></div>
+    <div class="bag-wrap"><div class="bag">Audit prep</div></div>
+  </div>
+  <div class="label">Project — Wheat</div>
+</div>
+
+<script>
+document.querySelectorAll('.tag-wc-speckles').forEach(el => {
+  const blobs = [];
+  const count = 4 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    let x = Math.random() * 100;
+    let y = Math.random() * 100;
+    const r = 14 + Math.random() * 18; // 14-32px — large soft blobs
+    blobs.push(`radial-gradient(circle ${r}px at ${x}% ${y}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 45%, transparent 100%)`);
+  }
+  el.style.backgroundImage = blobs.join(',');
+});
+</script>
+</body>
+</html>
