@@ -524,6 +524,75 @@ body {
   clip-path: polygon(0% 0%, 0% 100%, 100% 60%);
 }
 
+/* === Bonus mode: skip/snooze ribbon === */
+.bonus-skip-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  z-index: 6;
+  margin-top: 8px;
+}
+
+.bonus-skip {
+  position: relative;
+  overflow: hidden;
+  width: 120px;
+  height: 24px;
+  background: linear-gradient(180deg, #D4C8E8 0%, #B4A5D0 50%, #9484B8 100%);
+  border: 1px solid rgba(148, 132, 184, 0.5);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.bonus-skip:active {
+  transform: scale(0.96);
+}
+
+.bonus-skip span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #2E1E50;
+  text-shadow: 0 1px 0 rgba(255, 250, 255, 0.5);
+  position: relative;
+  z-index: 2;
+}
+
+.bonus-skip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg,
+    transparent 35%,
+    rgba(255, 250, 255, 0) 44%,
+    rgba(255, 250, 255, 0.5) 50%,
+    rgba(255, 250, 255, 0) 56%,
+    transparent 65%);
+  animation: gold-bar-shine 4s ease-in-out infinite;
+}
+
+.bonus-skip-tail {
+  position: absolute;
+  top: 5px;
+  width: 14px;
+  height: 18px;
+  background: linear-gradient(180deg, #B4A5D0, #9484B8);
+  z-index: 5;
+}
+
+.bonus-skip-tail.left {
+  left: calc(50% - 74px);
+  clip-path: polygon(100% 0%, 100% 100%, 0% 60%);
+}
+
+.bonus-skip-tail.right {
+  right: calc(50% - 74px);
+  clip-path: polygon(0% 0%, 0% 100%, 100% 60%);
+}
+
 /* === Bonus mode: sparkles around bag === */
 .bonus-sparkle-field {
   position: absolute;

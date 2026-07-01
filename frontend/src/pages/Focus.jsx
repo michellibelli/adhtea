@@ -466,6 +466,21 @@ export default function Focus({ onGoToList, onNavigate }) {
             </div>{/* end sway wrapper */}
             </div>{/* end teabag unit */}
 
+            {/* Bonus skip ribbon — snooze to tomorrow, load next bonus task */}
+            {isBonusMode && !celebrate && (
+              <div className="bonus-skip-wrap">
+                <div className="bonus-skip-tail left" />
+                <button className="bonus-skip" onClick={() => {
+                  const tomorrow = new Date()
+                  tomorrow.setDate(tomorrow.getDate() + 1)
+                  handleSnooze(tomorrow.toISOString().split('T')[0])
+                }}>
+                  <span>not now</span>
+                </button>
+                <div className="bonus-skip-tail right" />
+              </div>
+            )}
+
             {/* Bonus sparkles — scattered around bag, fade in/out in place */}
             {isBonusMode && !celebrate && (
               <div className="bonus-sparkle-field" aria-hidden="true">
