@@ -40,10 +40,11 @@ export async function completeTask(id) {
   }
 }
 export async function snoozeTask(id, snooze_until) {
+  queueSnooze(id, snooze_until)
   try {
     return await api.post(`/tasks/${id}/snooze`, { snooze_until })
   } catch {
-    queueSnooze(id, snooze_until)
+    // already queued — will flush later
   }
 }
 export const unsnoozeTask = (id) => api.post(`/tasks/${id}/unsnooze`)
