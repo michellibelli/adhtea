@@ -464,7 +464,6 @@ export default function Focus({ onGoToList, onNavigate }) {
                 </div>{/* end teabag clip-path */}
               </div>
             </div>{/* end sway wrapper */}
-            </div>{/* end teabag unit */}
 
             {/* Bonus skip ribbon — snooze to tomorrow, load next bonus task */}
             {isBonusMode && !celebrate && (
@@ -480,6 +479,8 @@ export default function Focus({ onGoToList, onNavigate }) {
                 <div className="bonus-skip-tail right" />
               </div>
             )}
+
+            </div>{/* end teabag unit */}
 
             {/* Bonus sparkles — scattered around bag, fade in/out in place */}
             {isBonusMode && !celebrate && (
