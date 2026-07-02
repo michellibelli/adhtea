@@ -155,6 +155,12 @@ export default function Today({ carriedOver = false, onNavigate }) {
     catch (err) { console.error(err); fetchAll() }
   }
 
+  async function handleCompleteUpNext(id) {
+    setInboxTasks(prev => prev.filter(t => t.id !== id))
+    completeTask(id)
+    getDoneToday().then(setDone).catch(() => {})
+  }
+
   async function handleSnoozeUpNext(id, until) {
     setInboxTasks(prev => prev.filter(t => t.id !== id))
     try {
@@ -335,6 +341,7 @@ export default function Today({ carriedOver = false, onNavigate }) {
                     <div key={task.id} className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <TaskCard task={task} variant="today"
+                          onComplete={handleCompleteUpNext}
                           onSnooze={(id, until) => handleSnoozeUpNext(id, until)}
                           onDefer={(id) => {
                             setInboxTasks(prev => prev.filter(t => t.id !== id))

@@ -4,7 +4,14 @@ import { api, queueComplete, removeComplete, getPendingCompletes, queueSnooze, r
 export const createTask = (data) => api.post('/tasks', data)
 
 // Lists
-export const getInbox = () => api.get('/tasks/inbox')
+export async function getInbox() {
+  const tasks = await api.get('/tasks/inbox')
+  const pendingC = getPendingCompletes()
+  const pendingS = getPendingSnoozes().map(s => s.id)
+  const exclude = [...pendingC, ...pendingS]
+  if (!exclude.length) return tasks
+  return tasks.filter(t => !exclude.includes(t.id))
+}
 export async function getToday() {
   const tasks = await api.get('/tasks/today')
   const pendingC = getPendingCompletes()

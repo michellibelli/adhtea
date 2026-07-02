@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getInbox, scheduleToday, snoozeTask, deleteTask } from '../api/tasks'
+import { getInbox, scheduleToday, snoozeTask, deleteTask, completeTask } from '../api/tasks'
 import TaskCard from '../components/TaskCard'
 import Card from '../components/Card'
 import { PageLoading, PageError } from '../components/PageState'
@@ -41,6 +41,10 @@ export default function Inbox({ onCountChange }) {
       setTimeout(() => setNotice(null), 4500)
     }
   }
+  async function handleComplete(id) {
+    setTasks(prev => prev.filter(t => t.id !== id))
+    completeTask(id)
+  }
   async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
   async function handleDelete(id) { await deleteTask(id); fetchTasks() }
 
@@ -81,6 +85,7 @@ export default function Inbox({ onCountChange }) {
             <div className="space-y-3">
               {tasks.map((task) => (
                 <TaskCard key={task.id} task={task} variant="inbox"
+                  onComplete={handleComplete}
                   onScheduleToday={handleScheduleToday}
                   onSnooze={handleSnooze}
                   onDelete={handleDelete}

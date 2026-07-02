@@ -224,7 +224,7 @@ function OverflowBumper({ tasks, taskMap, onResolve, onKeepAll }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-function DraggableUpNextRow({ task, onSnooze, onPromote, canPromote, onWhy, showWhy }) {
+function DraggableUpNextRow({ task, onComplete, onSnooze, onPromote, canPromote, onWhy, showWhy }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -240,6 +240,7 @@ function DraggableUpNextRow({ task, onSnooze, onPromote, canPromote, onWhy, show
           <TaskCard
             task={task}
             variant="triage"
+            onComplete={onComplete}
             onSnooze={onSnooze}
             showScore
             showWhy={showWhy}
@@ -590,6 +591,7 @@ export default function Tournament({ onDone }) {
                     <DraggableUpNextRow
                       key={t.id}
                       task={t}
+                      onComplete={handleComplete}
                       onSnooze={handleSnooze}
                       onEdit={(id) => setEditingTask(taskMap.get(id) || t)}
                       onPromote={handlePromote}
