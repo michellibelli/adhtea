@@ -148,6 +148,10 @@ export function queueComplete(taskId) {
   }
 }
 
+export function removeComplete(taskId) {
+  setPendingCompletes(getPendingCompletes().filter(id => id !== taskId))
+}
+
 // ---------------------------------------------------------------------------
 // Offline-resilient snooze queue
 // ---------------------------------------------------------------------------
@@ -171,34 +175,42 @@ export function queueSnooze(taskId, snoozeUntil) {
   }
 }
 
+export function removeSnooze(taskId) {
+  setPendingSnoozes(getPendingSnoozes().filter(s => s.id !== taskId))
+}
+
 let _flushing = false
 
 async function flushQueues() {
   if (_flushing || likelySleeping()) return
-  const pendingCompletes = getPendingCompletes()
-  const pendingSnoozes = getPendingSnoozes()
-  if (!pendingCompletes.length && !pendingSnoozes.length) return
+  if (!getPendingCompletes().length && !getPendingSnoozes().length) return
   _flushing = true
 
-  const stillCompletes = []
-  for (const id of pendingCompletes) {
+  // Re-read queue before each item and remove individually after success.
+  // Prevents overwriting items added concurrently by completeTask/snoozeTask.
+  let completes = getPendingCompletes()
+  while (completes.length) {
+    const id = completes[0]
     try {
       await request('POST', `/tasks/${id}/complete`)
+      removeComplete(id)
     } catch {
-      stillCompletes.push(id)
+      break
     }
+    completes = getPendingCompletes()
   }
-  setPendingCompletes(stillCompletes)
 
-  const stillSnoozes = []
-  for (const s of pendingSnoozes) {
+  let snoozes = getPendingSnoozes()
+  while (snoozes.length) {
+    const s = snoozes[0]
     try {
       await request('POST', `/tasks/${s.id}/snooze`, { snooze_until: s.snooze_until })
+      removeSnooze(s.id)
     } catch {
-      stillSnoozes.push(s)
+      break
     }
+    snoozes = getPendingSnoozes()
   }
-  setPendingSnoozes(stillSnoozes)
 
   _flushing = false
 }

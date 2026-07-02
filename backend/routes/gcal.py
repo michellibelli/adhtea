@@ -265,19 +265,19 @@ def sync_today_events(user_id: int, db: Session) -> dict:
 
                 # Dedup: match on title + due_date. If found, repair scheduled_date
                 # in case it was created with wrong UTC date from old sync bug.
+                # Skip completed/deleted tasks so sync doesn't resurrect them.
                 existing = db.query(Task).filter(
                     Task.owner_id == user_id,
                     Task.task_type == TaskType.appointment,
                     Task.title == summary,
                     Task.due_date == due_date,
-                    Task.status != TaskStatus.deleted,
+                    Task.status.notin_([TaskStatus.deleted, TaskStatus.done]),
                 ).first()
 
                 correct_scheduled = datetime(today.year, today.month, today.day)
                 if existing:
                     if existing.scheduled_date != correct_scheduled:
                         existing.scheduled_date = correct_scheduled
-                        existing.status = TaskStatus.today
                     continue
 
                 task = Task(

@@ -1,4 +1,4 @@
-import { api, queueComplete, getPendingCompletes, queueSnooze, getPendingSnoozes } from './client'
+import { api, queueComplete, removeComplete, getPendingCompletes, queueSnooze, removeSnooze, getPendingSnoozes } from './client'
 
 // Capture
 export const createTask = (data) => api.post('/tasks', data)
@@ -35,7 +35,9 @@ export const scheduleToday = (id, meta = {}) => api.post(`/tasks/${id}/schedule-
 export async function completeTask(id) {
   queueComplete(id)
   try {
-    return await api.post(`/tasks/${id}/complete`)
+    const result = await api.post(`/tasks/${id}/complete`)
+    removeComplete(id)
+    return result
   } catch {
     // already queued — will flush later
   }
@@ -43,7 +45,9 @@ export async function completeTask(id) {
 export async function snoozeTask(id, snooze_until) {
   queueSnooze(id, snooze_until)
   try {
-    return await api.post(`/tasks/${id}/snooze`, { snooze_until })
+    const result = await api.post(`/tasks/${id}/snooze`, { snooze_until })
+    removeSnooze(id)
+    return result
   } catch {
     // already queued — will flush later
   }
