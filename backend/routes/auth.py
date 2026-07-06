@@ -11,6 +11,8 @@ from rate_limit import limiter
 from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
     Task, Routine, Project, TaskType, TaskStatus, TaskWeight, RoutineFrequency, TimeOfDay,
+    Domain, SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
+    CapacitySnapshot, WeeklySnapshot, NudgeLog,
 )
 from schemas import (
     LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate,
@@ -295,6 +297,41 @@ def create_user(
     return user
 
 
+def _purge_user_data(user_id: int, db: Session):
+    """Delete every row a user owns, in FK-safe order, and null out cross-user
+    references, so the final user delete can't hit a foreign-key violation.
+
+    Only two of the ~15 tables referencing users.id have ORM/DB cascades, and
+    SQLite (local dev) doesn't enforce FKs by default — so a plain db.delete(user)
+    passes locally but 500s on Postgres. This is explicit on purpose: every table
+    that references a user must be handled here or the delete breaks in prod.
+    """
+    # 1. Null out references from OTHER users' rows (must not delete those rows).
+    db.query(Task).filter(Task.assigned_to_id == user_id).update(
+        {"assigned_to_id": None}, synchronize_session=False)
+    db.query(InviteToken).filter(InviteToken.used_by == user_id).update(
+        {"used_by": None}, synchronize_session=False)
+    db.query(User).filter(User.parent_id == user_id).update(
+        {"parent_id": None}, synchronize_session=False)
+
+    # 2. Tasks first — they reference this user's projects/domains/routines/actuators.
+    db.query(Task).filter(Task.owner_id == user_id).delete(synchronize_session=False)
+
+    # 3. Medication logs before their schedules.
+    db.query(MedicationLog).filter(MedicationLog.user_id == user_id).delete(synchronize_session=False)
+    db.query(MedicationSchedule).filter(MedicationSchedule.user_id == user_id).delete(synchronize_session=False)
+
+    # 4. Everything else the user owns (no remaining inbound FKs at this point).
+    for model in (
+        Project, Routine, Domain, ActuatorCategory, SelfCareLog,
+        CapacitySnapshot, WeeklySnapshot, NudgeLog, GoogleCalendarToken, SessionToken,
+    ):
+        db.query(model).filter(model.user_id == user_id).delete(synchronize_session=False)
+
+    # 5. Invites this user created (created_by is NOT NULL, so must be removed).
+    db.query(InviteToken).filter(InviteToken.created_by == user_id).delete(synchronize_session=False)
+
+
 @router.delete("/users/{user_id}", status_code=204)
 def delete_user(
     user_id: int,
@@ -306,6 +343,7 @@ def delete_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    _purge_user_data(user_id, db)
     db.delete(user)
     db.commit()
 

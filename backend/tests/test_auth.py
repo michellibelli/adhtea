@@ -173,3 +173,72 @@ def test_stale_plaintext_token_cannot_authenticate(client, db_session):
     db_session.commit()
     resp = client.get("/me", headers={"Authorization": "Bearer plaintext_leaked_token"})
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# delete_user purges all owned rows without FK violations (#8)
+# ---------------------------------------------------------------------------
+
+def test_delete_user_purges_all_owned_data_with_fk_enforced():
+    """Regression for the FK-cascade gap. SQLite skips FK checks by default, which
+    is exactly why this bug reached prod — so enable them here and seed a row in
+    every table that references users.id."""
+    from datetime import date, datetime, timezone
+    from sqlalchemy import create_engine, event, inspect
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+    from database import Base
+    from routes.auth import _purge_user_data
+    import models as m
+
+    eng = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+
+    @event.listens_for(eng, "connect")
+    def _fk_on(dbapi_conn, _):
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
+
+    Base.metadata.create_all(eng)
+    Session = sessionmaker(bind=eng)
+    db = Session()
+
+    victim = m.User(name="V", username="victim", hashed_password="x", role=m.UserRole.member)
+    other  = m.User(name="O", username="other",  hashed_password="x", role=m.UserRole.member)
+    db.add_all([victim, other]); db.flush()
+
+    dom = m.Domain(user_id=victim.id, name="D"); db.add(dom); db.flush()
+    proj = m.Project(user_id=victim.id, title="P", domain_id=dom.id); db.add(proj); db.flush()
+    rout = m.Routine(user_id=victim.id, title="R"); db.add(rout); db.flush()
+    cat  = m.ActuatorCategory(user_id=victim.id, name="C"); db.add(cat); db.flush()
+    sched = m.MedicationSchedule(user_id=victim.id, name="Med"); db.add(sched); db.flush()
+    db.add(m.MedicationLog(schedule_id=sched.id, user_id=victim.id, log_date=date.today()))
+    db.add(m.Task(owner_id=victim.id, title="T", project_id=proj.id, domain_id=dom.id,
+                  routine_id=rout.id, actuator_category_id=cat.id))
+    db.add(m.SelfCareLog(user_id=victim.id, log_date=date.today()))
+    db.add(m.SessionToken(user_id=victim.id, token="tok", expires_at=datetime.now(timezone.utc).replace(tzinfo=None)))
+    db.add(m.GoogleCalendarToken(user_id=victim.id, access_token="a"))
+    db.add(m.CapacitySnapshot(user_id=victim.id, log_date=date.today(), sleep_battery=1, nutrition_battery=1,
+                              physical_battery=1, emotional_battery=1, environment_battery=1,
+                              executive_capacitor=1, overall=1))
+    db.add(m.WeeklySnapshot(user_id=victim.id, week_start=date.today()))
+    db.add(m.NudgeLog(user_id=victim.id, nudge_type="t", variable="v"))
+    # Cross-user references to the victim that must be nulled, not deleted.
+    db.add(m.Task(owner_id=other.id, title="delegated", assigned_to_id=victim.id))
+    db.add(m.InviteToken(token="inv", created_by=victim.id, used_by=other.id))
+    db.commit()
+
+    _purge_user_data(victim.id, db)
+    db.delete(victim)
+    db.commit()  # would raise IntegrityError if any FK were left dangling
+
+    assert db.query(m.User).filter_by(id=victim.id).first() is None
+    # Other user's task survives with its delegation cleared.
+    delegated = db.query(m.Task).filter_by(title="delegated").first()
+    assert delegated is not None and delegated.assigned_to_id is None
+    # No orphan rows reference the deleted user anywhere.
+    assert db.query(m.Task).filter_by(owner_id=victim.id).count() == 0
+    for model in (m.Project, m.Routine, m.Domain, m.ActuatorCategory, m.SelfCareLog,
+                  m.MedicationSchedule, m.MedicationLog, m.CapacitySnapshot, m.WeeklySnapshot,
+                  m.NudgeLog, m.GoogleCalendarToken, m.SessionToken):
+        assert db.query(model).filter_by(user_id=victim.id).count() == 0
+    assert db.query(m.InviteToken).filter_by(created_by=victim.id).count() == 0
+    db.close()
