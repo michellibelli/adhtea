@@ -124,6 +124,9 @@ class User(Base):
     day_start_hour = Column(Integer, default=6, nullable=False)   # new day begins at this local hour
     alpha_code_version = Column(Integer, default=0, nullable=False)
     is_onboarded = Column(Boolean, default=False, nullable=False)
+    # Last app-day the once-per-day rollover sweeps ran for this user. Used as an
+    # atomic guard so concurrent Today/Inbox loads don't each spawn routines.
+    rolled_over_on = Column(Date, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")

@@ -6,6 +6,7 @@ from database import get_db
 from models import Routine, Task, TaskType, TaskStatus, utcnow
 from schemas import RoutineCreate, RoutineUpdate, RoutineResponse, TaskResponse
 from routes.auth import get_current_user
+from routes.task_lifecycle import generate_routine_instances
 from models import User
 
 router = APIRouter()
@@ -42,6 +43,10 @@ def create_routine(
     )
     db.add(routine)
     db.commit()
+    # Spawn today's instance now if it's due — the daily rollover sweep only runs
+    # once per day, so a routine added mid-day would otherwise not appear until
+    # tomorrow. Idempotent and respects the day-start gate.
+    generate_routine_instances(current_user, db)
     db.refresh(routine)
     return routine
 
@@ -62,6 +67,9 @@ def update_routine(
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(routine, field, value)
     db.commit()
+    # Re-evaluate today's instance in case the edit made it due today (e.g.
+    # reactivated, or day/frequency changed to include today).
+    generate_routine_instances(current_user, db)
     db.refresh(routine)
     return routine
 

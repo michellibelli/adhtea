@@ -25,7 +25,7 @@ from routes.domain_utils import next_allowed_date, date_allowed, time_of_day_all
 from routes.task_lifecycle import (
     _tz, _day_start_hour, _app_today, _day_start, _day_end,
     DAILY_CAP, count_today, _exempt_from_cap,
-    _is_routine_due, generate_routine_instances,
+    _is_routine_due, generate_routine_instances, run_daily_rollover,
     carry_forward, resolve_snoozes, promote_due_tasks,
     demote_misclassified_today, demote_domain_violations,
     archive_past_appointments, _domain_rules_for_tasks,
@@ -101,9 +101,8 @@ def triage_summary(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    carry_forward(current_user, db)
+    run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    generate_routine_instances(current_user, db)
     promote_due_tasks(current_user, db)
     inbox_count = db.query(Task).filter(
         Task.owner_id == current_user.id, Task.status == TaskStatus.inbox
@@ -131,9 +130,8 @@ def get_critical_list(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    carry_forward(current_user, db)
+    run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    generate_routine_instances(current_user, db)
     promote_due_tasks(current_user, db)
     today_local = _app_today(current_user)
     active_statuses = [TaskStatus.inbox, TaskStatus.today]
@@ -320,9 +318,8 @@ def get_backlog(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    carry_forward(current_user, db)
+    run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    generate_routine_instances(current_user, db)
     tasks = (
         db.query(Task)
         .filter(
@@ -348,9 +345,8 @@ def get_inbox(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    carry_forward(current_user, db)
+    run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    generate_routine_instances(current_user, db)
     # Lazy gcal sync if token exists and not synced today
     _maybe_sync_gcal(current_user.id, db)
     today = _app_today(current_user)
@@ -391,10 +387,8 @@ def get_today(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    carry_forward(current_user, db)
+    run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    generate_routine_instances(current_user, db)
-    archive_past_appointments(current_user, db)
     demote_misclassified_today(current_user, db)
     demote_domain_violations(current_user, db)
     promote_due_tasks(current_user, db)

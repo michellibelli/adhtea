@@ -142,6 +142,45 @@ def generate_routine_instances(user: User, db: Session):
 
 
 # ---------------------------------------------------------------------------
+# Daily rollover — the once-per-day sweeps, run behind an atomic guard.
+# ---------------------------------------------------------------------------
+
+def run_daily_rollover(user: User, db: Session) -> bool:
+    """Run the sweeps that only change at the day boundary — carry-forward, routine
+    generation, appointment archival — at most once per app-day per user.
+
+    These are triggered lazily from the read endpoints (there is no background
+    scheduler), so without a guard two concurrent first-of-day page loads would
+    both pass generate_routine_instances' exists-check and INSERT duplicate
+    routine tasks. The guard is an atomic compare-and-swap on users.rolled_over_on:
+    the UPDATE only matches when the stored date is behind today, so exactly one
+    concurrent caller flips it and proceeds; the rest see 0 rows and skip.
+
+    Intraday sweeps (resolve_snoozes, promote_due_tasks, the demotions) are NOT
+    run here — they must run on every request and are already idempotent.
+
+    Returns True if this call performed the rollover, False if it was already done.
+    """
+    today = _app_today(user)
+    won = (
+        db.query(User)
+        .filter(
+            User.id == user.id,
+            (User.rolled_over_on.is_(None)) | (User.rolled_over_on < today),
+        )
+        .update({User.rolled_over_on: today}, synchronize_session=False)
+    )
+    db.commit()  # release the row lock so a losing concurrent caller re-reads and gets 0
+    if not won:
+        return False
+
+    carry_forward(user, db)
+    generate_routine_instances(user, db)
+    archive_past_appointments(user, db)
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Carry-forward: move yesterday's incomplete Today items back to Inbox
 # ---------------------------------------------------------------------------
 

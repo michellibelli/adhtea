@@ -73,6 +73,8 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE users ADD COLUMN max_tasks_per_day INTEGER NOT NULL DEFAULT 10"))
             if "max_total_per_day" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN max_total_per_day INTEGER NOT NULL DEFAULT 15"))
+            if "rolled_over_on" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN rolled_over_on DATE"))
             # Security: every self-signup used to be created as `primary` (admin).
             # Demote all non-owner primaries to plain members. Owner keeps admin.
             conn.execute(text("UPDATE users SET role='member' WHERE is_owner=0 AND role='primary'"))
@@ -117,6 +119,7 @@ def _migrate(target_engine=None):
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_total_per_day INTEGER NOT NULL DEFAULT 15"
             ))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS rolled_over_on DATE"))
             # Security: demote all non-owner primaries (every self-signup used to
             # be created as admin). Owner keeps primary/admin.
             conn.execute(text("UPDATE users SET role='member' WHERE is_owner=FALSE AND role='primary'"))

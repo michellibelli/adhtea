@@ -220,3 +220,23 @@ def test_archive_past_appointments_ignores_plain_tasks(db_session):
     archive_past_appointments(user, db_session)
     db_session.refresh(overdue_task)
     assert overdue_task.status == TaskStatus.inbox   # overdue tasks stay actionable
+
+
+def test_daily_rollover_generates_only_once_per_day(db_session, monkeypatch):
+    """The atomic guard must let exactly one call per app-day run the once-daily
+    sweeps — this is what stops concurrent loads spawning duplicate routines."""
+    from routes import task_lifecycle as tl
+    user = _user(db_session)
+    user.day_start_hour = 0
+    db_session.commit()
+
+    calls = {"n": 0}
+    real = tl.generate_routine_instances
+    def _spy(u, d):
+        calls["n"] += 1
+        return real(u, d)
+    monkeypatch.setattr(tl, "generate_routine_instances", _spy)
+
+    assert tl.run_daily_rollover(user, db_session) is True     # wins, runs sweeps
+    assert tl.run_daily_rollover(user, db_session) is False    # already done today
+    assert calls["n"] == 1

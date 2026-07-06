@@ -156,3 +156,24 @@ def test_generate_skips_inactive_routines(db_session):
         Task.owner_id == user.id, Task.task_type == TaskType.routine
     ).count()
     assert count == 0
+
+
+def test_routine_added_midday_appears_same_day(client, auth_headers, db_session):
+    """Regression: the daily rollover runs once per day, so a routine created
+    after today's rollover must still spawn its instance immediately (not wait
+    until tomorrow)."""
+    from models import User
+    u = db_session.query(User).first()
+    u.day_start_hour = 0  # keep the day-start gate open regardless of wall clock
+    db_session.commit()
+
+    # First Today load performs the daily rollover and stamps rolled_over_on.
+    assert client.get("/tasks/today", headers=auth_headers).status_code == 200
+
+    # Add a routine AFTER the rollover already ran today.
+    r = client.post("/routines", json={"title": "Morning pages", "frequency": "daily"},
+                    headers=auth_headers)
+    assert r.status_code == 200
+
+    titles = [t["title"] for t in client.get("/tasks/today", headers=auth_headers).json()]
+    assert "Morning pages" in titles
