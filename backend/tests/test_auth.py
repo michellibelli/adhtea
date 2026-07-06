@@ -221,6 +221,7 @@ def test_delete_user_purges_all_owned_data_with_fk_enforced():
                               executive_capacitor=1, overall=1))
     db.add(m.WeeklySnapshot(user_id=victim.id, week_start=date.today()))
     db.add(m.NudgeLog(user_id=victim.id, nudge_type="t", variable="v"))
+    db.add(m.OAuthState(state="pending", user_id=victim.id, verifier="v"))
     # Cross-user references to the victim that must be nulled, not deleted.
     db.add(m.Task(owner_id=other.id, title="delegated", assigned_to_id=victim.id))
     db.add(m.InviteToken(token="inv", created_by=victim.id, used_by=other.id))
@@ -238,7 +239,7 @@ def test_delete_user_purges_all_owned_data_with_fk_enforced():
     assert db.query(m.Task).filter_by(owner_id=victim.id).count() == 0
     for model in (m.Project, m.Routine, m.Domain, m.ActuatorCategory, m.SelfCareLog,
                   m.MedicationSchedule, m.MedicationLog, m.CapacitySnapshot, m.WeeklySnapshot,
-                  m.NudgeLog, m.GoogleCalendarToken, m.SessionToken):
+                  m.NudgeLog, m.GoogleCalendarToken, m.SessionToken, m.OAuthState):
         assert db.query(model).filter_by(user_id=victim.id).count() == 0
     assert db.query(m.InviteToken).filter_by(created_by=victim.id).count() == 0
     db.close()

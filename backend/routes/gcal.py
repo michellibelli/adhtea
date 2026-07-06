@@ -25,29 +25,26 @@ from sqlalchemy.orm import Session
 
 from zoneinfo import ZoneInfo
 from database import get_db
-from models import GoogleCalendarToken, Task, TaskStatus, TaskType, User, utcnow
+from models import GoogleCalendarToken, OAuthState, Task, TaskStatus, TaskType, User, utcnow
 from routes.auth import get_current_user
 
 router = APIRouter()
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
-# Pending OAuth flows, keyed by a random unguessable state token:
-#   state -> {"user_id": int, "verifier": str | None, "created": datetime}
-# The state is what ties the callback back to the user who started the flow.
-# Never derive the user from a caller-supplied value (e.g. the raw user id) —
-# that lets anyone link their own Google account into someone else's account.
-# NOTE: in-memory, so a server restart mid-flow invalidates pending logins
-# (acceptable: the connect→callback window is seconds). See review item #7.
-_pending_oauth: dict[str, dict] = {}
+# A random unguessable `state` ties the callback back to the user who started the
+# flow. Never derive the user from a caller-supplied value (e.g. the raw user id)
+# — that lets anyone link their own Google account into someone else's account.
+# State is persisted in the DB (see models.OAuthState) so it survives the server
+# restarts that happen between /connect and /callback on Render's free tier.
 _OAUTH_TTL = timedelta(minutes=10)
 
 
-def _reap_pending_oauth():
-    """Drop stale pending flows so abandoned connects don't accumulate."""
+def _reap_pending_oauth(db: Session):
+    """Drop stale/abandoned pending flows so they don't accumulate."""
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - _OAUTH_TTL
-    for st in [k for k, v in _pending_oauth.items() if v.get("created", cutoff) < cutoff]:
-        _pending_oauth.pop(st, None)
+    db.query(OAuthState).filter(OAuthState.created_at < cutoff).delete()
+    db.commit()
 
 
 def _env(key):
@@ -122,10 +119,11 @@ def gcal_status(
 @router.get("/gcal/connect")
 def gcal_connect(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     if not _gcal_available():
         raise HTTPException(status_code=503, detail="Google Calendar not configured. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI to .env")
-    _reap_pending_oauth()
+    _reap_pending_oauth(db)
     flow = _build_flow()
     # Random, unguessable state — the only thing that authorizes the callback to
     # bind Google credentials to this user. Do NOT use the user id here.
@@ -140,11 +138,8 @@ def gcal_connect(
     verifier = getattr(flow, "code_verifier", None) or getattr(
         getattr(flow, "oauth2session", None), "_code_verifier", None
     )
-    _pending_oauth[state] = {
-        "user_id": current_user.id,
-        "verifier": verifier,
-        "created": datetime.now(timezone.utc).replace(tzinfo=None),
-    }
+    db.add(OAuthState(state=state, user_id=current_user.id, verifier=verifier))
+    db.commit()
     return {"auth_url": auth_url}
 
 
@@ -159,12 +154,14 @@ def gcal_callback(
 
     # Resolve the user from our server-side record of the state we issued.
     # An attacker-supplied state simply won't be found → 400.
-    _reap_pending_oauth()
-    pending = _pending_oauth.pop(state, None)
+    _reap_pending_oauth(db)
+    pending = db.query(OAuthState).filter(OAuthState.state == state).first()
     if not pending:
         raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
-    user_id = pending["user_id"]
-    verifier = pending.get("verifier")
+    user_id = pending.user_id
+    verifier = pending.verifier
+    db.delete(pending)   # one-time use — consume it so it can't be replayed
+    db.commit()
 
     try:
         flow = _build_flow()

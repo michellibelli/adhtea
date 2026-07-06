@@ -179,3 +179,48 @@ def test_update_calendars_strips_primary_from_stored_ids(client, auth_headers, d
 def test_update_calendars_404_when_not_connected(client, auth_headers):
     r = client.patch("/gcal/calendars", json={"calendar_ids": ["x"]}, headers=auth_headers)
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# OAuth state is DB-backed: survives restart, unforgeable, one-time use (#2/#7)
+# ---------------------------------------------------------------------------
+
+class _FakeCreds:
+    token = "access-tok"
+    refresh_token = "refresh-tok"
+    expiry = None
+
+
+class _FakeFlow:
+    credentials = _FakeCreds()
+    def fetch_token(self, **kwargs):
+        pass
+
+
+def _mock_oauth(monkeypatch):
+    monkeypatch.setattr(gcal, "_gcal_available", lambda: True)
+    monkeypatch.setattr(gcal, "_build_flow", lambda: _FakeFlow())
+
+
+def test_callback_resolves_user_from_db_state_and_consumes_it(client, db_session, monkeypatch):
+    from models import OAuthState
+    _mock_oauth(monkeypatch)
+    uid = db_session.query(User).first().id
+    db_session.add(OAuthState(state="good-state", user_id=uid, verifier=None))
+    db_session.commit()
+
+    r = client.get("/gcal/callback", params={"code": "c", "state": "good-state"},
+                   follow_redirects=False)
+    assert r.status_code in (302, 307)
+    assert "gcal=connected" in r.headers["location"]
+
+    # Credentials linked to the right user, and the state row is consumed.
+    assert db_session.query(GoogleCalendarToken).filter_by(user_id=uid).first() is not None
+    assert db_session.query(OAuthState).filter_by(state="good-state").first() is None
+
+
+def test_callback_rejects_forged_state(client, db_session, monkeypatch):
+    _mock_oauth(monkeypatch)
+    r = client.get("/gcal/callback", params={"code": "c", "state": "never-issued"},
+                   follow_redirects=False)
+    assert r.status_code == 400

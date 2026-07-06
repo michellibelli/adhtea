@@ -12,7 +12,7 @@ from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
     Task, Routine, Project, TaskType, TaskStatus, TaskWeight, RoutineFrequency, TimeOfDay,
     Domain, SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
-    CapacitySnapshot, WeeklySnapshot, NudgeLog,
+    CapacitySnapshot, WeeklySnapshot, NudgeLog, OAuthState,
 )
 from schemas import (
     LoginRequest, LoginResponse, SetupRequest, UserResponse, UserSettingsUpdate,
@@ -325,6 +325,7 @@ def _purge_user_data(user_id: int, db: Session):
     for model in (
         Project, Routine, Domain, ActuatorCategory, SelfCareLog,
         CapacitySnapshot, WeeklySnapshot, NudgeLog, GoogleCalendarToken, SessionToken,
+        OAuthState,
     ):
         db.query(model).filter(model.user_id == user_id).delete(synchronize_session=False)
 

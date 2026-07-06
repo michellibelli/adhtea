@@ -135,7 +135,7 @@ def _migrate(target_engine=None):
                 "domains", "projects", "tasks", "routines", "self_care_logs",
                 "medication_schedules", "medication_logs", "invite_tokens",
                 "google_calendar_tokens", "capacity_snapshots",
-                "weekly_snapshots", "nudge_logs",
+                "weekly_snapshots", "nudge_logs", "oauth_states",
             ):
                 conn.execute(text(f"ALTER TABLE {_table} ENABLE ROW LEVEL SECURITY"))
             conn.commit()

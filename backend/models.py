@@ -387,6 +387,20 @@ class InviteToken(Base):
 # Google Calendar OAuth token
 # ---------------------------------------------------------------------------
 
+class OAuthState(Base):
+    """Short-lived record tying an in-flight OAuth `state` back to the user who
+    started the flow (+ the PKCE verifier). Persisted in the DB rather than in
+    process memory so a server restart between /connect and /callback — routine
+    on Render's free tier — doesn't drop the pending login. Rows are one-time use
+    and reaped after a few minutes."""
+    __tablename__ = "oauth_states"
+
+    state = Column(String(64), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    verifier = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
+
+
 class GoogleCalendarToken(Base):
     __tablename__ = "google_calendar_tokens"
 
