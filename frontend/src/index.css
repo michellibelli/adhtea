@@ -342,6 +342,10 @@ body {
 
 /* Linen floral decorations — side vines + bottom garland.
    Hidden by default; Linen theme reveals them. */
+/* z-index 0 keeps these floral decorations in the same behind-content tier as
+   .falling-leaves — above the page background (z -1) but below all content
+   (main is z 2), so cards and menu items always stay readable over them.
+   They were at z 1 before, which let the bottom garland paint over task cards. */
 .linen-flower-banner {
   display: none;
   position: fixed;
@@ -353,7 +357,7 @@ body {
   height: 140px;
   background: url('/linen-flower-banner.png') center bottom / contain no-repeat;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
   opacity: 0.82;
 }
 .linen-side-vines {
@@ -364,7 +368,7 @@ body {
   right: 0;
   height: 100svh;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
   overflow: hidden;
 }
 .linen-vine-img {

@@ -332,7 +332,7 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="pt-[64px] relative z-[2]">
+      <main className="pt-[64px] relative z-10">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} />}
         {screen === 'today'    && <Today carriedOver={carriedOver} onNavigate={setScreen} />}
