@@ -45,7 +45,7 @@ def test_app_today_returns_yesterday_when_before_day_start(db_session):
 
     # 3am Los Angeles → still yesterday by app rules
     fake_now = datetime(2026, 5, 18, 3, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/Los_Angeles"))
-    with patch("routes.tasks.datetime") as mock_dt:
+    with patch("routes.task_lifecycle.datetime") as mock_dt:
         mock_dt.now.return_value = fake_now
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
         result = _app_today(user)
@@ -58,7 +58,7 @@ def test_app_today_returns_today_after_day_start(db_session):
     user.day_start_hour = 6
     db_session.commit()
     fake_now = datetime(2026, 5, 18, 9, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/Los_Angeles"))
-    with patch("routes.tasks.datetime") as mock_dt:
+    with patch("routes.task_lifecycle.datetime") as mock_dt:
         mock_dt.now.return_value = fake_now
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
         result = _app_today(user)
