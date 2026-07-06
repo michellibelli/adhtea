@@ -73,8 +73,16 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE users ADD COLUMN max_tasks_per_day INTEGER NOT NULL DEFAULT 10"))
             if "max_total_per_day" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN max_total_per_day INTEGER NOT NULL DEFAULT 15"))
+            # Security: every self-signup used to be created as `primary` (admin).
+            # Demote all non-owner primaries to plain members. Owner keeps admin.
+            conn.execute(text("UPDATE users SET role='member' WHERE is_owner=0 AND role='primary'"))
             conn.commit()
         else:
+            # Add the new `member` label to the native Postgres `userrole` enum.
+            # ALTER TYPE ... ADD VALUE must be committed before the value can be
+            # used, so this runs (and commits) ahead of the demote UPDATE below.
+            conn.execute(text("ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'member'"))
+            conn.commit()
             conn.execute(text(
                 "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL"
             ))
@@ -109,6 +117,9 @@ def _migrate(target_engine=None):
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_total_per_day INTEGER NOT NULL DEFAULT 15"
             ))
+            # Security: demote all non-owner primaries (every self-signup used to
+            # be created as admin). Owner keeps primary/admin.
+            conn.execute(text("UPDATE users SET role='member' WHERE is_owner=FALSE AND role='primary'"))
             # Privacy: drop dose column. Pre-3.9.11 rows held real dose strings.
             conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN IF EXISTS dose"))
             # Security: enable Row-Level Security on every table. The backend

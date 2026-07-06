@@ -17,7 +17,8 @@ def utcnow():
 # ---------------------------------------------------------------------------
 
 class UserRole(str, enum.Enum):
-    primary = "primary"
+    primary = "primary"   # admin — manages users/invites (owner is a primary)
+    member = "member"     # regular self-service user; no admin surface
     child = "child"
 
 

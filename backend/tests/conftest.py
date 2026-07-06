@@ -13,6 +13,12 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
 from main import app, _migrate
+from rate_limit import limiter
+
+# Rate limits are infrastructure, not logic under test. The shared limiter is
+# keyed on client IP, so the many /setup + /signup calls across the suite would
+# otherwise trip the per-minute caps and fail unrelated tests with 429s.
+limiter.enabled = False
 
 
 @pytest.fixture

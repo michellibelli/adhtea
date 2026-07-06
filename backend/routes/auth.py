@@ -88,7 +88,8 @@ def setup_needed(db: Session = Depends(get_db)):
 
 
 @router.post("/setup", response_model=LoginResponse)
-def setup(req: SetupRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def setup(request: Request, req: SetupRequest, db: Session = Depends(get_db)):
     existing = db.query(User).first()
     if existing:
         raise HTTPException(status_code=400, detail="Setup already complete")
@@ -264,7 +265,7 @@ def create_user(
         name=req.name,
         username=username,
         hashed_password=hashed,
-        role=UserRole.primary,
+        role=UserRole.member,
     )
     db.add(user)
     db.flush()
@@ -334,7 +335,8 @@ def revoke_invite(
 
 
 @router.post("/register", response_model=LoginResponse, status_code=201)
-def register(req: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, req: RegisterRequest, db: Session = Depends(get_db)):
     invite = db.query(InviteToken).filter(
         InviteToken.token == req.invite_token,
         InviteToken.used_by == None,  # noqa: E711
@@ -347,7 +349,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
     hashed = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
-    user = User(name=req.name, username=username, hashed_password=hashed, role=UserRole.primary)
+    user = User(name=req.name, username=username, hashed_password=hashed, role=UserRole.member)
     db.add(user)
     db.flush()
     for p in PRESET_ACTUATORS:
@@ -370,7 +372,8 @@ def signup_config(db: Session = Depends(get_db)):
 
 
 @router.post("/signup", response_model=LoginResponse, status_code=201)
-def signup(req: SignupRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
     config = _get_or_init_config(db)
     if config.alpha_code is not None:
         if not req.alpha_code or req.alpha_code.strip() != config.alpha_code:
@@ -386,7 +389,7 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
         username=username,
         email=req.email,
         hashed_password=hashed,
-        role=UserRole.primary,
+        role=UserRole.member,
         alpha_code_version=config.alpha_code_version,
     )
     db.add(user)
@@ -403,7 +406,9 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @router.post("/alpha-challenge")
+@limiter.limit("5/minute")
 def alpha_challenge(
+    request: Request,
     req: AlphaChallengeRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -451,10 +456,31 @@ def set_alpha_code(
 # Onboarding — seed tutorial data for new users
 # ---------------------------------------------------------------------------
 
+def _user_day_start(user: User) -> datetime:
+    """Naive midnight of the user's current app-day — mirrors tasks._day_start so
+    seeded today-tasks fall inside get_today's scheduled_date window. Inlined here
+    (rather than imported) because tasks.py imports auth, which would be circular.
+    """
+    from zoneinfo import ZoneInfo
+    try:
+        tz = ZoneInfo(getattr(user, "timezone", None) or "America/Los_Angeles")
+    except Exception:
+        tz = ZoneInfo("America/Los_Angeles")
+    now_local = datetime.now(tz)
+    d = now_local.date()
+    if now_local.hour < (getattr(user, "day_start_hour", 6) or 6):
+        d = d - timedelta(days=1)
+    return datetime(d.year, d.month, d.day)
+
+
 @router.post("/onboard/seed")
 def onboard_seed(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.is_onboarded:
         return {"ok": True, "skipped": True}
+
+    # Today-status tasks must carry a scheduled_date or get_today's window filter
+    # (scheduled_date BETWEEN day_start AND day_end) silently hides them.
+    sched = _user_day_start(current_user)
 
     # Task: Log in (completeable immediately)
     db.add(Task(
@@ -462,6 +488,7 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         title="Log in ✓",
         task_type=TaskType.task,
         status=TaskStatus.today,
+        scheduled_date=sched,
         notes="You made it! Tap the checkmark to complete this one right now.",
         weight=TaskWeight.light,
     ))
@@ -481,6 +508,7 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         title="Schedule your daily self-care routine",
         task_type=TaskType.task,
         status=TaskStatus.today,
+        scheduled_date=sched,
         notes="Go to Routines (moon icon) to set a time for your 15-min self-care. Even a small daily ritual makes a big difference.",
         weight=TaskWeight.light,
     ))
@@ -502,6 +530,7 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         title="What do you want to get done tomorrow?",
         task_type=TaskType.task,
         status=TaskStatus.today,
+        scheduled_date=sched,
         notes="Tap '+ Task 🛠️' on the Projects page to add tasks here. One thing you want to tackle tomorrow is enough.",
         weight=TaskWeight.light,
     ))
@@ -513,6 +542,7 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         title="What's your morning routine?",
         task_type=TaskType.task,
         status=TaskStatus.today,
+        scheduled_date=sched,
         notes="Go to Routines (moon icon) and tap '+ Routine' to build your morning ritual. Once added, tap 'Schedule' to lock it into your day.",
         weight=TaskWeight.light,
     ))
@@ -523,6 +553,7 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         title="Log your first morning check-in",
         task_type=TaskType.task,
         status=TaskStatus.today,
+        scheduled_date=sched,
         notes="Head to the Log page (heart icon) and tap 'Check in ✏️' to record how you're doing today.",
         weight=TaskWeight.light,
     ))

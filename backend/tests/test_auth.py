@@ -91,3 +91,55 @@ def test_expired_token_rejected(client, db_session, primary_user_token):
     db_session.commit()
     r = client.get("/me", headers={"Authorization": "Bearer expired_token"})
     assert r.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Privilege separation — self-signup users are members, not admins (#1)
+# ---------------------------------------------------------------------------
+
+def test_setup_user_is_owner_primary(client):
+    """First user (via /setup) is the owner and holds the primary/admin role."""
+    r = client.post("/setup", json={"name": "Owner", "username": "owner", "password": "longpass1"})
+    assert r.status_code == 200
+    assert r.json()["role"] == "primary"
+
+
+def test_signup_creates_member_not_admin(client, primary_user_token):
+    """A self-signup user must land as `member`, never `primary`."""
+    r = client.post("/signup", json={"name": "Mia", "username": "mia", "password": "longpass1"})
+    assert r.status_code == 201
+    assert r.json()["role"] == "member"
+
+
+def test_member_blocked_from_admin_endpoints(client, primary_user_token):
+    """Members cannot list, create, or delete users, nor mint invites."""
+    r = client.post("/signup", json={"name": "Mia", "username": "mia", "password": "longpass1"})
+    member_headers = {"Authorization": f"Bearer {r.json()['token']}"}
+
+    assert client.get("/users", headers=member_headers).status_code == 403
+    assert client.post("/invites", headers=member_headers).status_code == 403
+    assert client.delete("/users/1", headers=member_headers).status_code == 403
+
+
+def test_owner_reaches_admin_endpoints(client, auth_headers):
+    """The owner/primary still has full admin access."""
+    assert client.get("/users", headers=auth_headers).status_code == 200
+    assert client.post("/invites", headers=auth_headers).status_code == 201
+
+
+# ---------------------------------------------------------------------------
+# Onboarding seed tasks are visible in Today (#5)
+# ---------------------------------------------------------------------------
+
+def test_onboard_seed_tasks_appear_in_today(client):
+    """Seeded status=today tasks must carry a scheduled_date or get_today hides them."""
+    signup = client.post("/signup", json={"name": "Nora", "username": "nora", "password": "longpass1"})
+    headers = {"Authorization": f"Bearer {signup.json()['token']}"}
+
+    seed = client.post("/onboard/seed", headers=headers)
+    assert seed.status_code == 200
+
+    today = client.get("/tasks/today", headers=headers)
+    assert today.status_code == 200
+    titles = [t["title"] for t in today.json()]
+    assert "Log in ✓" in titles
