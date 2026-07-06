@@ -143,3 +143,33 @@ def test_onboard_seed_tasks_appear_in_today(client):
     assert today.status_code == 200
     titles = [t["title"] for t in today.json()]
     assert "Log in ✓" in titles
+
+
+# ---------------------------------------------------------------------------
+# Session tokens are stored hashed, not in plaintext (#4)
+# ---------------------------------------------------------------------------
+
+def test_session_token_stored_hashed(client, db_session):
+    import hashlib
+    r = client.post("/setup", json={"name": "H", "username": "hasher", "password": "longpass1"})
+    raw = r.json()["token"]
+
+    row = db_session.query(SessionToken).first()
+    assert row.token != raw                                    # never the plaintext token
+    assert row.token == hashlib.sha256(raw.encode()).hexdigest()  # stored as sha256
+
+    # And the raw token still authenticates.
+    assert client.get("/me", headers={"Authorization": f"Bearer {raw}"}).status_code == 200
+
+
+def test_stale_plaintext_token_cannot_authenticate(client, db_session):
+    """A leaked pre-hashing (plaintext) row can't be replayed: lookup hashes the
+    incoming bearer, so the stored plaintext never matches."""
+    from datetime import datetime, timedelta, timezone
+    client.post("/setup", json={"name": "L", "username": "legacy", "password": "longpass1"})
+    uid = db_session.query(User).filter(User.username == "legacy").first().id
+    future = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
+    db_session.add(SessionToken(user_id=uid, token="plaintext_leaked_token", expires_at=future))
+    db_session.commit()
+    resp = client.get("/me", headers={"Authorization": "Bearer plaintext_leaked_token"})
+    assert resp.status_code == 401

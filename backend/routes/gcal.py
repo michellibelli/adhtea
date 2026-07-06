@@ -16,6 +16,7 @@ Setup (one-time):
 
 import os
 import json
+import secrets
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -31,8 +32,22 @@ router = APIRouter()
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
-# Temporary in-memory store for PKCE code verifiers (connect → callback window)
-_code_verifiers: dict[str, str] = {}
+# Pending OAuth flows, keyed by a random unguessable state token:
+#   state -> {"user_id": int, "verifier": str | None, "created": datetime}
+# The state is what ties the callback back to the user who started the flow.
+# Never derive the user from a caller-supplied value (e.g. the raw user id) —
+# that lets anyone link their own Google account into someone else's account.
+# NOTE: in-memory, so a server restart mid-flow invalidates pending logins
+# (acceptable: the connect→callback window is seconds). See review item #7.
+_pending_oauth: dict[str, dict] = {}
+_OAUTH_TTL = timedelta(minutes=10)
+
+
+def _reap_pending_oauth():
+    """Drop stale pending flows so abandoned connects don't accumulate."""
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - _OAUTH_TTL
+    for st in [k for k, v in _pending_oauth.items() if v.get("created", cutoff) < cutoff]:
+        _pending_oauth.pop(st, None)
 
 
 def _env(key):
@@ -110,19 +125,26 @@ def gcal_connect(
 ):
     if not _gcal_available():
         raise HTTPException(status_code=503, detail="Google Calendar not configured. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI to .env")
+    _reap_pending_oauth()
     flow = _build_flow()
+    # Random, unguessable state — the only thing that authorizes the callback to
+    # bind Google credentials to this user. Do NOT use the user id here.
+    state = secrets.token_urlsafe(24)
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
-        state=str(current_user.id),
+        state=state,
     )
     # Persist PKCE code verifier if the library generated one
     verifier = getattr(flow, "code_verifier", None) or getattr(
         getattr(flow, "oauth2session", None), "_code_verifier", None
     )
-    if verifier:
-        _code_verifiers[str(current_user.id)] = verifier
+    _pending_oauth[state] = {
+        "user_id": current_user.id,
+        "verifier": verifier,
+        "created": datetime.now(timezone.utc).replace(tzinfo=None),
+    }
     return {"auth_url": auth_url}
 
 
@@ -134,16 +156,24 @@ def gcal_callback(
 ):
     if not _gcal_available():
         raise HTTPException(status_code=503, detail="Google Calendar not configured")
+
+    # Resolve the user from our server-side record of the state we issued.
+    # An attacker-supplied state simply won't be found → 400.
+    _reap_pending_oauth()
+    pending = _pending_oauth.pop(state, None)
+    if not pending:
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
+    user_id = pending["user_id"]
+    verifier = pending.get("verifier")
+
     try:
         flow = _build_flow()
-        verifier = _code_verifiers.pop(state, None)
         fetch_kwargs = {"code": code}
         if verifier:
             fetch_kwargs["code_verifier"] = verifier
         flow.fetch_token(**fetch_kwargs)
         creds = flow.credentials
 
-        user_id = int(state)
         token = db.query(GoogleCalendarToken).filter(
             GoogleCalendarToken.user_id == user_id
         ).first()
@@ -171,7 +201,10 @@ def gcal_callback(
         return RedirectResponse(url=f"{frontend}?gcal=connected")
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"OAuth error: {e}")
+        # Log the real cause server-side; don't echo internals (client config,
+        # library internals) back to the caller.
+        print(f"gcal OAuth callback failed for user {user_id}: {e}")
+        raise HTTPException(status_code=400, detail="Could not complete Google sign-in. Please try again.")
 
 
 @router.delete("/gcal/disconnect")

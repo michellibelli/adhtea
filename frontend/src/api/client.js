@@ -105,7 +105,9 @@ async function rawRequest(method, path, body, isForm) {
       const err = await res.json()
       detail = err.detail || detail
     } catch (_) {}
-    throw new Error(detail)
+    const error = new Error(detail)
+    error.status = res.status  // let callers distinguish 4xx (permanent) from 5xx/network
+    throw error
   }
 
   markSuccess()
@@ -181,6 +183,14 @@ export function removeSnooze(taskId) {
 
 let _flushing = false
 
+// A 4xx (except timeout/rate-limit) means the request will never succeed —
+// e.g. the task was deleted server-side, so /complete 404s forever. Drop it so
+// it can't wedge the head of the queue. 5xx / network / 429 are transient → retry.
+function _isPermanentFailure(err) {
+  const s = err?.status
+  return typeof s === 'number' && s >= 400 && s < 500 && s !== 408 && s !== 429
+}
+
 async function flushQueues() {
   if (_flushing || likelySleeping()) return
   if (!getPendingCompletes().length && !getPendingSnoozes().length) return
@@ -194,8 +204,9 @@ async function flushQueues() {
     try {
       await request('POST', `/tasks/${id}/complete`)
       removeComplete(id)
-    } catch {
-      break
+    } catch (err) {
+      if (_isPermanentFailure(err)) removeComplete(id)  // drop; don't jam the queue
+      else break                                         // transient; retry next flush
     }
     completes = getPendingCompletes()
   }
@@ -206,8 +217,9 @@ async function flushQueues() {
     try {
       await request('POST', `/tasks/${s.id}/snooze`, { snooze_until: s.snooze_until })
       removeSnooze(s.id)
-    } catch {
-      break
+    } catch (err) {
+      if (_isPermanentFailure(err)) removeSnooze(s.id)
+      else break
     }
     snoozes = getPendingSnoozes()
   }

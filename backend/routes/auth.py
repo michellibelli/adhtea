@@ -1,4 +1,5 @@
 import secrets
+import hashlib
 import bcrypt
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -35,16 +36,25 @@ def _get_or_init_config(db: Session) -> SiteConfig:
     return config
 
 
+def _hash_token(token_str: str) -> str:
+    """SHA-256 of a session token. Stored server-side instead of the raw token so a
+    database leak can't be replayed as live sessions. sha256 hex is 64 chars — an
+    exact fit for the SessionToken.token column."""
+    return hashlib.sha256(token_str.encode()).hexdigest()
+
+
 def _make_session(user_id: int, db: Session) -> str:
-    """Create a new auth token for user_id, store it in the DB, and return the token string.
+    """Create a new auth token for user_id, store its HASH in the DB, and return the
+    raw token string (shown to the client once).
 
     The token is a 64-character random hex string (32 bytes of entropy).
     It expires after TOKEN_EXPIRY_DAYS days. The frontend stores it in localStorage
-    and sends it as a Bearer token on every API request.
+    and sends it as a Bearer token on every API request; the server hashes the
+    incoming token to look up the session.
     """
     token_str = secrets.token_hex(32)
     expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
-    db.add(SessionToken(user_id=user_id, token=token_str, expires_at=expires))
+    db.add(SessionToken(user_id=user_id, token=_hash_token(token_str), expires_at=expires))
     return token_str
 
 PRESET_ACTUATORS = [
@@ -70,7 +80,7 @@ def get_current_user(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     session = (
         db.query(SessionToken)
-        .filter(SessionToken.token == token_str, SessionToken.expires_at > now)
+        .filter(SessionToken.token == _hash_token(token_str), SessionToken.expires_at > now)
         .first()
     )
     if not session:
@@ -139,6 +149,10 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     if not user or not bcrypt.checkpw(req.password.encode(), user.hashed_password.encode()):
         raise HTTPException(status_code=401, detail="Could not sign in")
 
+    # Opportunistic cleanup: expired sessions are never otherwise deleted.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.query(SessionToken).filter(SessionToken.expires_at < now).delete()
+
     token_str = _make_session(user.id, db)
     db.commit()
 
@@ -161,7 +175,7 @@ def logout(
     db: Session = Depends(get_db),
 ):
     token_str = credentials.credentials
-    session = db.query(SessionToken).filter(SessionToken.token == token_str).first()
+    session = db.query(SessionToken).filter(SessionToken.token == _hash_token(token_str)).first()
     if session:
         db.delete(session)
         db.commit()
