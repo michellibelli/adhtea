@@ -16,6 +16,7 @@ Setup (one-time):
 
 import os
 import json
+import logging
 import secrets
 from datetime import date, datetime, timedelta, timezone
 
@@ -29,6 +30,7 @@ from models import GoogleCalendarToken, OAuthState, Task, TaskStatus, TaskType, 
 from routes.auth import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
@@ -107,7 +109,7 @@ def gcal_status(
             selected_ids = json.loads(token.calendar_ids)
         except Exception as e:
             # Log so a corrupted JSON blob is visible instead of silently empty
-            print(f"gcal calendar_ids JSON parse failed for user {current_user.id}: {e}")
+            logger.warning("gcal calendar_ids JSON parse failed for user %s: %s", current_user.id, e)
     return {
         "connected":           token is not None,
         "configured":          True,
@@ -200,7 +202,7 @@ def gcal_callback(
     except Exception as e:
         # Log the real cause server-side; don't echo internals (client config,
         # library internals) back to the caller.
-        print(f"gcal OAuth callback failed for user {user_id}: {e}")
+        logger.exception("gcal OAuth callback failed for user %s", user_id)
         raise HTTPException(status_code=400, detail="Could not complete Google sign-in. Please try again.")
 
 
@@ -331,8 +333,8 @@ def sync_today_events(user_id: int, db: Session) -> dict:
         db.commit()
         return {"created": created, "calendars_queried": calendars_queried, "events_found": events_found}
 
-    except Exception as e:
-        print(f"gcal sync error for user {user_id}: {e}")
+    except Exception:
+        logger.exception("gcal sync error for user %s", user_id)
         raise  # re-raise so manual_sync can surface the error
 
 

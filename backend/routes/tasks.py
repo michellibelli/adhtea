@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -32,6 +33,7 @@ from routes.task_lifecycle import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -245,10 +247,10 @@ def _maybe_sync_gcal(user_id: int, db: Session):
     try:
         from routes.gcal import sync_today_events
         sync_today_events(user_id, db)
-    except Exception as e:
+    except Exception:
         # Never let a GCal failure break the task list, but log it so issues
         # like expired tokens or API outages are visible in the server logs
-        print(f"gcal auto-sync failed for user {user_id}: {e}")
+        logger.exception("gcal auto-sync failed for user %s", user_id)
 
 
 # ---------------------------------------------------------------------------

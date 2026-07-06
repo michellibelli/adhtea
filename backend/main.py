@@ -1,4 +1,5 @@
 import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,14 @@ from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
 from routes import projects, domains, triage, insights
 
 load_dotenv()
+
+# Structured logging to stdout (captured by Render). Level via LOG_LEVEL env.
+# Modules log with logging.getLogger(__name__) instead of print(), so lines
+# carry a timestamp, level, and source — greppable in the Render dashboard.
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
