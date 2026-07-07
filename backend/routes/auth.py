@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from rate_limit import limiter
+from routes.task_lifecycle import _app_today
 from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
     Task, Routine, Project, TaskType, TaskStatus, TaskWeight, RoutineFrequency, TimeOfDay,
@@ -202,6 +203,7 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
     # only fields explicitly declared in UserResponse are returned.
     response = UserResponse.model_validate(current_user).model_dump()
     response["needs_alpha_challenge"] = needs_challenge
+    response["day_planned"] = current_user.planned_on == _app_today(current_user)
     return response
 
 

@@ -97,13 +97,16 @@ function AppShell() {
   const [diaryEntry, setDiaryEntry]           = useState('')
   const [diaryConfig]                         = useState(getDiaryConfig)
   const [serverUp, setServerUp]               = useState(false)
+  const [slowLoad, setSlowLoad]               = useState(false)
   const [showWake, setShowWake]               = useState(false)
   const [wakeReady, setWakeReady]             = useState(false)
   const [wakeDiary, setWakeDiary]             = useState('')
   const wakePromptRef = useRef('')
+  const wakeDiaryRef = useRef('')
   const diaryRef = useRef('')
   const prevScreenRef = useRef('focus')
   const pageLoadedRef = useRef(false)
+  const coverInitDoneRef = useRef(false)
 
   useEffect(() => {
     getMe()
@@ -135,8 +138,16 @@ function AppShell() {
         setScreen(opening)
         getTodayCapacity().then(setCapacity).catch(() => {})
 
+        // Gate decision (self-care check-in / EOD) must resolve before we show
+        // the app so it doesn't flash the main screen then yank to the gate.
+        // But a cold Render server can make getTodayLog take many seconds — cap
+        // it so a slow log fetch can never strand the user on the loading
+        // screen. If it times out we proceed; the gate can still appear later.
         try {
-          const log = await getTodayLog()
+          const log = await Promise.race([
+            getTodayLog(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('log-timeout')), 2500)),
+          ])
           const hour = new Date().getHours()
           const isMorningWindow = hour < 14
           if (!log && isMorningWindow) {
@@ -144,57 +155,96 @@ function AppShell() {
           } else if (log && isEODWindow(u)) {
             setShowEOD(true)
           }
-        } catch { /* non-blocking */ }
+        } catch { /* slow/cold server — proceed without blocking */ }
         setReady(true)
       })
       .catch(() => setReady(true))
   }, [])
 
+  // Raise the full-screen loading cover for the page we're about to show. The
+  // page mounts and fetches *underneath* the cover; it lifts only once that
+  // page's data has loaded (aria:page-loaded), so the user never sees the bare
+  // "…" skeleton while a cold Render server spins up.
+  const raiseCover = () => {
+    setWakeDiary('')
+    wakeDiaryRef.current = ''
+    setWakeReady(false)
+    wakePromptRef.current = DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]
+    setShowWake(true)
+  }
+
+  // Cover the opening page (first ready) and every subsequent screen change.
   useEffect(() => {
     if (!ready) return
-    if (screen !== prevScreenRef.current) {
-      prevScreenRef.current = screen
-      pageLoadedRef.current = false
-      const onLoad = () => { pageLoadedRef.current = true }
-      window.addEventListener('aria:server-awake', onLoad)
-      const openWake = () => {
-        setWakeDiary('')
-        setWakeReady(false)
-        wakePromptRef.current = DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]
-        setShowWake(true)
-      }
-      if (likelySleeping()) {
-        openWake()
-      } else {
-        const timer = setTimeout(() => {
-          if (!pageLoadedRef.current) openWake()
-        }, 3000)
-        return () => { clearTimeout(timer); window.removeEventListener('aria:server-awake', onLoad) }
-      }
-      return () => window.removeEventListener('aria:server-awake', onLoad)
+    const changed = screen !== prevScreenRef.current
+    const initial = !coverInitDoneRef.current
+    if (!changed && !initial) return
+    prevScreenRef.current = screen
+    coverInitDoneRef.current = true
+    pageLoadedRef.current = false
+
+    const onLoad = () => { pageLoadedRef.current = true }
+    window.addEventListener('aria:page-loaded', onLoad)
+
+    if (likelySleeping()) {
+      raiseCover()
+      return () => window.removeEventListener('aria:page-loaded', onLoad)
     }
+    // Warm server: only cover if the page is actually slow, to avoid a flash on
+    // fast navigations (fast pages emit aria:page-loaded well under this delay).
+    const timer = setTimeout(() => { if (!pageLoadedRef.current) raiseCover() }, 1200)
+    return () => { clearTimeout(timer); window.removeEventListener('aria:page-loaded', onLoad) }
   }, [screen, ready])
 
+  // While the cover is up: enable the manual Continue once the server responds,
+  // and auto-lift as soon as the page's data lands (unless the user is
+  // mid-diary, in which case leave it to them to Continue).
   useEffect(() => {
     if (!showWake) return
-    const check = () => { if (!likelySleeping()) setWakeReady(true) }
-    check()
-    const interval = setInterval(check, 500)
+    const markReady = () => { if (!likelySleeping()) setWakeReady(true) }
+    markReady()
+    const interval = setInterval(markReady, 500)
     const onAwake = () => setWakeReady(true)
     window.addEventListener('aria:server-awake', onAwake)
-    return () => { clearInterval(interval); window.removeEventListener('aria:server-awake', onAwake) }
+
+    let settle
+    const onPageLoaded = () => {
+      setWakeReady(true)
+      if (wakeDiaryRef.current.trim()) return   // respect an in-progress journal entry
+      clearTimeout(settle)
+      settle = setTimeout(() => dismissWake(), 500)   // brief settle so the page paints
+    }
+    window.addEventListener('aria:page-loaded', onPageLoaded)
+
+    const hard = setTimeout(() => dismissWake(), 60000)   // safety: never trap the user (cold Render wake ~30-45s)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(settle)
+      clearTimeout(hard)
+      window.removeEventListener('aria:server-awake', onAwake)
+      window.removeEventListener('aria:page-loaded', onPageLoaded)
+    }
   }, [showWake])
 
   function dismissWake() {
-    if (wakeDiary.trim()) {
+    if (wakeDiaryRef.current.trim()) {
       createTask({
         title: 'Diary entry',
         task_type: 'note',
-        notes: wakeDiary.trim(),
+        notes: wakeDiaryRef.current.trim(),
       }).catch(() => {})
     }
     setShowWake(false)
   }
+
+  // If we're still not ready after a few seconds (cold server, stalled fetch),
+  // surface a manual "Continue" so the user is never trapped on the loader.
+  useEffect(() => {
+    if (ready) { setSlowLoad(false); return }
+    const t = setTimeout(() => setSlowLoad(true), 4000)
+    return () => clearTimeout(t)
+  }, [ready])
 
   function handleLogout() { logout().then(() => window.location.reload()) }
 
@@ -215,7 +265,17 @@ function AppShell() {
           <p
             className="text-sm text-ui-subtext mb-6"
             style={{ fontFamily: 'Caveat, cursive', fontSize: 18, letterSpacing: '0.02em' }}
-          >{serverUp ? 'ready when you are' : 'brewing…'}</p>
+          >{serverUp ? 'almost there…' : 'brewing…'}</p>
+
+          {slowLoad && (
+            <button
+              onClick={() => setReady(true)}
+              className="mb-6 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300"
+              style={{ background: 'var(--aria-accent)', color: 'var(--aria-bg)', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+            >
+              Continue
+            </button>
+          )}
 
           <div className="w-full">
             <div className="rounded-xl border border-ui-border/60 bg-ui-card/80 px-4 py-4 backdrop-blur-sm">
@@ -335,7 +395,14 @@ function AppShell() {
       <main className="pt-[64px] relative z-10">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} />}
-        {screen === 'today'    && <Today carriedOver={carriedOver} onNavigate={setScreen} />}
+        {screen === 'today'    && (
+          <Today
+            carriedOver={carriedOver}
+            onNavigate={setScreen}
+            dayPlanned={!!user?.day_planned}
+            onDayPlanned={() => setUser(u => u ? { ...u, day_planned: true } : u)}
+          />
+        )}
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
@@ -370,7 +437,7 @@ function AppShell() {
                 </p>
                 <textarea
                   value={wakeDiary}
-                  onChange={(e) => setWakeDiary(e.target.value)}
+                  onChange={(e) => { setWakeDiary(e.target.value); wakeDiaryRef.current = e.target.value }}
                   placeholder="or just wait, no pressure"
                   rows={4}
                   className="w-full rounded-lg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none transition-colors"

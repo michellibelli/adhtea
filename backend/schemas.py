@@ -113,6 +113,7 @@ class UserResponse(BaseModel):
     created_at: datetime
     needs_alpha_challenge: bool = False
     is_onboarded: bool = True
+    day_planned: bool = False   # true once user hit "Start my day" this app-day
 
     model_config = {"from_attributes": True}
 

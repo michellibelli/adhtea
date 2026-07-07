@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { getToday, getInbox, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, scheduleToday, reorderTasks } from '../api/tasks'
+import { getToday, getInbox, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, scheduleToday, reorderTasks, planDay } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
@@ -80,7 +80,7 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete, comple
   )
 }
 
-export default function Today({ carriedOver = false, onNavigate }) {
+export default function Today({ carriedOver = false, onNavigate, dayPlanned = true, onDayPlanned }) {
   const [todayTasks, setTodayTasks] = useState([])
   const [inboxTasks, setInboxTasks] = useState([])
   const [doneTasks, setDone]        = useState([])
@@ -91,6 +91,24 @@ export default function Today({ carriedOver = false, onNavigate }) {
   const [showDone, setShowDone]     = useState(false)
   const [expandedDoneId, setExpandedDoneId] = useState(null)
   const [sortBy, setSortBy]         = useState('manual')
+  // Planning vs started state for the once-per-day "Start my day" ritual.
+  const [planned, setPlanned]       = useState(dayPlanned)
+  const [applying, setApplying]     = useState(false)
+  const planning = !planned
+
+  async function handleStartDay() {
+    setApplying(true)
+    setPlanned(true)          // optimistic — flip to started immediately
+    try {
+      await planDay()
+      onDayPlanned?.()
+    } catch (err) {
+      console.error(err)
+      setPlanned(false)       // revert on failure so the ritual can be retried
+    } finally {
+      setApplying(false)
+    }
+  }
 
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
@@ -109,7 +127,12 @@ export default function Today({ carriedOver = false, onNavigate }) {
       setDone(doneList)
       setCapacity(cap)
     } catch (err) { console.error(err); setError(true) }
-    finally { setLoading(false) }
+    finally {
+      setLoading(false)
+      // Tell the app shell the page's data has landed so it can lift the
+      // loading cover — reveal a populated page, never a "..." skeleton.
+      window.dispatchEvent(new Event('aria:page-loaded'))
+    }
   }, [])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -208,7 +231,7 @@ export default function Today({ carriedOver = false, onNavigate }) {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-semibold text-ui-text">Today</h1>
+          <h1 className="text-2xl font-semibold text-ui-text">{planning ? 'Plan your day' : 'Today'}</h1>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             <span className="text-sm text-ui-subtext mr-1">{regular.length + timed.length} today</span>
             {onNavigate && (
@@ -232,6 +255,14 @@ export default function Today({ carriedOver = false, onNavigate }) {
 
         {/* Capacity */}
         <CapacityBar capacity={capacity} compact />
+
+        {/* Planning banner — shown until the day is committed via Start my day */}
+        {planning && (
+          <Card className="mb-4 px-4 py-3" style={{ borderColor: 'var(--aria-accent)' }}>
+            <p className="text-sm font-medium text-ui-text mb-0.5">Set up your day</p>
+            <p className="text-xs text-ui-subtext">Add, reorder, or trim below. When it feels right, hit <span className="font-semibold text-ui-text">Start my day</span> to lock it in and begin.</p>
+          </Card>
+        )}
 
         {/* Carried-over banner */}
         {carriedOver && (
@@ -415,7 +446,33 @@ export default function Today({ carriedOver = false, onNavigate }) {
           </div>
         )}
 
+        {/* Spacer so the fixed Start-my-day bar never covers the last task */}
+        {planning && <div style={{ height: 88 }} />}
+
       </div>
+
+      {/* Start my day — the once-per-day commit ritual. Fixed to the bottom so
+          it's always reachable while planning; disappears once the day starts. */}
+      {planning && (
+        <div
+          className="fixed left-0 right-0 z-40 flex justify-center px-4"
+          style={{ bottom: 'calc(16px + env(safe-area-inset-bottom))', pointerEvents: 'none' }}
+        >
+          <button
+            onClick={handleStartDay}
+            disabled={applying}
+            className="w-full max-w-2xl py-3.5 rounded-xl text-base font-semibold transition-all duration-300 disabled:opacity-70"
+            style={{
+              background: 'var(--aria-accent)',
+              color: 'var(--aria-bg)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+              pointerEvents: 'auto',
+            }}
+          >
+            {applying ? 'Starting…' : 'Start my day ☕'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

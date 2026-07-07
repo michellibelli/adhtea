@@ -179,7 +179,10 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
         )
         setMedLogs(ml)
       } catch (err) { console.error(err); setError(true) }
-      finally { setLoading(false) }
+      finally {
+        setLoading(false)
+        window.dispatchEvent(new Event('aria:page-loaded'))
+      }
     })()
   }
 

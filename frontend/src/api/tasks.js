@@ -39,6 +39,7 @@ export const searchTasks      = (q) => api.get(`/tasks/search?q=${encodeURICompo
 
 // Actions
 export const scheduleToday = (id, meta = {}) => api.post(`/tasks/${id}/schedule-today`, meta)
+export const planDay = () => api.post('/tasks/plan-day')
 export async function completeTask(id) {
   queueComplete(id)
   try {

@@ -178,7 +178,12 @@ export default function Focus({ onGoToList, onNavigate }) {
         setError(true)
       }
     }
-    finally { setLoading(false) }
+    finally {
+      setLoading(false)
+      // Signal the app shell that data has landed so the loading cover lifts
+      // onto a populated page rather than the "…" placeholder.
+      window.dispatchEvent(new Event('aria:page-loaded'))
+    }
   }, [])
 
   // Mount-only fetch; fetchAll is stable (useCallback []).

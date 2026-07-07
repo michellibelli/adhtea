@@ -424,6 +424,25 @@ def get_today(
 
 
 # ---------------------------------------------------------------------------
+# Start my day — commit today's plan
+# ---------------------------------------------------------------------------
+
+@router.post("/tasks/plan-day")
+def plan_day(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark the user's plan as committed for the current app-day. Flips Today
+    from its planning state into its started state. Idempotent — calling it
+    again the same app-day is a no-op. Resets automatically at the next
+    day_start_hour boundary because it's compared against _app_today."""
+    today = _app_today(current_user)
+    current_user.planned_on = today
+    db.commit()
+    return {"day_planned": True, "planned_on": today.isoformat()}
+
+
+# ---------------------------------------------------------------------------
 # Waiting (snoozed)
 # ---------------------------------------------------------------------------
 

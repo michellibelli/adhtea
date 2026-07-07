@@ -127,6 +127,11 @@ class User(Base):
     # Last app-day the once-per-day rollover sweeps ran for this user. Used as an
     # atomic guard so concurrent Today/Inbox loads don't each spawn routines.
     rolled_over_on = Column(Date, nullable=True)
+    # Last app-day the user committed their plan via "Start my day". When this
+    # equals the current app-day, Today renders in its "started" state; otherwise
+    # it opens in "planning" and shows the Start-my-day button. Resets at the
+    # day_start_hour boundary automatically since it's compared against _app_today.
+    planned_on = Column(Date, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")

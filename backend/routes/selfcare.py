@@ -6,6 +6,7 @@ from database import get_db
 from models import SelfCareLog, CapacitySnapshot, Task, TaskStatus, TaskType, MedicationLog, utcnow
 from schemas import SelfCareLogCreate, SelfCareLogResponse, CapacitySnapshotResponse
 from routes.auth import get_current_user
+from routes.task_lifecycle import _app_today
 from models import User
 
 router = APIRouter()
@@ -99,7 +100,7 @@ def get_today_log(
 ):
     return db.query(SelfCareLog).filter(
         SelfCareLog.user_id == current_user.id,
-        SelfCareLog.log_date == date.today(),
+        SelfCareLog.log_date == _app_today(current_user),
     ).first()
 
 
@@ -109,7 +110,7 @@ def upsert_log(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    log_date = body.log_date or date.today()
+    log_date = body.log_date or _app_today(current_user)
 
     log = db.query(SelfCareLog).filter(
         SelfCareLog.user_id == current_user.id,
@@ -140,7 +141,7 @@ def get_log_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    since = date.today() - timedelta(days=days)
+    since = _app_today(current_user) - timedelta(days=days)
     return (
         db.query(SelfCareLog)
         .filter(
@@ -163,7 +164,7 @@ def get_today_capacity(
 ):
     snap = db.query(CapacitySnapshot).filter(
         CapacitySnapshot.user_id == current_user.id,
-        CapacitySnapshot.log_date == date.today(),
+        CapacitySnapshot.log_date == _app_today(current_user),
     ).first()
     if snap is None:
         return None
