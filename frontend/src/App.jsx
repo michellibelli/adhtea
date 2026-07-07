@@ -7,7 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, likelySleeping } from './api/client'
+import { isLoggedIn, likelySleeping, warmUp } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { createTask } from './api/tasks'
@@ -107,6 +107,7 @@ function AppShell() {
   const prevScreenRef = useRef('focus')
   const pageLoadedRef = useRef(false)
   const coverInitDoneRef = useRef(false)
+  const [refreshKey, setRefreshKey]           = useState(0)
 
   useEffect(() => {
     getMe()
@@ -204,17 +205,25 @@ function AppShell() {
     const markReady = () => { if (!likelySleeping()) setWakeReady(true) }
     markReady()
     const interval = setInterval(markReady, 500)
-    const onAwake = () => setWakeReady(true)
-    window.addEventListener('aria:server-awake', onAwake)
 
     let settle
+    // Preferred: lift as soon as the page's own data lands (instrumented pages).
     const onPageLoaded = () => {
       setWakeReady(true)
       if (wakeDiaryRef.current.trim()) return   // respect an in-progress journal entry
       clearTimeout(settle)
       settle = setTimeout(() => dismissWake(), 500)   // brief settle so the page paints
     }
+    // Fallback: for pages that emit no page-loaded, lift shortly after the
+    // server responds to any request (longer settle so page-loaded wins if both).
+    const onAwake = () => {
+      setWakeReady(true)
+      if (wakeDiaryRef.current.trim()) return
+      clearTimeout(settle)
+      settle = setTimeout(() => dismissWake(), 1500)
+    }
     window.addEventListener('aria:page-loaded', onPageLoaded)
+    window.addEventListener('aria:server-awake', onAwake)
 
     const hard = setTimeout(() => dismissWake(), 60000)   // safety: never trap the user (cold Render wake ~30-45s)
 
@@ -226,6 +235,44 @@ function AppShell() {
       window.removeEventListener('aria:page-loaded', onPageLoaded)
     }
   }, [showWake])
+
+  // Returning to an already-open tab after the server has likely slept (e.g.
+  // away 2h). Raise the loading cover, wake the server, and remount the current
+  // screen (bump refreshKey) so it refetches — the cover lifts on the fresh
+  // page's aria:page-loaded. Without this, the user would click through a stale
+  // cached list while the server silently warms in the background.
+  useEffect(() => {
+    if (!ready) return
+    const onReturn = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!likelySleeping()) return
+      // warmUp fires aria:server-waking, which raises the cover and refetches
+      // (see the aria:server-waking effect below) — single source of truth.
+      warmUp(() => {}).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onReturn)
+    window.addEventListener('focus', onReturn)
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn)
+      window.removeEventListener('focus', onReturn)
+    }
+  }, [ready])
+
+  // Reactive: any request that hits a sleeping server (client.js fires
+  // aria:server-waking once per wake cycle) raises the cover and refetches the
+  // current page. Covers the visible-tab case — e.g. app left open on a second
+  // monitor while the server naps — where visibilitychange never fires. The
+  // action that triggered the wake is already queued in localStorage, so
+  // nothing is lost; this just gives the wake a loading screen and fresh data.
+  useEffect(() => {
+    if (!ready) return
+    const onWaking = () => {
+      raiseCover()
+      setRefreshKey(k => k + 1)
+    }
+    window.addEventListener('aria:server-waking', onWaking)
+    return () => window.removeEventListener('aria:server-waking', onWaking)
+  }, [ready])
 
   function dismissWake() {
     if (wakeDiaryRef.current.trim()) {
@@ -392,7 +439,9 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="pt-[64px] relative z-10">
+      {/* key includes refreshKey so a return-from-sleep remounts the current
+          page and it refetches fresh data instead of showing the stale cache. */}
+      <main className="pt-[64px] relative z-10" key={refreshKey}>
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} />}
         {screen === 'today'    && (

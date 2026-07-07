@@ -49,6 +49,11 @@ let _warmUpPromise = null
 
 export async function warmUp(onLog) {
   if (_warmUpPromise) return _warmUpPromise
+  // Fire once per wake cycle (guarded by _warmUpPromise) so the app shell can
+  // raise a loading cover the moment any request hits a sleeping server —
+  // covers the case where the tab stayed visible (e.g. app on a second monitor)
+  // so visibilitychange never fired.
+  window.dispatchEvent(new Event('aria:server-waking'))
   _warmUpPromise = _doWarmUp(onLog).finally(() => { _warmUpPromise = null })
   return _warmUpPromise
 }
