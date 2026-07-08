@@ -44,6 +44,11 @@ async function getOpeningScreen() {
   return 'focus'
 }
 
+// Screens that fetch data on mount and emit aria:page-loaded when it lands.
+// Only these get a loading cover on navigation — instant/form pages (capture,
+// settings, etc.) would just flash it, so they're excluded.
+const COVER_SCREENS = new Set(['focus', 'today', 'selfcare'])
+
 const DIARY_PROMPTS = [
   'How are you feeling right now?',
   "What's on your mind?",
@@ -97,8 +102,8 @@ function AppShell() {
   const [diaryEntry, setDiaryEntry]           = useState('')
   const [diaryConfig]                         = useState(getDiaryConfig)
   const [serverUp, setServerUp]               = useState(false)
-  const [slowLoad, setSlowLoad]               = useState(false)
   const [showWake, setShowWake]               = useState(false)
+  const [coverPageReady, setCoverPageReady]   = useState(false)
   const [wakeReady, setWakeReady]             = useState(false)
   const [wakeDiary, setWakeDiary]             = useState('')
   const wakePromptRef = useRef('')
@@ -170,6 +175,7 @@ function AppShell() {
     setWakeDiary('')
     wakeDiaryRef.current = ''
     setWakeReady(false)
+    setCoverPageReady(false)
     wakePromptRef.current = DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]
     setShowWake(true)
   }
@@ -182,6 +188,9 @@ function AppShell() {
     if (!changed && !initial) return
     prevScreenRef.current = screen
     coverInitDoneRef.current = true
+    // Instant/form pages (capture, settings) have no data fetch and emit no
+    // page-loaded — covering them just flashes the loader. Skip.
+    if (!COVER_SCREENS.has(screen)) return
     pageLoadedRef.current = false
 
     const onLoad = () => { pageLoadedRef.current = true }
@@ -197,9 +206,11 @@ function AppShell() {
     return () => { clearTimeout(timer); window.removeEventListener('aria:page-loaded', onLoad) }
   }, [screen, ready])
 
-  // While the cover is up: enable the manual Continue once the server responds,
-  // and auto-lift as soon as the page's data lands (unless the user is
-  // mid-diary, in which case leave it to them to Continue).
+  // While the cover is up: update the "brewing/almost there" label as the server
+  // responds, and auto-lift only once the page's DATA has actually loaded
+  // (coverPageReady) — never merely because the server socket answered, which
+  // would reveal the "…" skeleton. Manual Continue also gates on coverPageReady,
+  // so pressing it can never drop the user onto a still-loading page.
   useEffect(() => {
     if (!showWake) return
     const markReady = () => { if (!likelySleeping()) setWakeReady(true) }
@@ -207,21 +218,17 @@ function AppShell() {
     const interval = setInterval(markReady, 500)
 
     let settle
-    // Preferred: lift as soon as the page's own data lands (instrumented pages).
-    const onPageLoaded = () => {
-      setWakeReady(true)
+    const pageReady = (delay) => {
+      setCoverPageReady(true)
       if (wakeDiaryRef.current.trim()) return   // respect an in-progress journal entry
       clearTimeout(settle)
-      settle = setTimeout(() => dismissWake(), 500)   // brief settle so the page paints
+      settle = setTimeout(() => dismissWake(), delay)
     }
-    // Fallback: for pages that emit no page-loaded, lift shortly after the
-    // server responds to any request (longer settle so page-loaded wins if both).
-    const onAwake = () => {
-      setWakeReady(true)
-      if (wakeDiaryRef.current.trim()) return
-      clearTimeout(settle)
-      settle = setTimeout(() => dismissWake(), 1500)
-    }
+    // Preferred: the page's own data landed (instrumented pages: Focus/Today/SelfCare).
+    const onPageLoaded = () => pageReady(500)
+    // Fallback for pages that emit no page-loaded: a beat after the server
+    // answers, give the quick warm refetch time to paint (page-loaded wins if both).
+    const onAwake = () => pageReady(1500)
     window.addEventListener('aria:page-loaded', onPageLoaded)
     window.addEventListener('aria:server-awake', onAwake)
 
@@ -285,14 +292,6 @@ function AppShell() {
     setShowWake(false)
   }
 
-  // If we're still not ready after a few seconds (cold server, stalled fetch),
-  // surface a manual "Continue" so the user is never trapped on the loader.
-  useEffect(() => {
-    if (ready) { setSlowLoad(false); return }
-    const t = setTimeout(() => setSlowLoad(true), 4000)
-    return () => clearTimeout(t)
-  }, [ready])
-
   function handleLogout() { logout().then(() => window.location.reload()) }
 
   // handleTriageDone + openTriage removed — triage merged into Today
@@ -313,16 +312,6 @@ function AppShell() {
             className="text-sm text-ui-subtext mb-6"
             style={{ fontFamily: 'Caveat, cursive', fontSize: 18, letterSpacing: '0.02em' }}
           >{serverUp ? 'almost there…' : 'brewing…'}</p>
-
-          {slowLoad && (
-            <button
-              onClick={() => setReady(true)}
-              className="mb-6 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300"
-              style={{ background: 'var(--aria-accent)', color: 'var(--aria-bg)', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
-            >
-              Continue
-            </button>
-          )}
 
           <div className="w-full">
             <div className="rounded-xl border border-ui-border/60 bg-ui-card/80 px-4 py-4 backdrop-blur-sm">
@@ -500,7 +489,11 @@ function AppShell() {
               </div>
             </div>
 
-            {wakeReady && (
+            {/* Continue only appears once the page's data is actually loaded, so
+                it can never drop the user onto a still-loading "…" screen. Non-
+                journaling users are auto-dismissed; this is mainly for someone
+                mid-diary who wants to finish and proceed. */}
+            {coverPageReady && (
               <button
                 onClick={dismissWake}
                 className="mt-4 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300"
