@@ -12,9 +12,6 @@ import {
   updateProject, generateProjectTasks, removeTaskFromProject,
 } from '../api/projects'
 import { createTask, completeTask, reorderTasks, updateTask } from '../api/tasks'
-import { listDomains } from '../api/domains'
-import DomainPicker from '../components/DomainPicker'
-import DomainDateWarning from '../components/DomainDateWarning'
 
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -108,7 +105,7 @@ function LongPressCircle({ task, selected, onComplete, onToggleSelect }) {
   )
 }
 
-function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, selected, onToggleSelect, domainRules }) {
+function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, selected, onToggleSelect }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const [editing, setEditing]     = useState(false)
   const [localTitle, setLocalTitle] = useState(task.title)
@@ -146,7 +143,6 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, sele
             <button onClick={saveEdit} className="text-xs text-ui-accent font-medium hover:opacity-70 transition-opacity">Save</button>
             <button onClick={cancelEdit} className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity">Cancel</button>
           </div>
-          <DomainDateWarning date={localDate} rules={domainRules} />
         </div>
       ) : (
         <div className={`flex items-center gap-3 px-4 py-2.5 ${selected ? 'bg-ui-accent/10' : ''}`}>
@@ -187,7 +183,7 @@ function SortableTaskRow({ task, projectId, onComplete, onRemove, onUpdate, sele
   )
 }
 
-function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate, selected, onToggleSelect, domainRules }) {
+function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, onUpdate, selected, onToggleSelect }) {
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,        { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -216,7 +212,6 @@ function SortableTaskList({ tasks, projectId, onReorder, onComplete, onRemove, o
             onUpdate={onUpdate}
             selected={selected.has(task.id)}
             onToggleSelect={onToggleSelect}
-            domainRules={domainRules}
           />
         ))}
       </SortableContext>
@@ -252,9 +247,6 @@ export default function Projects() {
   const [batchDateMode, setBatchDateMode] = useState(false)
   const [batchDate,     setBatchDate]     = useState('')
 
-  const [domains,      setDomains]      = useState([])
-  const [newDomainId,  setNewDomainId]  = useState(null)
-
   function fetchProjects() {
     setLoading(true)
     setError(null)
@@ -268,7 +260,6 @@ export default function Projects() {
     // Mount-only fetch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProjects()
-    listDomains().then(setDomains).catch(console.error)
   }, [])
 
   async function loadDetail(id) {
@@ -301,7 +292,7 @@ export default function Projects() {
     if (!newForm.title.trim()) return
     setCreating(true)
     try {
-      const p = await createProject(newForm.title, newForm.description || null, newDomainId)
+      const p = await createProject(newForm.title, newForm.description || null)
       setProjects(prev => [{ ...p }, ...prev])
       setShowCreate(false)
       setExpanded(p.id)
@@ -311,19 +302,8 @@ export default function Projects() {
         setGenerateDesc(newForm.description)
       }
       setNewForm({ title: '', description: '' })
-      setNewDomainId(null)
     } catch (err) { console.error(err) }
     finally { setCreating(false) }
-  }
-
-  async function handleSetProjectDomain(projectId, domainId) {
-    try {
-      const updated = await updateProject(projectId, { domain_id: domainId })
-      setProjects(prev => prev.map(p => p.id === projectId
-        ? { ...p, domain_id: updated.domain_id, domain_name: updated.domain_name }
-        : p
-      ))
-    } catch (err) { console.error(err) }
   }
 
   async function handleGenerate(projectId) {
@@ -502,12 +482,6 @@ export default function Projects() {
               rows={3}
               placeholder="Describe the project — AI will generate tasks from this (optional)"
             />
-            <DomainPicker
-              domains={domains}
-              value={newDomainId}
-              onChange={setNewDomainId}
-              onCreate={d => setDomains(prev => [...prev, d])}
-            />
             <Button onClick={handleCreate} disabled={!newForm.title.trim() || creating}>
               {creating
                 ? 'Creating…'
@@ -533,7 +507,6 @@ export default function Projects() {
           {projects.map(project => {
             const isExpanded = expanded === project.id
             const d = detail[project.id]
-            const domainRules = domains.find(dd => dd.id === project.domain_id)?.rules || []
 
             return (
               <Card key={project.id} className="overflow-hidden">
@@ -560,11 +533,6 @@ export default function Projects() {
                       <button className="flex-1 text-left min-w-0" onClick={() => toggleExpand(project.id)}>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-semibold text-ui-text leading-snug">{project.title}</p>
-                          {project.domain_name && (
-                            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-ui-accent/15 text-ui-accent font-semibold">
-                              {project.domain_name}
-                            </span>
-                          )}
                         </div>
                         <ProgressBar done={project.done_count} total={project.task_count} />
                       </button>
@@ -603,19 +571,6 @@ export default function Projects() {
 
                     {d && (
                       <>
-                        {/* Domain selector — change at any time */}
-                        <div className="px-4 py-3 border-b border-ui-border/40">
-                          <DomainPicker
-                            domains={domains}
-                            value={project.domain_id}
-                            onChange={(id) => handleSetProjectDomain(project.id, id)}
-                            onCreate={d => {
-                              setDomains(prev => [...prev, d])
-                              handleSetProjectDomain(project.id, d.id)
-                            }}
-                          />
-                        </div>
-
                         {d.tasks.length === 0 && showGenerate !== project.id && showAddTask !== project.id && (
                           <p className="text-sm text-ui-subtext px-4 py-3">
                             No tasks yet — add some below.
@@ -667,7 +622,6 @@ export default function Projects() {
                                     ✕
                                   </button>
                                 </div>
-                                <DomainDateWarning date={batchDate} rules={domainRules} />
                               </div>
                             )}
                           </div>
@@ -684,7 +638,6 @@ export default function Projects() {
                             onUpdate={handleUpdateProjectTask}
                             selected={selected}
                             onToggleSelect={toggleSelect}
-                            domainRules={domainRules}
                           />
                         )}
 
@@ -705,7 +658,6 @@ export default function Projects() {
                                   value={newTaskDue}
                                   onChange={e => setNewTaskDue(e.target.value)}
                                 />
-                                <DomainDateWarning date={newTaskDue} rules={domainRules} />
                               </div>
                             </div>
                             <div className="flex gap-2">

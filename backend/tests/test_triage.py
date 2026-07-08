@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from models import CapacitySnapshot, Domain, Project, Task, TaskStatus, TaskType, TaskWeight, User
+from models import CapacitySnapshot, Project, Task, TaskStatus, TaskType, TaskWeight, User
 from routes.triage import (
     compute_score,
     capacity_tier,

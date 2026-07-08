@@ -12,7 +12,7 @@ from routes.task_lifecycle import _app_today
 from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
     Task, Routine, Project, TaskType, TaskStatus, TaskWeight, RoutineFrequency, TimeOfDay,
-    Domain, SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
+    SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
     CapacitySnapshot, WeeklySnapshot, NudgeLog, OAuthState,
 )
 from schemas import (
@@ -316,7 +316,7 @@ def _purge_user_data(user_id: int, db: Session):
     db.query(User).filter(User.parent_id == user_id).update(
         {"parent_id": None}, synchronize_session=False)
 
-    # 2. Tasks first — they reference this user's projects/domains/routines/actuators.
+    # 2. Tasks first — they reference this user's projects/routines/actuators.
     db.query(Task).filter(Task.owner_id == user_id).delete(synchronize_session=False)
 
     # 3. Medication logs before their schedules.
@@ -325,7 +325,7 @@ def _purge_user_data(user_id: int, db: Session):
 
     # 4. Everything else the user owns (no remaining inbound FKs at this point).
     for model in (
-        Project, Routine, Domain, ActuatorCategory, SelfCareLog,
+        Project, Routine, ActuatorCategory, SelfCareLog,
         CapacitySnapshot, WeeklySnapshot, NudgeLog, GoogleCalendarToken, SessionToken,
         OAuthState,
     ):

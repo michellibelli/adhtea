@@ -11,20 +11,17 @@ every request:
   - resolve_snoozes            : snoozed items whose date arrived → Inbox
   - promote_due_tasks          : Inbox tasks due today → Today (within the cap)
   - demote_misclassified_today : Today tasks with a future due_date → Inbox
-  - demote_domain_violations   : Today tasks a domain disallows today → Inbox
   - archive_past_appointments  : past appointments → done (stamped to their date)
 
 plus the user-day/time helpers (`_app_today`, `_day_start`, …) they all share.
 """
 
-import json
 from datetime import datetime, timezone, date, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
-from models import Task, TaskStatus, TaskType, Routine, RoutineFrequency, Domain, User
-from routes.domain_utils import date_allowed
+from models import Task, TaskStatus, TaskType, Routine, RoutineFrequency, User
 
 
 # ---------------------------------------------------------------------------
@@ -299,24 +296,10 @@ def resolve_snoozes(user: User, db: Session):
 # Auto-promote: inbox tasks with due_date <= today move into Today list
 # ---------------------------------------------------------------------------
 
-def _domain_rules_for_tasks(tasks, db: Session) -> dict:
-    """Return {domain_id: rules_list} for the projects referenced by these tasks.
-
-    Single Domain query keyed by the distinct domain_ids on the tasks' projects.
-    Tasks without a project or whose project has no domain contribute nothing.
-    """
-    domain_ids = {t.project.domain_id for t in tasks if t.project and t.project.domain_id}
-    if not domain_ids:
-        return {}
-    domains = db.query(Domain).filter(Domain.id.in_(domain_ids)).all()
-    return {d.id: json.loads(d.rules or "[]") for d in domains}
-
-
 def promote_due_tasks(user: User, db: Session):
     today_local = _app_today(user)
     due = (
         db.query(Task)
-        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == user.id,
             Task.status == TaskStatus.inbox,
@@ -329,18 +312,11 @@ def promote_due_tasks(user: User, db: Session):
     if not due:
         return
 
-    # Skip tasks whose project's domain disallows today. A Work-domain task
-    # due last Friday must not auto-promote to Today on Sunday.
-    rules_by_domain = _domain_rules_for_tasks(due, db)
     # Daily cap: appointments always promote (time-bound); plain tasks only
     # promote while Today has room, otherwise they wait in the inbox.
     room = DAILY_CAP - count_today(user, db)
     promotable = []
     for task in due:
-        domain_id = task.project.domain_id if task.project else None
-        rules = rules_by_domain.get(domain_id, []) if domain_id else []
-        if rules and not date_allowed(today_local, rules):
-            continue
         if _exempt_from_cap(task.task_type):
             promotable.append(task)
         elif room > 0:
@@ -362,42 +338,3 @@ def promote_due_tasks(user: User, db: Session):
     db.commit()
 
 
-# ---------------------------------------------------------------------------
-# Demote status=today tasks whose project's domain disallows today's date.
-# Cleanup sweep for tasks that landed in Today via paths that skipped the
-# domain snap (drag-to-today, batch edits, legacy create-before-snap) or
-# whose project's domain rules changed after the task was placed.
-# ---------------------------------------------------------------------------
-
-def demote_domain_violations(user: User, db: Session):
-    today_local = _app_today(user)
-    today_tasks = (
-        db.query(Task)
-        .options(joinedload(Task.project))
-        .filter(
-            Task.owner_id == user.id,
-            Task.status == TaskStatus.today,
-            Task.task_type != TaskType.routine,
-        )
-        .all()
-    )
-    if not today_tasks:
-        return 0
-
-    rules_by_domain = _domain_rules_for_tasks(today_tasks, db)
-    demoted = 0
-    for task in today_tasks:
-        domain_id = task.project.domain_id if task.project else None
-        if domain_id is None:
-            continue
-        rules = rules_by_domain.get(domain_id, [])
-        if not rules:
-            continue
-        if not date_allowed(today_local, rules):
-            task.status = TaskStatus.inbox
-            task.scheduled_date = None
-            task.sort_order = None
-            demoted += 1
-    if demoted:
-        db.commit()
-    return demoted

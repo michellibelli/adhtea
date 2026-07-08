@@ -146,7 +146,6 @@ class TaskCreate(BaseModel):
     task_type: TaskType = TaskType.task
     actuator_category_id: Optional[int] = None
     project_id: Optional[int] = None
-    domain_id: Optional[int] = None         # only honored when project_id is null
     is_critical: bool = False
     due_date: Optional[date] = None
     due_time: Optional[str] = None          # HH:MM
@@ -168,7 +167,6 @@ class TaskUpdate(BaseModel):
     snooze_until: Optional[datetime] = None
     sort_order: Optional[float] = None
     actuator_category_id: Optional[int] = None
-    domain_id: Optional[int] = None         # only honored when project_id is null
     is_critical: Optional[bool] = None
     due_date: Optional[date] = None
     due_time: Optional[str] = None
@@ -198,12 +196,6 @@ class TaskResponse(BaseModel):
     routine_id: Optional[int]
     project_id: Optional[int]
     project_name: Optional[str] = None
-    domain_id: Optional[int] = None
-    domain_name: Optional[str] = None
-    in_context: bool = True   # set False when the user's current time-of-day is
-                              # outside the effective domain's rules. Used by
-                              # /tasks/today + Focus pickNext to sink off-context
-                              # items to the bottom without hiding them.
     title: str
     notes: Optional[str]
     task_type: TaskType
@@ -389,43 +381,12 @@ class CapacitySnapshotResponse(BaseModel):
 class ProjectCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    domain_id: Optional[int] = None
 
 
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
-    domain_id: Optional[int] = None
-
-
-# ── Domains ───────────────────────────────────────────────────────────────
-
-class DomainRule(BaseModel):
-    days: Optional[list[int]] = None       # 0=Mon … 6=Sun; null = any
-    times: Optional[list[str]] = None      # morning/afternoon/evening; null = any
-    weights: Optional[list[str]] = None    # light/medium/heavy; null = any
-
-
-class DomainCreate(BaseModel):
-    name: str
-    rules: list[DomainRule] = []
-
-
-class DomainUpdate(BaseModel):
-    name: Optional[str] = None
-    rules: Optional[list[DomainRule]] = None
-
-
-class DomainResponse(BaseModel):
-    id: int
-    user_id: int
-    name: str
-    rules: list[DomainRule]
-    is_default: bool
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class ProjectGenerateRequest(BaseModel):
@@ -451,8 +412,6 @@ class ProjectResponse(BaseModel):
     title: str
     description: Optional[str]
     status: str
-    domain_id: Optional[int] = None
-    domain_name: Optional[str] = None
     created_at: datetime
     task_count: int
     done_count: int
@@ -466,8 +425,6 @@ class ProjectDetailResponse(BaseModel):
     title: str
     description: Optional[str]
     status: str
-    domain_id: Optional[int] = None
-    domain_name: Optional[str] = None
     created_at: datetime
     tasks: list[ProjectTaskSummary]
 

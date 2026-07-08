@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, domains, triage, insights
+from routes import projects, triage, insights
 
 load_dotenv()
 
@@ -53,8 +53,15 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN dose"))
             if "project_id" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
-            if "domain_id" not in tasks_cols:
-                conn.execute(text("ALTER TABLE tasks ADD COLUMN domain_id INTEGER REFERENCES domains(id)"))
+            # Domains removed — drop the FK column if a pre-removal DB still has it.
+            # SQLite can't DROP a column that's part of a foreign key, so this is
+            # best-effort on stale local dev DBs (production is Postgres). A
+            # leftover nullable column/table is harmless — the ORM ignores it.
+            if "domain_id" in tasks_cols:
+                try:
+                    conn.execute(text("ALTER TABLE tasks DROP COLUMN domain_id"))
+                except Exception:
+                    pass
             if "score" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN score FLOAT"))
             if "score_components" not in tasks_cols:
@@ -76,8 +83,15 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_onboarded BOOLEAN NOT NULL DEFAULT 0"))
                 conn.execute(text("UPDATE users SET is_onboarded=1"))  # existing users skip onboarding
             projects_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(projects)")).fetchall()}
-            if "domain_id" not in projects_cols:
-                conn.execute(text("ALTER TABLE projects ADD COLUMN domain_id INTEGER REFERENCES domains(id)"))
+            if "domain_id" in projects_cols:
+                try:
+                    conn.execute(text("ALTER TABLE projects DROP COLUMN domain_id"))
+                except Exception:
+                    pass
+            try:
+                conn.execute(text("DROP TABLE IF EXISTS domains"))
+            except Exception:
+                pass
             if "max_tasks_per_day" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN max_tasks_per_day INTEGER NOT NULL DEFAULT 10"))
             if "max_total_per_day" not in users_cols:
@@ -107,12 +121,10 @@ def _migrate(target_engine=None):
             conn.execute(text(
                 "UPDATE users SET is_owner=TRUE WHERE id=(SELECT MIN(id) FROM users) AND is_owner=FALSE"
             ))
-            conn.execute(text(
-                "ALTER TABLE projects ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
-            ))
-            conn.execute(text(
-                "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS domain_id INTEGER REFERENCES domains(id) ON DELETE SET NULL"
-            ))
+            # Domains removed — drop the FK columns then the table (irreversible).
+            conn.execute(text("ALTER TABLE projects DROP COLUMN IF EXISTS domain_id"))
+            conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS domain_id"))
+            conn.execute(text("DROP TABLE IF EXISTS domains CASCADE"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score FLOAT"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_components TEXT"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_updated_at TIMESTAMP"))
@@ -147,7 +159,7 @@ def _migrate(target_engine=None):
             # See Supabase advisor: rls_disabled_in_public.
             for _table in (
                 "site_config", "users", "session_tokens", "actuator_categories",
-                "domains", "projects", "tasks", "routines", "self_care_logs",
+                "projects", "tasks", "routines", "self_care_logs",
                 "medication_schedules", "medication_logs", "invite_tokens",
                 "google_calendar_tokens", "capacity_snapshots",
                 "weekly_snapshots", "nudge_logs", "oauth_states",
@@ -189,7 +201,6 @@ app.include_router(medication.router,  tags=["medication"])
 app.include_router(import_csv.router,  tags=["import"])
 app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
-app.include_router(domains.router)
 app.include_router(triage.router)
 app.include_router(insights.router)
 

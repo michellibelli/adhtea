@@ -16,7 +16,6 @@ Levers (each contributes a signed integer; total is the sum):
   due_soon         decaying boost for items 1-7 days out
   same_day_create  +300 when created_at == due_date — "I just decided this matters"
   project_stall    +20 when project hasn't seen a completion in N+ days
-  in_context       +10 when the user's current time-bucket fits the domain
   age_boost        slow creep for items sitting in the inbox a long time
   push_penalty     −5 per snooze/defer to flag chronically-pushed items
 
@@ -39,7 +38,6 @@ from models import (
 )
 from schemas import TaskResponse, TriageApplyRequest, TriageOverflowRequest
 from routes.auth import get_current_user
-from routes.domain_utils import effective_rules, time_of_day_allowed
 from routes.tasks import (
     archive_past_appointments, carry_forward, resolve_snoozes,
 )
@@ -68,7 +66,6 @@ DUE_SOON_BASELINE = 50
 DUE_SOON_PER_DAY_DECAY = 7
 CRITICAL_BONUS = 50
 PROJECT_STALL_BONUS = 20
-IN_CONTEXT_BONUS = 10
 PUSH_PENALTY_PER_COUNT = -5
 # A task created on the same day it's due is a "I just decided this matters
 # today" item. Sized to outrank every other lever combination so these never
@@ -184,13 +181,6 @@ def compute_score(
     # Project stall — boost when the parent project has gone quiet
     if task.project_id and stall_map and stall_map.get(task.project_id):
         c["project_stall"] = PROJECT_STALL_BONUS
-
-    # Time-of-day context match. Off-context tasks aren't penalized here
-    # (the deprioritize-sort in /tasks/today handles that). Being in-context
-    # adds a small bonus so otherwise-equal tasks favor the right-now item.
-    rules = effective_rules(task)
-    if rules and time_of_day_allowed(now_local, rules):
-        c["in_context"] = IN_CONTEXT_BONUS
 
     # Inbox age creep — prevents anything in the inbox from rotting forever
     if task.created_at:
@@ -393,7 +383,7 @@ def _bin_pack(db: Session, user_id: int, today_local: date, now_local: datetime)
     # their snooze_until to expire — bin-pack shouldn't drag them back in.
     pool = (
         db.query(Task)
-        .options(joinedload(Task.project).joinedload(Project.domain), joinedload(Task.domain))
+        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == user_id,
             Task.task_type == TaskType.task,

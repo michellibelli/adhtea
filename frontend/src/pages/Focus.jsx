@@ -94,8 +94,7 @@ function pickNext(tasks) {
 
   // Step 2 — sort priorities (top wins):
   //   1. Imminent timed items (≤ 5 min away) — always trump everything else
-  //   2. In-context domain (server-stamped `in_context`; out-of-context sinks)
-  //   3. sort_order — user's manual priority from triage
+  //   2. sort_order — user's manual priority from triage
   const copy = [...visible]
   copy.sort((a, b) => {
     const aImm = isImminent(a)
@@ -107,9 +106,6 @@ function pickNext(tasks) {
     const bRtnDue = b.task_type === 'routine' && (!b.due_time || minutesUntil(b.due_time) <= 5)
     if (aRtnDue && !bRtnDue) return -1
     if (bRtnDue && !aRtnDue) return 1
-    const aCtx = a.in_context !== false
-    const bCtx = b.in_context !== false
-    if (aCtx !== bCtx) return aCtx ? -1 : 1
     return (a.sort_order ?? 999) - (b.sort_order ?? 999)
   })
 
@@ -603,7 +599,7 @@ export default function Focus({ onGoToList, onNavigate }) {
 
       </div>
 
-      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task?.domain_name} />}
+      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
       {pendingNudge && <NudgeModal nudge={pendingNudge} onDismiss={handleNudgeDismiss} />}
     </div>

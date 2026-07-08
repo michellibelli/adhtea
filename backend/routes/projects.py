@@ -6,13 +6,12 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Domain, Project, Task, TaskStatus, TaskType, TaskWeight, User
+from models import Project, Task, TaskStatus, TaskType, TaskWeight, User
 from schemas import (
     ProjectCreate, ProjectUpdate, ProjectGenerateRequest,
     ProjectResponse, ProjectDetailResponse, TaskResponse,
 )
 from routes.auth import get_current_user
-from routes.domain_utils import next_allowed_date, domain_days_prompt_hint
 
 router = APIRouter(prefix="/projects")
 
@@ -38,7 +37,6 @@ def _project_summary(p: Project, db: Session) -> dict:
     return {
         "id": p.id, "user_id": p.user_id, "title": p.title,
         "description": p.description, "status": p.status,
-        "domain_id": p.domain_id, "domain_name": p.domain_name,
         "created_at": p.created_at, "task_count": len(tasks), "done_count": done,
     }
 
@@ -78,7 +76,6 @@ def _batch_project_summaries(projects: list[Project], db: Session) -> list[dict]
         {
             "id": p.id, "user_id": p.user_id, "title": p.title,
             "description": p.description, "status": p.status,
-            "domain_id": p.domain_id, "domain_name": p.domain_name,
             "created_at": p.created_at,
             "task_count": counts.get(p.id, {}).get("total", 0),
             "done_count":  counts.get(p.id, {}).get("done", 0),
@@ -111,7 +108,6 @@ def create_project(
         user_id=current_user.id,
         title=body.title.strip(),
         description=body.description,
-        domain_id=body.domain_id,
     )
     db.add(p)
     db.commit()
@@ -136,7 +132,6 @@ def get_project(
     return {
         "id": p.id, "user_id": p.user_id, "title": p.title,
         "description": p.description, "status": p.status,
-        "domain_id": p.domain_id, "domain_name": p.domain_name,
         "created_at": p.created_at, "tasks": tasks,
     }
 
@@ -155,10 +150,6 @@ def update_project(
         p.description = body.description
     if body.status is not None:
         p.status = body.status
-    # Use exclude_unset so explicit null clears the domain
-    patch = body.model_dump(exclude_unset=True)
-    if "domain_id" in patch:
-        p.domain_id = patch["domain_id"]
     db.commit()
     db.refresh(p)
     return _project_summary(p, db)
@@ -192,15 +183,6 @@ def generate_tasks(
 
     p = own_project(project_id, current_user, db)
 
-    # Load domain rules for date snapping and prompt hint
-    domain_rules = []
-    days_hint = ""
-    if p.domain_id:
-        domain_obj = db.query(Domain).filter(Domain.id == p.domain_id).first()
-        if domain_obj:
-            domain_rules = json.loads(domain_obj.rules or "[]")
-            days_hint = domain_days_prompt_hint(domain_rules)
-
     import anthropic
     client = anthropic.Anthropic(api_key=key)
 
@@ -216,7 +198,6 @@ def generate_tasks(
         "- Spread tasks realistically; do not pile multiple mediums on one day\n"
         "- Titles must be specific and action-oriented (start with a verb)\n"
         "- Aim for 4–12 tasks total\n"
-        + days_hint + "\n"
         "- Return ONLY a valid JSON array — no markdown, no explanation\n\n"
         f"Project: {body.description}\n\n"
         'Format: [{"title":"...","notes":"...or null","size":"small|medium","day_offset":1},...]'
@@ -244,8 +225,7 @@ def generate_tasks(
     for item in items:
         offset = max(1, int(item.get("day_offset", 1)))
         weight = TaskWeight.light if item.get("size") == "small" else TaskWeight.medium
-        raw_date = today + timedelta(days=offset)
-        due = next_allowed_date(raw_date, domain_rules) if domain_rules else raw_date
+        due = today + timedelta(days=offset)
         t = Task(
             owner_id=current_user.id,
             project_id=p.id,

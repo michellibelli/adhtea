@@ -1,27 +1,6 @@
 // Snooze date calculations.
 // All dates returned as ISO strings (UTC) for the API.
 
-// Domain-name → allowed weekday filter for snooze targets.
-// Home tasks should land on weekends ("do it on my day off");
-// Work tasks should never land on a weekend.
-// Other domains (custom, or null) have no constraint.
-// JS Date.getDay(): Sun=0 ... Sat=6.
-function allowedDayForDomain(domainName, jsDay) {
-  if (domainName === 'Home') return jsDay === 0 || jsDay === 6
-  if (domainName === 'Work') return jsDay >= 1 && jsDay <= 5
-  return true
-}
-
-function snapToDomainDay(date, domainName) {
-  if (!date || !domainName) return date
-  const d = new Date(date)
-  for (let i = 0; i < 14; i++) {
-    if (allowedDayForDomain(domainName, d.getDay())) return d
-    d.setDate(d.getDate() + 1)
-  }
-  return date  // safety fallback; shouldn't happen
-}
-
 export const SNOOZE_OPTIONS = [
   { id: 'tonight', label: 'Tonight', sublabel: 'Back tomorrow morning' },
   { id: 'tomorrow', label: 'Tomorrow', sublabel: '' },
@@ -31,11 +10,8 @@ export const SNOOZE_OPTIONS = [
   { id: 'custom', label: 'Pick a Date…', sublabel: '' },
 ]
 
-// Returns a Date object for the snooze target. `domainName` (optional)
-// constrains the result to days the task's domain allows: Home → weekends,
-// Work → weekdays. Used by SnoozeSheet to keep snooze targets sensible
-// without forcing the user to think about which day to pick.
-export function resolveSnoozeDate(optionId, customDate = null, domainName = null) {
+// Returns a Date object for the snooze target.
+export function resolveSnoozeDate(optionId, customDate = null) {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -91,7 +67,7 @@ export function resolveSnoozeDate(optionId, customDate = null, domainName = null
       return null
   }
 
-  return snapToDomainDay(target, domainName)
+  return target
 }
 
 export function formatSnoozeLabel(isoDate) {

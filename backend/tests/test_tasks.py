@@ -1,11 +1,10 @@
-"""Tasks route tests: cascade date shift + domain enforcement."""
+"""Tasks route tests: cascade date shift + daily cap."""
 
-import json
 from datetime import date, timedelta
 
-from models import Domain, Project, Task, TaskStatus, TaskType, User
+from models import Project, Task, TaskStatus, TaskType, User
 from routes.tasks import (
-    demote_domain_violations, promote_due_tasks, count_today, DAILY_CAP,
+    promote_due_tasks, count_today, DAILY_CAP,
 )
 
 
@@ -30,26 +29,6 @@ def _mk_task(db, user_id, project_id=None, due=None, status=TaskStatus.inbox, ta
     db.commit()
     db.refresh(t)
     return t
-
-
-def _mk_domain(db, user_id, allowed_weekdays, name="Work"):
-    """Domain that allows only the listed Python weekday indices (0=Mon..6=Sun)."""
-    d = Domain(
-        user_id=user_id, name=name,
-        rules=json.dumps([{"days": list(allowed_weekdays)}]),
-        is_default=False,
-    )
-    db.add(d)
-    db.commit()
-    db.refresh(d)
-    return d
-
-
-def _attach_domain(db, project, domain):
-    project.domain_id = domain.id
-    db.commit()
-    db.refresh(project)
-    return project
 
 
 # ---------------------------------------------------------------------------
@@ -130,141 +109,17 @@ def test_cascade_does_not_run_across_projects(client, auth_headers, db_session):
 
 
 # ---------------------------------------------------------------------------
-# Domain enforcement: create snap, promote skip, demote sweep
+# Auto-promote of due tasks
 # ---------------------------------------------------------------------------
 
-def test_create_task_snaps_before_due_today(client, auth_headers, db_session):
-    """POST with a due_date that today's weekday disallows must land status=inbox
-    with a snapped future due_date (not status=today on a disallowed day)."""
+def test_promote_due_tasks_promotes_overdue_inbox_task(client, auth_headers, db_session):
+    """An overdue inbox task promotes to Today when there's room."""
     user = _mk_user(db_session)
     today = date.today()
-    forbid_today = [d for d in range(7) if d != today.weekday()]
-    domain = _mk_domain(db_session, user.id, allowed_weekdays=forbid_today)
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, domain)
-
-    r = client.post(
-        "/tasks",
-        json={"title": "x", "task_type": "task", "project_id": project.id, "due_date": today.isoformat()},
-        headers=auth_headers,
-    )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["status"] == "inbox"
-    assert date.fromisoformat(body["due_date"]) > today
-
-
-def test_promote_due_tasks_skips_domain_disallowed_today(client, auth_headers, db_session):
-    """An inbox task overdue for today must NOT promote when today's weekday violates the domain."""
-    user = _mk_user(db_session)
-    today = date.today()
-    forbid_today = [d for d in range(7) if d != today.weekday()]
-    domain = _mk_domain(db_session, user.id, allowed_weekdays=forbid_today)
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, domain)
-
-    t = _mk_task(db_session, user.id, project.id, due=today - timedelta(days=5), status=TaskStatus.inbox)
-    promote_due_tasks(user, db_session)
-    db_session.refresh(t)
-    assert t.status == TaskStatus.inbox
-
-
-def test_promote_due_tasks_runs_when_today_allowed(client, auth_headers, db_session):
-    """Sanity: same setup with today on the allowed list — the task DOES promote."""
-    user = _mk_user(db_session)
-    today = date.today()
-    domain = _mk_domain(db_session, user.id, allowed_weekdays=[today.weekday()])
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, domain)
-
-    t = _mk_task(db_session, user.id, project.id, due=today - timedelta(days=1), status=TaskStatus.inbox)
+    t = _mk_task(db_session, user.id, due=today - timedelta(days=1), status=TaskStatus.inbox)
     promote_due_tasks(user, db_session)
     db_session.refresh(t)
     assert t.status == TaskStatus.today
-
-
-def test_demote_domain_violations_demotes_stale_today(client, auth_headers, db_session):
-    """A pre-seeded status=today task on a domain that disallows today gets demoted to inbox."""
-    user = _mk_user(db_session)
-    today = date.today()
-    forbid_today = [d for d in range(7) if d != today.weekday()]
-    domain = _mk_domain(db_session, user.id, allowed_weekdays=forbid_today)
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, domain)
-
-    t = _mk_task(db_session, user.id, project.id, due=today + timedelta(days=1), status=TaskStatus.today)
-    n = demote_domain_violations(user, db_session)
-    db_session.refresh(t)
-    assert n == 1
-    assert t.status == TaskStatus.inbox
-
-
-def test_demote_domain_violations_leaves_allowed_today_alone(client, auth_headers, db_session):
-    """Sanity: status=today task on a domain-allowed day stays put."""
-    user = _mk_user(db_session)
-    today = date.today()
-    domain = _mk_domain(db_session, user.id, allowed_weekdays=[today.weekday()])
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, domain)
-
-    t = _mk_task(db_session, user.id, project.id, due=today, status=TaskStatus.today)
-    n = demote_domain_violations(user, db_session)
-    db_session.refresh(t)
-    assert n == 0
-    assert t.status == TaskStatus.today
-
-
-# ---------------------------------------------------------------------------
-# Task-level domain_id (orphan tasks)
-# ---------------------------------------------------------------------------
-
-def test_create_task_persists_domain_id_when_no_project(client, auth_headers, db_session):
-    user = _mk_user(db_session)
-    home = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4, 5, 6], name="Home")
-    r = client.post(
-        "/tasks",
-        json={"title": "Orphan home task", "domain_id": home.id},
-        headers=auth_headers,
-    )
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["domain_id"] == home.id
-    assert body["domain_name"] == "Home"
-
-
-def test_create_task_ignores_domain_id_when_project_set(client, auth_headers, db_session):
-    """Project domain wins — task-level domain_id is silently dropped on save."""
-    user = _mk_user(db_session)
-    work = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4], name="Work")
-    home = _mk_domain(db_session, user.id, allowed_weekdays=[5, 6], name="Home")
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, work)
-
-    r = client.post(
-        "/tasks",
-        json={"title": "In a Work project, tagged Home", "project_id": project.id, "domain_id": home.id},
-        headers=auth_headers,
-    )
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["domain_id"] is None              # task-level dropped
-    assert body["domain_name"] == "Work"          # effective name reflects project domain
-
-
-def test_update_task_ignores_domain_id_when_project_already_set(client, auth_headers, db_session):
-    """PATCH on a projected task with domain_id silently drops the task-level domain."""
-    user = _mk_user(db_session)
-    work = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4], name="Work")
-    home = _mk_domain(db_session, user.id, allowed_weekdays=[0, 1, 2, 3, 4, 5, 6], name="Home")
-    project = _mk_project(db_session, user.id)
-    _attach_domain(db_session, project, work)
-    t = _mk_task(db_session, user.id, project.id)
-
-    r = client.patch(f"/tasks/{t.id}", json={"domain_id": home.id}, headers=auth_headers)
-    assert r.status_code == 200
-    body = r.json()
-    assert body["domain_id"] is None              # nulled because project wins
-    assert body["domain_name"] == "Work"
 
 
 # ---------------------------------------------------------------------------

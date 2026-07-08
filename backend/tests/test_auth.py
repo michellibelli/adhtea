@@ -205,13 +205,12 @@ def test_delete_user_purges_all_owned_data_with_fk_enforced():
     other  = m.User(name="O", username="other",  hashed_password="x", role=m.UserRole.member)
     db.add_all([victim, other]); db.flush()
 
-    dom = m.Domain(user_id=victim.id, name="D"); db.add(dom); db.flush()
-    proj = m.Project(user_id=victim.id, title="P", domain_id=dom.id); db.add(proj); db.flush()
+    proj = m.Project(user_id=victim.id, title="P"); db.add(proj); db.flush()
     rout = m.Routine(user_id=victim.id, title="R"); db.add(rout); db.flush()
     cat  = m.ActuatorCategory(user_id=victim.id, name="C"); db.add(cat); db.flush()
     sched = m.MedicationSchedule(user_id=victim.id, name="Med"); db.add(sched); db.flush()
     db.add(m.MedicationLog(schedule_id=sched.id, user_id=victim.id, log_date=date.today()))
-    db.add(m.Task(owner_id=victim.id, title="T", project_id=proj.id, domain_id=dom.id,
+    db.add(m.Task(owner_id=victim.id, title="T", project_id=proj.id,
                   routine_id=rout.id, actuator_category_id=cat.id))
     db.add(m.SelfCareLog(user_id=victim.id, log_date=date.today()))
     db.add(m.SessionToken(user_id=victim.id, token="tok", expires_at=datetime.now(timezone.utc).replace(tzinfo=None)))
@@ -237,7 +236,7 @@ def test_delete_user_purges_all_owned_data_with_fk_enforced():
     assert delegated is not None and delegated.assigned_to_id is None
     # No orphan rows reference the deleted user anywhere.
     assert db.query(m.Task).filter_by(owner_id=victim.id).count() == 0
-    for model in (m.Project, m.Routine, m.Domain, m.ActuatorCategory, m.SelfCareLog,
+    for model in (m.Project, m.Routine, m.ActuatorCategory, m.SelfCareLog,
                   m.MedicationSchedule, m.MedicationLog, m.CapacitySnapshot, m.WeeklySnapshot,
                   m.NudgeLog, m.GoogleCalendarToken, m.SessionToken, m.OAuthState):
         assert db.query(model).filter_by(user_id=victim.id).count() == 0

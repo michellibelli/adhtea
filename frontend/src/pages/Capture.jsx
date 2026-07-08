@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { createTask } from '../api/tasks'
 import { createRoutine } from '../api/routines'
 import { createProject, generateProjectTasks } from '../api/projects'
-import { listDomains } from '../api/domains'
 import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
 
@@ -93,6 +92,22 @@ function DayPicker({ value, onChange }) {
   )
 }
 
+function TeaCupIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
+         strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      {/* cup */}
+      <path d="M4 8h13v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" />
+      {/* handle */}
+      <path d="M17 9h2.25a2.25 2.25 0 0 1 0 4.5H17" />
+      {/* saucer */}
+      <path d="M3 20h15" />
+      {/* steam */}
+      <path d="M8 2.5c-.4.7-.4 1.3 0 2M12 2.5c-.4.7-.4 1.3 0 2" />
+    </svg>
+  )
+}
+
 function FieldRow({ label, required, children }) {
   return (
     <div>
@@ -116,7 +131,6 @@ const BLANK = {
   time_of_day: 'anytime',
   days_of_week: '',
   exact_time: '',
-  domain_id: null,   // orphan-task domain. Set to Work id after domains load.
 }
 
 function isValid(taskType, form) {
@@ -137,21 +151,9 @@ export default function Capture({ onNavigate }) {
   const [saved, setSaved]       = useState(null)
   const [savedDate, setSavedDate] = useState(null)
   const [error, setError]       = useState(null)
-  const [domains, setDomains]   = useState([])
   const titleRef = useRef(null)
 
   useEffect(() => { titleRef.current?.focus() }, [])
-
-  // Fetch domain list + default the picker to the user's Work domain so
-  // orphan tasks land in the Work bucket unless the user explicitly picks
-  // a different one. Falls back to whatever the first returned domain is.
-  useEffect(() => {
-    listDomains().then(list => {
-      setDomains(list)
-      const work = list.find(d => d.name === 'Work') || list[0]
-      if (work) setForm(f => f.domain_id ? f : { ...f, domain_id: work.id })
-    }).catch(console.error)
-  }, [])
 
   function set(field, val) { setForm((f) => ({ ...f, [field]: val })) }
 
@@ -160,7 +162,7 @@ export default function Capture({ onNavigate }) {
     setTimeout(() => titleRef.current?.focus(), 50)
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e, addAnother = false) {
     e.preventDefault()
     if (!isValid(taskType, form)) return
     setSaving(true)
@@ -197,13 +199,12 @@ export default function Capture({ onNavigate }) {
           location_type: form.location_type || undefined,
           location_detail: form.location_detail.trim() || undefined,
           tags: form.tags.trim() || undefined,
-          domain_id: form.domain_id ?? undefined,
         }
         const created = await createTask(payload)
         if (created.status === 'today') {
           setSaved('today')
         } else if (dueToday) {
-          // Aimed for today but rescheduled — today is full, or domain rules.
+          // Aimed for today but rescheduled — today is full.
           setSavedDate(created.due_date)
           setSaved('snapped')
         } else {
@@ -211,7 +212,9 @@ export default function Capture({ onNavigate }) {
         }
         reset()
       }
-      setTimeout(() => { setSaved(null); onNavigate?.('focus') }, 1500)
+      // "Add another" keeps the user on Capture (form already reset); the
+      // primary tea-cup action returns them to Focus after the flash.
+      setTimeout(() => { setSaved(null); if (!addAnother) onNavigate?.('focus') }, 1500)
     } catch (err) {
       console.error(err)
       setError(err?.message || 'Could not save — check connection and try again.')
@@ -400,34 +403,42 @@ export default function Capture({ onNavigate }) {
             </FieldRow>
           )}
 
-          {/* Domain — task / appointment / note only. Routines + projects
-              have their own scheduling models. Captured items default to
-              Work; pick another domain if the item belongs to a different
-              life area (its rules then govern surface time-of-day). */}
-          {taskType !== 'routine' && taskType !== 'project' && domains.length > 0 && (
-            <PillRow
-              label="Domain"
-              options={domains.map(d => ({ id: d.id, label: d.name }))}
-              value={form.domain_id}
-              onChange={(v) => set('domain_id', v)}
-            />
-          )}
-
           <div className="flex items-center justify-between pt-1">
             <p className="text-xs text-ui-subtext">
               {taskType === 'task'        && 'Due date required'}
               {taskType === 'appointment' && 'Date and time required'}
               {taskType === 'routine'     && (needsDays ? 'Days required' : '')}
             </p>
-            <Button type="submit" disabled={!valid || saving}>
-              {saving
-                ? '…'
-                : taskType === 'routine'
-                  ? 'Save routine'
-                  : taskType === 'project'
-                    ? 'Create project'
-                    : 'Capture'}
-            </Button>
+
+            {taskType === 'routine' || taskType === 'project' ? (
+              <Button type="submit" disabled={!valid || saving}>
+                {saving ? '…' : taskType === 'routine' ? 'Save routine' : 'Create project'}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-3">
+                {/* Capture and immediately add another — stays on Capture */}
+                <button
+                  type="button"
+                  onClick={(e) => handleSubmit(e, true)}
+                  disabled={!valid || saving}
+                  title="Capture and add another"
+                  aria-label="Capture and add another"
+                  className="w-12 h-12 rounded-full border-2 border-ui-border flex items-center justify-center text-ui-subtext hover:text-ui-accent hover:border-ui-accent disabled:opacity-40 transition-colors"
+                >
+                  <span className="text-2xl leading-none pb-0.5">+</span>
+                </button>
+                {/* Capture and return to Focus (primary) */}
+                <button
+                  type="submit"
+                  disabled={!valid || saving}
+                  title="Capture and go to Focus"
+                  aria-label="Capture and go to Focus"
+                  className="w-12 h-12 rounded-full bg-ui-primary text-ui-primary-text flex items-center justify-center disabled:opacity-40 transition-opacity"
+                >
+                  {saving ? <span className="text-lg leading-none">…</span> : <TeaCupIcon />}
+                </button>
+              </div>
+            )}
           </div>
         </form>
 

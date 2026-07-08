@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { updateTask } from '../api/tasks'
-import { listDomains } from '../api/domains'
 import { formatSnoozeLabel } from '../utils/snooze'
 import SnoozeSheet from './SnoozeSheet'
 import Button from './Button'
@@ -42,18 +41,8 @@ function EditForm({ task, onSave, onCancel }) {
     location_type:   task.location_type ?? '',
     location_detail: task.location_detail ?? '',
     tags:            task.tags ?? '',
-    domain_id:       task.domain_id ?? null,
   })
   const [saving, setSaving] = useState(false)
-  const [domains, setDomains] = useState([])
-
-  // Domain swap is only meaningful for orphan tasks — projected tasks inherit
-  // from their project. Skip the fetch entirely when the task is projected.
-  const isOrphan = !task.project_id
-  useEffect(() => {
-    if (!isOrphan) return
-    listDomains().then(setDomains).catch(console.error)
-  }, [isOrphan])
 
   function set(field, val) { setForm((f) => ({ ...f, [field]: val })) }
 
@@ -73,7 +62,6 @@ function EditForm({ task, onSave, onCancel }) {
         location_detail: form.location_detail.trim() || null,
         tags:            form.tags.trim()     || null,
       }
-      if (isOrphan) patch.domain_id = form.domain_id ?? null
       const updated = await updateTask(task.id, patch)
       onSave(updated)
     } catch (err) {
@@ -174,29 +162,6 @@ function EditForm({ task, onSave, onCancel }) {
         />
       )}
 
-      {/* Domain (orphans only — projected tasks inherit from their project) */}
-      {isOrphan && domains.length > 0 && (
-        <div>
-          <p className="text-[10px] text-ui-subtext mb-1">Domain</p>
-          <div className="flex flex-wrap gap-1">
-            {domains.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => set('domain_id', form.domain_id === d.id ? null : d.id)}
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-medium border transition-all ${
-                  form.domain_id === d.id
-                    ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                    : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-                }`}
-              >
-                {d.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Actions */}
       <div className="flex gap-2 pt-1">
         <Button type="submit" size="sm" disabled={!form.title.trim() || saving}>
@@ -235,7 +200,6 @@ const LEVER_LABELS = {
   due_soon:        'Due soon',
   same_day_create: 'Same-day deadline',
   project_stall:   'Stalling project',
-  in_context:      'Fits this time',
   age_boost:       'Inbox age',
   push_penalty:    'Pushed before',
 }
@@ -342,19 +306,6 @@ export default function TaskCard({
                 {/* Meta row */}
                 <div className="flex items-center gap-2 mt-1.5 ml-4 flex-wrap">
                   <ProjectBadge name={task.project_name} size="xs" />
-
-                  {task.domain_name && (
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wider ${
-                        task.in_context === false
-                          ? 'bg-ui-border/40 text-ui-subtext/60 italic'
-                          : 'bg-ui-border/60 text-ui-subtext'
-                      }`}
-                      title={task.in_context === false ? `${task.domain_name} — not right now` : task.domain_name}
-                    >
-                      {task.domain_name}
-                    </span>
-                  )}
 
                   {(() => {
                     const dd = formatDueDate(task.due_date)
@@ -472,7 +423,7 @@ export default function TaskCard({
         )}
       </Card>
 
-      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} domainName={task.domain_name} />}
+      {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
     </>
   )
 }
