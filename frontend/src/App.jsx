@@ -144,16 +144,13 @@ function AppShell() {
         setScreen(opening)
         getTodayCapacity().then(setCapacity).catch(() => {})
 
-        // Gate decision (self-care check-in / EOD) must resolve before we show
-        // the app so it doesn't flash the main screen then yank to the gate.
-        // But a cold Render server can make getTodayLog take many seconds — cap
-        // it so a slow log fetch can never strand the user on the loading
-        // screen. If it times out we proceed; the gate can still appear later.
+        // Decide the morning self-care gate / EOD BEFORE revealing the app so
+        // the user lands on the right screen (never flashes Focus then yanks to
+        // the gate). getMe has already warmed the server, so getTodayLog is
+        // fast — await it directly. A timeout here would risk skipping the gate
+        // on a cold morning, which is exactly the bug we're avoiding.
         try {
-          const log = await Promise.race([
-            getTodayLog(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('log-timeout')), 2500)),
-          ])
+          const log = await getTodayLog()
           const hour = new Date().getHours()
           const isMorningWindow = hour < 14
           if (!log && isMorningWindow) {
@@ -180,7 +177,11 @@ function AppShell() {
     setShowWake(true)
   }
 
-  // Cover the opening page (first ready) and every subsequent screen change.
+  // Cover the destination on every in-session screen change. NOT on the first
+  // reveal: the full-screen `!ready` loading screen already covered the cold
+  // wait, so raising a second (differently-styled) cover on top of it just
+  // reads as "two loading screens." Let the freshly-revealed page show its own
+  // quick skeleton on the now-warm server instead.
   useEffect(() => {
     if (!ready) return
     const changed = screen !== prevScreenRef.current
@@ -188,6 +189,7 @@ function AppShell() {
     if (!changed && !initial) return
     prevScreenRef.current = screen
     coverInitDoneRef.current = true
+    if (initial) return
     // Instant/form pages (capture, settings) have no data fetch and emit no
     // page-loaded — covering them just flashes the loader. Skip.
     if (!COVER_SCREENS.has(screen)) return
@@ -527,6 +529,13 @@ export default function App() {
     window.addEventListener('aria:build-chip-changed', handler)
     return () => window.removeEventListener('aria:build-chip-changed', handler)
   }, [])
+
+  // Wake the (free-tier, likely-sleeping) server in parallel while the user is
+  // on the login screen, so submitting credentials doesn't then wait ~40s for
+  // the cold start. No-op if already warm.
+  useEffect(() => {
+    if (!authed && likelySleeping()) warmUp(() => {}).catch(() => {})
+  }, [authed])
 
   function handleAuthed() {
     window.history.replaceState({}, '', '/')
