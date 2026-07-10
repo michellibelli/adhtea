@@ -12,7 +12,7 @@ from models import (
 )
 from schemas import WeeklySnapshotResponse, NudgeResponse, NudgeRespondRequest
 from routes.auth import get_current_user
-from routes.triage import project_stall_map
+from scoring import project_stall_map
 from pid_engine import compute_pid_state, rank_nudges, generate_weekly_insight
 
 router = APIRouter(prefix="/insights", tags=["insights"])

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal, listCalendars, updateCalendars } from '../api/gcal'
 import { listUsers, createUser, deleteUser, logout, getAlphaCode, setAlphaCode } from '../api/auth'
-import { updateSettings } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -374,11 +373,6 @@ export default function Settings({ onNavigate, user }) {
           </div>
         </section>
 
-        <section className="mb-6">
-          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Daily limits</h2>
-          <DailyLimitsSection user={user} />
-        </section>
-
         {user?.role === 'primary' && (
           <UsersSection currentUserId={user.id} />
         )}
@@ -508,72 +502,6 @@ function BuildChipToggle() {
     </Card>
   )
 }
-
-
-function DailyLimitsSection({ user }) {
-  const [tasksMax, setTasksMax] = useState(user?.max_tasks_per_day ?? 10)
-  const [totalMax, setTotalMax] = useState(user?.max_total_per_day ?? 15)
-  const [saving,   setSaving]   = useState(false)
-  const [saved,    setSaved]    = useState(false)
-
-  async function persist(field, val) {
-    setSaving(true)
-    setSaved(false)
-    try {
-      await updateSettings({ [field]: val })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 1800)
-    } catch (e) { console.error(e) }
-    finally { setSaving(false) }
-  }
-
-  return (
-    <Card className="px-5 py-4 space-y-4">
-      <p className="text-xs text-ui-subtext leading-relaxed">
-        Caps used by the Triage tournament when distributing tasks across days.
-      </p>
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm text-ui-text">Tasks per day</span>
-          <span className="text-sm font-semibold text-ui-accent">{tasksMax}</span>
-        </div>
-        <input
-          type="range"
-          min={5} max={15} step={1}
-          value={tasksMax}
-          onChange={e => setTasksMax(Number(e.target.value))}
-          onPointerUp={() => persist('max_tasks_per_day', tasksMax)}
-          className="w-full accent-ui-accent"
-        />
-        <div className="flex justify-between text-[10px] text-ui-subtext/60">
-          <span>5</span><span>10 (default)</span><span>15</span>
-        </div>
-      </div>
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm text-ui-text">Total items per day</span>
-          <span className="text-sm font-semibold text-ui-accent">{totalMax}</span>
-        </div>
-        <p className="text-[10px] text-ui-subtext mb-1">tasks + appointments + routines combined</p>
-        <input
-          type="range"
-          min={10} max={20} step={1}
-          value={totalMax}
-          onChange={e => setTotalMax(Number(e.target.value))}
-          onPointerUp={() => persist('max_total_per_day', totalMax)}
-          className="w-full accent-ui-accent"
-        />
-        <div className="flex justify-between text-[10px] text-ui-subtext/60">
-          <span>10</span><span>15 (default)</span><span>20</span>
-        </div>
-      </div>
-      <p className="text-[10px] text-ui-subtext/60 h-3">
-        {saving ? 'Saving…' : saved ? 'Saved ✓' : ''}
-      </p>
-    </Card>
-  )
-}
-
 
 
 

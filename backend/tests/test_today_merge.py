@@ -1,13 +1,7 @@
-"""Tests for the Today/Triage merge.
+"""Tests for the Today page (formed by merging the old Triage page in).
 
-Phases:
-  1. Backend: capacity-driven max_slots on /capacity/today, inbox ordering
-  2. Frontend: dynamic slot limit from API (no backend test needed)
-  3. Frontend: remove Tournament page, route morning to Today (no backend test)
-  4. Cleanup: triage routes dormant (no new tests needed)
-
-These tests define the target behavior BEFORE the implementation changes,
-so each phase can be validated independently.
+Covers the backend behavior Today relies on: capacity-driven max_slots on
+/capacity/today, inbox ordering by due_date + priority, and soft-delete.
 """
 
 from datetime import date, datetime, timedelta
@@ -151,40 +145,10 @@ class TestInboxOrdering:
 
 
 # ---------------------------------------------------------------------------
-# Phase 1: triage preview runs lifecycle hooks (already implemented)
+# Phase 1: delete soft-deletes so task stops appearing
 # ---------------------------------------------------------------------------
 
-class TestTriageLifecycleHooks:
-    """POST /triage/preview should archive past appointments before bin-packing."""
-
-    def test_preview_archives_past_appointments(self, client, auth_headers, db_session):
-        user = _user(db_session)
-        past = date.today() - timedelta(days=5)
-        _mk_task(
-            db_session, user.id, title="old hearing",
-            task_type=TaskType.appointment, due_date=past,
-            status=TaskStatus.inbox,
-        )
-        r = client.post("/triage/preview", headers=auth_headers)
-        assert r.status_code == 200
-        # The old appointment should NOT appear in the triage items
-        all_titles = []
-        for day in r.json()["days"]:
-            all_titles.extend(item["title"] for item in day["items"])
-        all_titles.extend(item["title"] for item in r.json()["overflow"])
-        assert "old hearing" not in all_titles
-
-        # Verify it was actually archived (status=done)
-        task = db_session.query(Task).filter(Task.title == "old hearing").first()
-        db_session.refresh(task)
-        assert task.status == TaskStatus.done
-
-
-# ---------------------------------------------------------------------------
-# Phase 1: delete works in triage context (already implemented)
-# ---------------------------------------------------------------------------
-
-class TestTriageDelete:
+class TestTaskDelete:
     """DELETE /tasks/{id} should soft-delete so task stops appearing."""
 
     def test_deleted_task_excluded_from_inbox(self, client, auth_headers, db_session):
@@ -196,15 +160,3 @@ class TestTriageDelete:
         r = client.get("/tasks/inbox", headers=auth_headers)
         titles = [t["title"] for t in r.json()]
         assert "trash me" not in titles
-
-    def test_deleted_task_excluded_from_triage(self, client, auth_headers, db_session):
-        user = _user(db_session)
-        t = _mk_task(db_session, user.id, title="trash me")
-        client.delete(f"/tasks/{t.id}", headers=auth_headers)
-
-        r = client.post("/triage/preview", headers=auth_headers)
-        all_titles = []
-        for day in r.json()["days"]:
-            all_titles.extend(item["title"] for item in day["items"])
-        all_titles.extend(item["title"] for item in r.json()["overflow"])
-        assert "trash me" not in all_titles

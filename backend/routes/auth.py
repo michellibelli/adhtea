@@ -236,14 +236,6 @@ def update_settings(
         if not (0 <= update.day_start_hour <= 11):
             raise HTTPException(status_code=400, detail="day_start_hour must be between 0 and 11")
         current_user.day_start_hour = update.day_start_hour
-    if update.max_tasks_per_day is not None:
-        if not (5 <= update.max_tasks_per_day <= 15):
-            raise HTTPException(status_code=400, detail="max_tasks_per_day must be between 5 and 15")
-        current_user.max_tasks_per_day = update.max_tasks_per_day
-    if update.max_total_per_day is not None:
-        if not (10 <= update.max_total_per_day <= 20):
-            raise HTTPException(status_code=400, detail="max_total_per_day must be between 10 and 20")
-        current_user.max_total_per_day = update.max_total_per_day
     db.commit()
     db.refresh(current_user)
     return current_user

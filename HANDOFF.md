@@ -1,7 +1,10 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-06-01 (BUILD 4.0.72)*
+*Last updated: 2026-07-10 (BUILD 4.9.1)*
 
-> Full project documentation → see `PROJECT.md`
+> Deeper design notes → `PROJECT.md` (note: PROJECT.md itself is stale at 4.0.0; this file is the current source of truth).
+
+## What it is
+
 
 ## Project layout
 
@@ -9,9 +12,14 @@
 aria/
   backend/   FastAPI + SQLite dev / PostgreSQL (Supabase) prod
   frontend/  React 19 + Vite + Tailwind v4
-  PROJECT.md full project docs
-  HANDOFF.md this file
+  BUILD      version string — the UI chip reads THIS file (see RELEASE GOTCHA)
+  HANDOFF.md this file — current source of truth
+  PROJECT.md older design doc (stale at 4.0.0; philosophy still valid)
+  SESSION.md session bookmark (stale at 4.0.72)
 ```
+
+Repo: `github.com/michellibelli/aria`. Local clone: `C:\Users\Chris\aria-work`.
+NB — a no-git snapshot copy also lives at `OneDrive\Desktop\aria-master` (frozen 2026-07-02). Do not edit it; edit the git clone.
 
 Run locally:
 ```bash
@@ -31,358 +39,45 @@ Primary user (prod): username=`demo_user`, user_id=2.
 | Backend | https://api.adh-tea.fun | Render free tier, sleeps after 15 min idle |
 | Database | Supabase PostgreSQL | Pooler connection, project ref `yyolrtwpsbtamncihmls` |
 
-**Render sleeps** — set up UptimeRobot ping to `https://api.adh-tea.fun/health` every 5 min.
+**Render sleeps at 15 min idle** — the app now handles cold starts + sleep/wake in-UI with an opaque loading cover (see below). UptimeRobot ping to `/health` still recommended to reduce cold hits.
 
-**Render DATABASE_URL** — password must be URL-encoded (`&` → `%26`, `@` → `%40`).
+**Render DATABASE_URL** — password must be URL-encoded (`&`→`%26`, `@`→`%40`).
 
----
+### RELEASE GOTCHA
+The version chip reads the repo-root **`BUILD` file** (`frontend/vite.config.js` → `__BUILD_TIME__`). Bumping the version in the commit *message* does nothing. You MUST edit the `BUILD` file every release, or (a) the chip shows the old version and (b) `main.jsx`'s stale-localStorage wipe — which keys off BUILD changing — won't fire. This was missed on 7901d87 + f03064c (chip stuck at 4.7.2), fixed in 76b60b0.
 
-## Current status — Phases 1–3 complete + Cafe visual pass + Today/Triage rework ✅
-
-Everything below is shipped and live on adh-tea.fun.
-
-### BUILDs 4.0.66–4.0.72 (2026-06-01) — Triage + Today rework
-
-**Triage page rewrite (Tournament.jsx) [4.0.66]**
-- Old 3-slot top-3 picker replaced with full day-planning surface.
-- Two sections: **Today** (max 15, sortable, status=today or due_date=today) / **Up Next** (remaining scored tasks, fills to 20 total) separated by horizontal divider.
-- Flow: promote from Up Next (+) → reorder in Today (drag) → Apply.
-- ⋮ action menu per row: Tomorrow, Next week, Next month (quick snooze), Edit (opens EditTaskSheet).
-- Promoting sets `due_date` to today via `updateTask` API.
-- Apply calls `POST /triage/apply-ordered` — walks ordered list against capacity budget, returns placed + overflow.
-- Over capacity → OverflowBumper sheet (tap to bump to tomorrow).
-- Recompute resets to score order. ActionMenu portaled to body (escapes `overflow:hidden`).
-- Deleted: SlotCard, CandidateRow, FullPlanView, PlanDay, PlanItem, 7-day plan disclosure, search bar, SnoozeSheet.
-
-**Today page rework (Today.jsx) [4.0.69]**
-- Two sections: **Today** (max 15, sortable with complete/snooze/defer/delete) / **Up Next** (inbox tasks, fills to 20 total) separated by horizontal divider.
-- Up Next items have + button to promote via `scheduleToday` API.
-- Snoozing from Up Next refetches inbox to repopulate.
-
-**Shared EditTaskSheet [4.0.68]**
-- Extracted from Focus.jsx to `components/EditTaskSheet.jsx`. Used by Focus + Tournament.
-
-**Backend: 2 new endpoints + 2 new schemas + 8 new tests [4.0.66]**
-- `POST /triage/apply-ordered` (TriageApplyRequest) — ordered task IDs → placed + overflow split by capacity budget.
-- `POST /triage/resolve-overflow` (TriageOverflowRequest) — keep_today_ids forced onto today; bump_ids → due_date=tomorrow, sort_order=0,1,2…, push_count+1.
-- 8 new tests. Full suite: **153 passed**.
-
-**Completion animation rework (Focus.jsx) [4.0.66]**
-- Dunk 15% faster (5000ms → 4250ms). Pun rises from cup simultaneously (~5.4s total, was ~9.5s).
-- Deleted: rainbow slide-in / shrink / sparkle phases.
-- 10 new tea puns (22 total).
-
-**Today.jsx completion animation [4.0.66]**
-- 350ms fade+slide out on task complete (was instant disappear).
-
-**Triage navigation cleanup [4.0.66]**
-- ConfirmModal gates removed. `triageReturnTo` in App.jsx — morning triage returns to Focus; Today-page triage returns to Today.
-
-### BUILDs 4.0.62–4.0.65 completed (2026-05-25–26)
-
-- **4.0.62** — Auth/onboarding cafe pass (AuthPage, Login, Signup, AlphaChallenge, Register, OnboardingWelcome). App.jsx steam-wisp splash. Backend: bonus/inbox/update_task switched from server-UTC to user-tz dates.
-- **4.0.63** — Missed routines kept completable; /routines/missed user-tz fix; Routines page missed list.
-- **4.0.64** — Tap tea-box bag to focus that task (overrides pickNext). Reverted 4.0.63 cross-day routine completion.
-- **4.0.65** — Triage scoring: DUE_TODAY_BONUS 50→100, OVERDUE_CAP 40→80, same_day_create lever (+300). +4 tests.
-
-### BUILDs 4.0.21–4.0.61 completed (2026-05-23) — cafe overhaul
-
-Deep visual + structural pass toward the cozy-cafe / tea-shop direction the user requested. 40+ pushes in one session.
-
-**Theme**
-- New `aria-cafe` theme (Solarized Light, paper + ink + amber/rust) made default. One-time migration from `aria-americano` via `aria_theme_migrated_cafe` flag.
-- Theme-scoped Tailwind retints (`[data-theme="aria-cafe"]`) mute saturated 400/500 utility colours across the app — Tournament, Capture, Settings, Login, TaskCard all retint without per-file edits.
-
-**Background**
-- `frontend/public/bookshelf-bg.svg` tiled at 540x420 — two shelves of muted books + eclectic curios (hourglass, crystal ball, glass dome with mushroom, skull, brass telescope, pinned butterfly).
-- Each curio gets a staggered CSS keyframe animation (30s cycle, ~2.4s active window per curio, negative delays) so only one or two curios are moving at any moment.
-- Linen grain (fractalNoise) + warm radial-gradient window vignette layered on the Solarized base3 cream.
-- Previous falling-leaves animation dropped — component + render removed.
-
-**Focus page restructure**
-- Bag + action row + tea-box now a single in-flow stack inside the card area, anchored to the **top** of the column directly under the focus bar (justify-start, items-center, gap-3).
-- Bag h fixed at **230px** (max-w 180 mobile / 260 desktop). Pendulum sway removed; bag hangs still. Drop shadow expanded to a layered soft + hard stack for "lifted paper" feel.
-- Action row: three matching **48x48 ghost icon buttons** — Capture / Done / Next — same shape, same border, same `bg-ui-surface/20 backdrop-blur-sm` fill so they read against the bookshelf bg. Done's check stroke a touch heavier for hierarchy.
-- Tea-box bags now render as **paper tag + 1x5 string + 15x28 body** (per-bag) — shape disambiguates them from the bookshelf books once both share muted Solarized colours. Bags also get `filter: saturate(1.25)` in TeaBox only so they pop on the wood plank without globally re-saturating the muted palette.
-- Hamburger menu removed on mobile; `HamburgerMenu` import + render gone. Focus pushes its Now / X done / Y left stats up to the App.jsx top bar via a new `onStatsChange` callback prop.
-
-**Top bar + chrome**
-- Mobile top bar: logo (new inline-SVG `<Logo />` — pointed-oval tea leaf + Lora italic "adhTea" wordmark) + capacity track + Focus stats stacked in the 52px frame.
-- Desktop focus bar (Focus.jsx inline header) wrapped in a visible paper-card box (full cream surface, 25% ink border, lift shadow + inset highlight).
-- Empty capacity track (no morning log yet) renders a visible 32% subtext trough instead of returning null.
-- Bottom-nav labels in Lora UPPERCASE with 0.22em tracking + active accent underline. Icon wrappers normalised to 26x26 so labels align across all items.
-- WakeScreen dropped — keep-alive bot handles Render warm-up. `!ready` placeholder replaced with Logo + "brewing…" splash.
-
-**Cards + inputs**
-- `.pixel-card` shadow stack expanded — border 95% + short/mid/long shadows + inset top-edge highlight.
-- `.pixel-input-lift` utility added; applied to Input/Textarea base. Focus state adds a soft 2px amber ring.
-- Capacity card in SelfCare/Log full mode now uses `.pixel-card`.
-
-**Behaviour fixes**
-- Morning check-in only gates before 14:00. Past 2pm with no log → skip gate. EOD gate still pops in evening if morning log exists.
-
-### BUILD 4.0.1 completed (2026-05-20)
-
-Triage-flow rework + a critical security fix.
-
-- **Security — RLS on all tables** `1b90cee`. Supabase advisor flagged
-  `rls_disabled_in_public` + `sensitive_columns_exposed`: the `public`
-  schema (incl. `users.hashed_password`, `session_tokens.token`, Google
-  OAuth tokens) was reachable via the auto-generated PostgREST API with
-  RLS off. `_migrate()` now runs `ALTER TABLE ... ENABLE ROW LEVEL
-  SECURITY` on all 14 tables (Postgres branch). RLS-on + no policies =
-  deny-all for the `anon`/`authenticated` API roles; the backend
-  connects as the `postgres` owner role, which bypasses RLS, so the app
-  is unaffected. Applied to prod manually via SQL editor + re-applies on
-  deploy. `session_tokens` was also wiped (precautionary token rotation).
-- **Check-in routes to Triage** `70ef8ce`. After the morning check-in
-  gate, the user now lands on Triage instead of Focus — capacity is
-  freshly logged, so triage is the natural next step. Gate CTA reads
-  "Continue to Triage".
-- **Triage top-3 starts empty** `70ef8ce`. Removed the top-scored
-  pre-fill — triage is an active choice, not a system guess. The
-  `slotsTouchedRef` guard is gone with it.
-- **Per-slot type-ahead** `70ef8ce`. Each empty slot is a text field;
-  typing filters existing tasks (in-memory substring match on title)
-  into a dropdown. A `+` button at the field's right edge creates a
-  brand-new task from the typed text with `due_date` = today, pins it
-  to today, and drops it into that slot. Search bar + suggested list
-  unchanged. The standalone `+Add` row was absorbed into the slots.
-- **Lint clean** `ecfc3e1` + `134bc64`. `npm run lint` is now 0 errors
-  / 0 warnings (was 41). `eslint.config.js` registers `__BUILD_TIME__`
-  as a global and ignores `_`-prefixed unused vars; dead code removed;
-  legit data-fetch-on-mount + ref/purity patterns suppressed with
-  explained `eslint-disable` comments.
-
-### BUILD 4.0.0 completed (2026-05-19)
-
-Major-version bump marks the close of the triage redesign D+F hybrid (R1–R7+) and the start of the next visual phase (tea-box on Focus, logo, bottom-nav cafe typography).
-
-- **R7 follow-up — drag/pin in 7-day plan view.** `FullPlanView` items wrapped in `useDraggable`; day cards in `useDroppable`. Drag any item to any day card → `pinTask(id, targetDate)` + refresh. Per-item `★` pins to today + auto-fills first empty top-3 slot. `slotsTouchedRef` blocks layout-change pre-population once the user has touched slots so recompute / pin / star no longer wipe manual picks. 409 (day at cap) surfaces a friendly in-page banner. Sensors match `Today.jsx` (`SmartPointerSensor` distance: 8, `TouchSensor` delay: 200). No backend changes — pin endpoint already accepted any future date.
-
-### Phase 3.9.35–3.9.44 completed (2026-05-18) — triage redesign D+F hybrid
-
-Old tournament (30-day horizon + head-to-head ranking) was inherently flawed: lumpy days, push-out → re-push loop, combative for ADHD cognition. Replaced with capacity bin-pack + manual top-3 pinning.
-
-- **R1** `b6a363e` — explainable scoring engine. `score_components` JSON per task with 9 levers: priority, critical_bonus, overdue_boost, due_today, due_soon, project_stall, in_context, age_boost, push_penalty. WhyTooltip surfaces each lever's contribution to the total.
-- **R2** `8bffd21` — capacity bin-pack + rolling 7-day window. Server auto-places tasks into days using priority + age + capacity budget.
-- **R3** `d3f0a84` — `Task.pinned_for` field + `POST /triage/tasks/{id}/pin`. `MAX_PINS_PER_DAY = 3`. Bin-pack respects pins.
-- **3.9.37 (R4)** `e16abe7` — new column layout + score chip + pin button.
-- **3.9.38 (R5+R6)** `d784eed` — stale prompt (push_count ≥ 5 surfaces delete / snooze-30d) + retire old tournament. ~323 lines of `Triage.jsx` deleted.
-- **3.9.39** `e3e02f4` — TaskCard always-visible snooze + edit + delete icon column.
-- **3.9.40** `c7eb696` — modal portal + top-third positioning so dialogs never fall below the fold.
-- **3.9.41** `bc8157d` — wider task cards + taller teabag, no text clipping.
-- **3.9.42** `2509dd6` — domain-aware snooze (respects `next_allowed_date`) + capacity-bar ignores routines.
-- **3.9.43** `80704c1` — morning check-in (mood + sleep + capacity) as hard gate before app access.
-- **3.9.44 (R7)** `1444846` — top-3 picker as primary surface; full 7-day grid collapsed behind disclosure. Apply: pins slotted tasks → on 409 auto-resolves by unpinning displaced today-pins → re-attempts → runs `/triage/run` to bin-pack the rest.
-
-### Phase 3.9.24–3.9.34 completed (2026-05-17 evening)
-
-Aesthetic + UX cohesion pass, plus a domain enforcement bug-fix. No new
-feature scope; this was polish, visual rework, and one systemic bug.
-
-- **3.9.24** — On every new build, `main.jsx` compares stored `aria_build`
-  to current `__BUILD_TIME__` and wipes localStorage on mismatch.
-  **Preserved keys**: `aria_token` (session), `aria_theme` (user pick),
-  `med_name_*` (real medication names — server has placeholders only,
-  wipe would be permanent data loss). Ensures bug fixes that depend on
-  clean local state reach users who haven't manually cleared.
-- **3.9.27** — Theme registry trimmed: dropped Original (`adhtea`) and
-  dead `utils/twilight.js`. Default theme now `aria-americano`. Users
-  with the old id in localStorage fall back to the default automatically.
-- **3.9.28** — Realistic teabag on Focus: tag stays fixed, string + bag
-  swing as a pendulum (`.teabag-sway` CSS animation, transform-origin
-  top center), stitched bottom seam (.teabag-stitches).
-- **3.9.30** — Static tiled tea-leaves on the page background replaced
-  with a `.falling-leaves` fixed overlay (six leaf SVGs, varied widths
-  + durations + negative animation-delays, each in their own column).
-- **3.9.31** — Persistent steeping cup removed (cup back to dunk-only).
-  Page bg extracted to `.aria-page-bg` fixed layer at z-index -1 — the
-  `.aria-page` element's `animation: page-in` was creating a stacking
-  context that painted the bg over the fixed `.falling-leaves`. Bag
-  sway slowed from 5s to 10s. Americano gradient swapped from blue
-  twilight to warm amber sunrise.
-- **3.9.32** — Teabag border removed (4px solid border was leaving
-  rectangular ghost outlines at the clip-path's chamfered corners —
-  CSS border ignores clip-path). Woven mesh texture added: thin
-  horizontal threads + thin vertical threads on a 3.5px grid layered
-  above the existing paper grain.
-- **3.9.33** — Cohesion pass toward "calm rustic cafe": `.pixel-btn-rainbow`
-  repurposed to a honey→amber→oak gradient with dusty-rose hover glow;
-  `.pride-stripe` swapped 4px saturated rainbow for a 1.5px dusty-rose
-  hairline; display font Press Start 2P → Lora serif (`--font-pixel`
-  var stable); `.pixel-card` softened (1px subtle border, 10px rounded
-  corners, soft warm wood shadow); pride-rainbow `::before/::after`
-  strips on `.pixel-card` removed; bonus-mode bag sparkles removed;
-  falling-leaves keyframe given wider lateral swings (±50px peaks) on
-  ease-in-out timing for autumn-drift feel.
-- **3.9.34** — Three physics-based leaf behaviors split across the six
-  leaves: **flutter** (2 leaves, 17–18s, `rotate3d` end-over-end tumble
-  on mixed X/Y/Z axes so the leaf flips edge-on; asymmetric leaves whirl
-  slowly per fluid mechanics), **glide** (2 leaves, 13–14s, smooth
-  diagonal drift in opposite directions, slow Z-rotation arc), **drop**
-  (2 leaves, 10–11s, near-straight fall with ±8px sway; symmetric leaves
-  are aerodynamically efficient and reach a higher terminal velocity).
-  All six share a `cubic-bezier(0.45,0,1,0.92)` timing approximating
-  gravity → terminal-velocity. GPU-composited transforms; no measurable
-  perf cost. **Still needs more tuning per user — carry forward.**
-- **fix(domain) 17be0ed** — Three domain-enforcement bugs in
-  `backend/routes/tasks.py` and a new sweep. (1) `create_task` was
-  computing `due_today` from the pre-snap `body.due_date`, so a Sunday
-  pick on a weekday-only Work project still landed status=today after
-  the snap moved due_date to Monday. (2) `update_task` ran the
-  demote-on-future check before snapping. (3) `promote_due_tasks`
-  promoted any inbox task with `due_date <= today` regardless of the
-  task's domain. New `demote_domain_violations` sweep wired into
-  `/tasks/today` to clean up historical drift. `_date_allowed` →
-  `date_allowed` (public). +5 tests in `test_tasks.py`. Full suite
-  **91 passed**.
-
-### Phase 3.9.16–3.9.22 completed (2026-05-17)
-
-
-- **3.9.16** — `autoComplete` attrs on Login/Register/Signup; `mobile-web-app-capable` meta added alongside deprecated apple variant; SelfCare runs a one-time pseudonymization migration for pre-3.9.13 med rows (copies real name to localStorage, renames server row to `Medication N` placeholder, idempotent via regex).
-- **3.9.17** — `dose` column dropped from `medication_schedules` table (ALTER TABLE DROP COLUMN in `_migrate`, both SQLite and Postgres branches). Pre-3.9.11 rows held real dose strings; this removes them server-side. Schema + route + ORM model all stripped.
-- **3.9.18** — Phase 3.8 Part 2 finisher: `frontend/src/utils/domain.js` mirrors `next_allowed_date()`; `<DomainDateWarning>` component shows amber inline warning below 3 date inputs in `Projects.jsx` (SortableTaskRow inline edit, batch-date bar, add-task form). Backend already snaps via `next_allowed_date`; this just surfaces the snap to the user.
-- **3.9.19** — `slowapi` rate limit on `POST /login` at 10/minute per IP. Shared `Limiter` in `backend/rate_limit.py`; other auth endpoints can opt in later. Closes #22.
-- **3.9.20** — Settings → Display → "Show build chip" toggle. localStorage-backed (`show_build_chip` key); live update via `aria:build-chip-changed` custom window event. Closes #7.
-- **3.9.21** — Manual theme picker (initially 8 themes; trimmed to 4 in 3.9.23). Each `[data-theme="aria-*"]` block defines 14 standard `--aria-*` vars + page-bg gradient + body bg. `color-mix()` derives subtext/border/primary-hover. `ThemeContext` now manual (reads `aria_theme` from localStorage, default `adhtea`, no twilight auto-switching). Settings → Display → Theme: swatch grid, tap to swap. BottomNav, mobile header, AuthPage, pixel-card + pixel-btn shadows all use `ui-*` utilities now so they retheme.
-- **3.9.22** — Teabag card paper texture: 4 layered backgrounds (2.5px fiber dots + 5px offset dots + SVG fractalNoise grain + vertical depth gradient) plus inset shadows for roundness. Bonus-mode variant in deeper amber/gold.
-- **3.9.23** — Trimmed picker themes: removed Coffee, Tea, Omelette, Mint after user palette review. Final set: Original, Berries, Americano, Chai.
-- **Test infrastructure** — `backend/tests/` 86 tests across 11 files; `requirements-dev.txt` pinned (pytest, httpx, tzdata). GitHub Actions workflow `.github/workflows/test.yml` runs full suite on every push + PR to master, Python 3.12 on ubuntu-latest. Run locally: `cd backend && python -m pytest tests/ -v`.
-
-### Phase 3.9.7–3.9.15 completed (2026-05-15, evening)
-
-Hardening + code-quality + privacy redesign pass. No new user-facing features beyond the medication redesign and tournament daily cap; rest is infrastructure polish for handoff.
-
-- **Google Calendar multi-cal + critical sync bug fix** — `_get_service(token)` was missing inside the calendar loop in `sync_today_events`, causing every iteration to throw a silently-caught NameError → 0 events created. Multi-calendar selector UI added in Settings → Google Calendar; `PATCH /gcal/calendars` stores non-primary IDs as JSON in `token.calendar_ids`. `/gcal/debug` endpoint removed (was leaking partial client ID in production).
-- **Loading + error states** — new `components/PageState.jsx` exports `PageLoading`, `PageError`, `InlineSkeletonCards`. Today/Inbox/Waiting/Projects/AllTasks all use the animated skeleton + retry button pattern instead of plain "Loading…" / silent failures.
-- **Security audit + fixes** — timezone validated through `ZoneInfo()` in `update_settings` (rejects bad values), CSV import capped at 5 MB, password min length 8 enforced on Setup/Register/Signup via `Annotated[str, Field(min_length=8, max_length=128)]` (Login left alone so existing users still work), debug endpoint deleted.
-- **Medication privacy redesign** — `dose` field removed entirely (form, schema-level, display). Server now stores placeholder names ("Medication 1", "Medication 2") in `MedicationSchedule.name`; real names live in `localStorage` keyed by `med_name_{userId}_{serverId}` via `frontend/src/utils/medicationStore.js`. Reminder times and taken-logs stay server-side and survive any device change. UI shows a privacy note explaining the model and falls back to "name not on this device" if the local map is cleared. Frontend keeps using the existing `/medication/*` server API; only the name string is pseudonymous.
-- **Tournament daily 3-pass cap** — `localStorage` tracks `triage_pass_count` per day. Pass 2 shows a refinement banner; pass 3 says "final pass"; pass 4+ shows a friendly gate screen ("Priorities are locked in. Come back tomorrow."). Auto-resets at midnight. Increments only on `Done`, not on abandon.
-- **Code review pass (perf + readability)** — projects.py N+1 fix (single `func.count` + `group_by` instead of one query per project), Today.jsx optimistic updates (tasks disappear instantly), Inbox.jsx `useRef` stabilization for `onCountChange` so parent re-renders don't trigger refetches, Settings.jsx primary-calendar detection no longer matches calendars merely named "Primary X". Named constants for `TOKEN_EXPIRY_DAYS`, `TRIAGE_SHOW_LIMIT`, `EXEC_GOOD/OK/LOW`, `WARMUP_RETRY_DELAY_MS`. Weekend date math in `snooze.js` simplified to single modulo formula. Plain-English explanatory comments added throughout for handoff readability (`domain_utils.py`, `auth.py`, `tasks.py`, `Focus.jsx`, `TaskCard.jsx`, more).
-- **Code review pass (correctness + error handling)** — `auth.py /me` now uses `UserResponse.model_validate()` instead of dumping `__table__.columns` (future sensitive fields like a hypothetical `hashed_password` can't accidentally leak through the dict comprehension). `_maybe_sync_gcal` and `gcal.py /status` JSON-parse exceptions now log to server output instead of `except: pass`. Triage CriticalList complete button wrapped in proper try/catch + refetch fallback.
-- **.gitignore tightened** — `docs/Secret Key.txt` and `docs/Server Stuff.txt` added; confirmed never committed via `git log --all`.
-
-### Phase 3.9.0–3.9.6 completed (2026-05-15, earlier waves)
-
-Tournament-driven Triage at scale.
-
-- **Triage tournament** — 3-card drag-to-reorder (top = most important), 10-tasks-per-day distribution across a 30-day horizon, tea-themed UX (cup-fill progress, random tea puns at 20% rate, ConfirmModal). Reachable from Today's "🍵 Triage all" and Settings → "Triage tournament 🍵".
-- **Daily caps (user-configurable)** — `max_tasks_per_day` (5–15, default 10) and `max_total_per_day` (10–20, default 15) with sliders in Settings. Both enforced by `_find_target` when bundling.
-- **Reset-on-start** — `POST /tasks/tournament/start` clears placements on all incomplete user tasks (task_type=task) so a campaign re-ranks from scratch. Routines + appointments stay where they are.
-- **Per-card corner actions** in tournament — ✓ already done, 🌙 snooze (full SnoozeSheet picker), ✕ delete. All stop drag propagation.
-- **App-styled `ConfirmModal`** replaces browser `confirm()` everywhere. Tea-themed copy ("Ready to triage everything? Let's brew it").
-- **`ProjectBadge` 🌱 amber pill** renders wherever a task appears (TaskCard, AllTasks rows, Triage daily card, Tournament card, Focus teabag tag).
-- **AllTasks delete** — trash-can button per row + tea-themed delete confirm.
-- **Focus refetch on date-push** — editing the active task's due_date to a future day now drops the task out and backfills the next-priority item.
-- **Backend hardening** — auto-sweep of misclassified `status=today` tasks whose `due_date` is in the future. Filter fixes so the inbox query includes all incomplete tasks regardless of date.
-- **Triage skips routines + appointments** entirely. Tournament does too.
-
-### Phase 3.8 completed (2026-05-14)
-
-**Project domains** (data + UI shipped; date enforcement is Phase 2):
-- `Domain` model (rules JSON: list of `{days, times, weights}` rule dicts)
-- `Project.domain_id` FK; ProjectResponse exposes `domain_id` + `domain_name`
-- Lazy-seed: first `/domains` call inserts Work + Home defaults per user
-- `backend/routes/domains.py` — full CRUD
-- `frontend/src/components/DomainPicker.jsx` — pill selector + inline "+ Other" form
-- Settings → "Project domains" — full rule editor (add/remove rules, days/times/weights, name; delete non-default)
-- Domain can be changed at any time from expanded project view
-
-**Project page UX:**
-- Sub-task circle now does double duty: tap = toggle done · long-press (500ms) = multi-select
-- Multi-select shows accent ring + tinted row; existing batch-date bar fires at 2+ selected
-- DragHandle changed from `<button>` to `<div role="button">` because SmartPointerSensor blocks drag activation on buttons (that was breaking reorder)
-- Project cards expand/collapse with 300ms grid-rows-[0fr↔1fr] CSS animation
-- Project task uncomplete (was missing entirely — `done` → `inbox` via `updateTask`)
-- Domain badge on project header
-
-**Backend correctness:**
-- `Task.project_name` property (was `.name`, project model field is `.title` — silently caught AttributeError → always returned None)
-- `joinedload(Task.project)` on `/tasks/today`, `/tasks/bonus`, `/projects/{id}`
-- Cascade date shift: PATCH `/tasks/{id}` with `due_date` change on a project task shifts later sibling tasks (status not done/deleted) by the same delta
-- POST `/routines` was dropping `exact_time` on create (update path worked) — fixed
-
-**Focus card visual rework:**
-- Teabag shape via clip-path; cream paper bg (#FBF6E5) + yellow-brown dot mesh
-- Tag colored by task type; for project sub-tasks: amber tag with "Project" + project name as subtitle, ~2× larger font
-- Bonus mode: golden bag + 5 staggered twinkling sparkles
-- Bonus mode trigger fixed: now checks `pickNext()` visibility (timed routines >5 min away no longer block bonus mode)
-- Next button now correctly bumps `sort_order` in bonus list too (was only updating `tasks`)
-- Pun celebration sparkles spread to page edges instead of clustering with cup
-
-**Tooling / observability:**
-- `scripts/deploy-check.sh` — unauth'd curl check: production HTML/JS/CSS hashes, marker grep, backend health, local HEAD comparison
-- `scripts/aria-api.sh` — authenticated production API helper. Reads bearer from `~/.aria-token` (outside repo); harvested via `localStorage.getItem('aria_token')` on adh-tea.fun
-- Vercel CLI linked to project; `vercel ls`/`vercel inspect`/`vercel logs` usable from CLI
-- BUILD timestamp chip auto-stamped via `vite.config.js` `define`/`__BUILD_TIME__`. Persistent in top-right of every page; remove when user requests
-- Vercel marketplace plugin loaded (`/vercel:status`, `/vercel:deploy`, etc.)
-
-**Other:**
-- Settings Tasks cards are now fully clickable (whole card = button; arrow buttons removed)
-- PWA service worker auto-update on visibilitychange via `controllerchange` listener in `main.jsx`
-- `vercel.json` cache headers (no-cache for `index.html`/`sw.js`, immutable for `/assets/*`)
-- Vite injects `__BUILD_TIME__` for the build-marker chip
-- Cleaned up CSS specificity battle: `.teabag-card.pixel-card` double-class selector + `!important` beats `.pixel-card` (which also uses `!important`)
-
-### Phase 3.7 completed prior session (2026-05-13)
-- AI project breakdown via Claude Haiku — `backend/routes/projects.py` lines 116–190
-- `ANTHROPIC_API_KEY` added to Render env vars → live
-- Frontend: `Projects.jsx` fully wired — ✨ button triggers generation, inline task list, add/complete/remove/archive
-- `frontend/src/api/projects.js` — all endpoints including `generateProjectTasks`
-
-### Previously completed (all live)
-- **Phase 1** — Core loop: inbox, today, waiting, snooze, carry-forward, time-of-day theming
-- **Phase 2** — Triage: one-at-a-time, capacity bar, critical list, localStorage done-flag
-- **Phase 3** — Foundation: routines, self-care log, medication, EOD gate
-- **Phase 3.5** — Focus home screen, type-aware capture, Google Calendar OAuth, inline task edit
-- **Phase 3.6** — Nav redesign (hamburger + FAB), AllTasks, Search, batch ops, bonus mode, Render/Vercel/Supabase deployment
-- **Design system** — adhTea palette + pixel utilities fully implemented in `index.css`
-- **WakeScreen** — backend wake splash wired in `App.jsx`
-- **PWA** — `vite-plugin-pwa` installed + configured in `vite.config.js`
+### Diagnostics
+```bash
+bash scripts/deploy-check.sh        # live JS/CSS hashes + backend health + local HEAD
+bash scripts/aria-api.sh /tasks/today   # auth'd API helper; bearer from ~/.aria-token
+vercel ls / vercel inspect <url> / vercel logs <url>
+```
 
 ---
 
-## Known issues / small todos
+## Current status — BUILD 4.9.1 (2026-07-09)
 
-1. **Real device test of medication pseudonymization** — verify on the user's phone that the name map persists, clears cleanly, and the privacy note is visible.
-2. **Real human code review** — both AI passes still missed things a human would catch.
-3. **Hardcoded hex sweep (cleanup)** — `Focus.jsx`, `OnboardingWelcome.jsx`, `WakeScreen.jsx`, `PageProgress.jsx` still have raw hex literals (sparkles, gradients). Cosmetic.
-4. **Settings page visual pass** — functional but cluttered, needs cafe theme spacing + Card consistency.
-5. **Logo/branding** — new adhTea logo + iconography still on the deferred cosmetic list.
+`master` clean, synced with origin. Backend suite **186 passed**. `npm run build` clean. Live.
 
-Resolved 2026-06-01: triage rework (Today/Up Next split, action menu, EditTaskSheet, portal fix); Today page rework (Today/Up Next split, inbox promote); completion animation (dunk+pun ~5.4s); fade-out animation; triage nav cleanup.
-Resolved 2026-05-26: auth/onboarding cafe pass; server-tz date bugs in bonus/inbox/update_task (4.0.62); tap-bag-to-focus (4.0.64); triage scoring tuning (4.0.65).
-Resolved 2026-05-18: triage redesign D+F hybrid R1–R7, morning check-in gate, domain-aware snooze, modal portal positioning.
-Resolved 2026-05-19: R7 drag/pin in 7-day plan view; BUILD bumped to 4.0.0.
-Resolved 2026-05-20: RLS on all tables; lint clean; triage check-in routing + empty slots + per-slot type-ahead. BUILD 4.0.1.
-Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement, aesthetic cohesion.
+The last ~six weeks were reliability + subtraction: three subsystems (domains, tournament triage, difficulty/weight) were removed, security was hardened, and cold-start/sleep-wake loading was made robust. Feature surface is stable.
 
----
+### Big shifts since BUILD 4.0.x
 
-## Next
+**Triage merged into Today (4.4.0, 2026-06-30).** The separate Tournament/Triage page is gone. Today is now the sole planning + execution surface: a **Today** section (status=today, sortable, complete/snooze/defer/delete) and an **Up Next** section (inbox, ordered by due_date → priority → created_at, `+` promotes). Slot count shown as `(X/N)` where N = capacity-driven `max_slots` from `/capacity/today`. Morning flow: self-care gate → Today (plan inline) → Start my day. Cleanup on 2026-07-10: the orphan frontend files (`pages/Tournament.jsx`, `api/triage.js`, `utils/triage.js`) and the entire `routes/triage.py` scoring/bin-pack backend + `test_triage.py` were removed. Its two still-needed helpers (`capacity_tier`, `project_stall_map`) were extracted to `backend/scoring.py` (imported by `selfcare.py` + `insights.py`). The functionally-dead daily-caps sliders (`max_tasks_per_day`/`max_total_per_day`) were also removed from Settings + backend.
 
-1. **Settings page visual pass** — needs cafe theme spacing + Card consistency.
-2. **Logo/branding** — new adhTea logo + iconography. Current: `public/adhTeaLogo.png`.
-3. **Backend warnings cleanup** — `datetime.utcnow()` deprecation (112 warnings), SQLAlchemy `Query.get()` legacy.
+**Domains removed entirely (4.9.0, 2026-07-08).** The whole project/task time-of-day + date-rule scheduling constraint system was ripped out per user. Gone: `Domain` model, `domain_id` FKs (destructive migration — `DROP TABLE domains CASCADE` on Postgres, best-effort DROP COLUMN on SQLite), `routes/domains.py`, `domain_utils.py`, `next_allowed_date` due-date snapping, `in_context` field + its Focus/triage sorting, and all frontend domain UI (`DomainPicker`, `DomainDateWarning`, `utils/domain.js`, `api/domains.js`). Tasks now schedule purely on due_date + daily cap.
 
+**Difficulty/weight system removed (2026-06-30)**, replaced with over-capacity signals.
 
-**Status:** Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight.
+**Start-my-day planning gate (4.8.0, 2026-07-07).** Once-per-day "commit your plan" ritual. Today opens in a **planning** state ("Plan your day" + fixed-bottom "Start my day ☕" button); pressing it flips to **started**. Soft gate — navigable, it's a self-signal not a lock. Backend: `User.planned_on` Date, `/me` exposes computed `day_planned`, `POST /tasks/plan-day` stamps it, resets at `day_start_hour` boundary. Tests: `test_plan_day.py`.
 
+**Phase 6 PID nudge system (4.3.0, 2026-06-18).** PID control loop for behavior-change nudges: tracks sleep/meals/exercise/check-in against targets — P (gap), I (accumulated deficit, anti-windup), D (trend). Warm single-question micro-nudge after task completion; 2h cooldown, 3/day cap, weekday-only. `backend/pid_engine.py` (pure math), `routes/insights.py`, `WeeklySnapshot` + `NudgeLog` models, `NudgeModal.jsx` + `WeeklyInsightCard.jsx`. Lazy auto-compute — GET /weekly + /nudge create the snapshot if missing, no cron needed.
 
-**Groundwork already in place:**
-- `User` model has `role` (primary/child) and `parent_id` fields
-- `Task` model has `assigned_to_id`
-- Invite token flow exists in `backend/routes/auth.py`
-- `AlphaChallenge.jsx` + `OnboardingWelcome.jsx` pages exist
+**Security hardening (4.6.0–4.6.3, 2026-07-06).** Privilege separation, auth rate limits, hashed session tokens, OAuth pending-state persisted in DB, `delete_user` Postgres crash fix (explicit owned-row purge), onboarding visibility. Earlier (4.0.1): RLS enabled on all tables in the Postgres branch of `_migrate`.
 
-**What needs building when unblocked:**
-1. **Backend** — filter delegated tasks for child users, delegation endpoint (`POST /tasks/{id}/delegate`)
-2. **Frontend** — child home view (simplified: just his routines + delegated tasks, big checkboxes)
-3. **the user's view** — delegation UI on triage/today cards, completion status visible
+**Cold-start / sleep-wake loading covers (4.8.0–4.9.1).** Render free-tier cold starts and mid-session sleeps used to show loading→"…" skeleton jank. Now: pages (`Focus`, `Today`, `SelfCare`) dispatch `aria:page-loaded` when their primary fetch settles; App raises an opaque z-50 cover on nav + reactive wakes and lifts it only on `aria:page-loaded` (data renders underneath). Sleep-on-return funnels through a single `aria:server-waking` event (visibilitychange/focus + reactive on any request to a sleeping server). Completions/snoozes are queued to localStorage before the request, so the triggering action is never lost. 4.9.1 fixed the cold first-open specifically: removed a 2.5s `Promise.race` on `getTodayLog` that was losing the race on cold starts and skipping the self-care gate; killed the double-loader; added parallel login-screen warm-up. Correct morning flow now: (login → parallel wake) → single loading screen → self-care gate → Today → Start my day.
 
-**Where to start:** `backend/routes/auth.py` (child account creation) → `backend/routes/tasks.py` (delegation endpoint) → new `frontend/src/pages/AndeView.jsx`
+**Visual direction: Cafe + Linen themes only** (Americano/Berries/Chai removed 4.2.19). Cafe = warm amber, Lora serif, wood shadows, CafeShelf idle animations. Linen = soft plum/lavender paper, botanical header pill, pressed-flower SVG, paper-grain Focus card. Watercolor tea assets throughout. Tea-box metaphor on Focus (bags = tasks, ordered morning→evening by due_time). Capture has a two-button submit (tea-cup = save+return, `+` = save+add-another).
 
 ---
 
@@ -390,138 +85,77 @@ Resolved 2026-05-17 (evening): bonus mode teabag, domain enforcement, aesthetic 
 
 ```
 backend/
-  main.py             app setup, CORS, router registration, auto-migration (_migrate fn)
+  main.py             app setup, CORS, router registration, _migrate() auto-migration
   database.py         SQLAlchemy engine + session
   models.py           all ORM models
   schemas.py          Pydantic schemas
   rate_limit.py       shared slowapi Limiter (keyed on client IP)
+  pid_engine.py       pure PID math for nudges (no DB imports)
+  scoring.py          shared capacity_tier + project_stall_map (used by selfcare + insights)
   routes/
-    auth.py           login (10/min rate limit), session tokens (TOKEN_EXPIRY_DAYS=30), invite codes
-    tasks.py          CRUD + today/inbox/bonus/search/backlog/critical-list endpoints
-    routines.py       routine CRUD + lazy daily instance generation
-    selfcare.py       SelfCareLog + CapacitySnapshot
-    medication.py     MedicationSchedule + MedicationLog (no dose field as of 3.9.17)
-    gcal.py           Google Calendar OAuth 2.0 + lazy sync
+    auth.py           login (rate-limited), session tokens (hashed), settings, invite codes
+    tasks.py          CRUD + today/inbox/bonus/search/plan-day endpoints
+    task_lifecycle.py lifecycle engine extracted from tasks.py (carry-forward, rollover, promote/demote)
+    routines.py       routine CRUD + lazy daily instance generation (rollover-race guarded)
+    selfcare.py       SelfCareLog + CapacitySnapshot + /capacity/today (user-tz dates)
+    medication.py     MedicationSchedule + MedicationLog (names pseudonymized client-side)
+    gcal.py           Google Calendar OAuth 2.0 + lazy sync (OAuth state persisted in DB)
     projects.py       Project CRUD + Claude Haiku AI breakdown + sub-task date cascade
-    triage.py         scoring engine, bin-pack, pin/unpin, apply-ordered, resolve-overflow
-    domains.py        Project Domain CRUD; lazy-seeds Work/Home defaults per user
+    insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
     import_csv.py     Notion CSV import
-  tests/              153 pytest tests (conftest + 11 test files); see Test infra section
+  tests/              125 pytest tests (conftest + 12 test files); CI on every push/PR
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 
-```
-scripts/
-  deploy-check.sh     unauth'd: prints live JS/CSS hashes + backend health + local HEAD
-  aria-api.sh         auth'd API helper. Reads bearer from ~/.aria-token
-```
+Run tests: `cd backend && python -m pip install -r requirements-dev.txt && python -m pytest tests/ -v`
+Test files: auth, gcal, import_csv, insights, medication, migrate, plan_day, projects, routines, selfcare, tasks, tasks_lifecycle, today_merge.
 
 ## Frontend file map
 
 ```
 frontend/src/
-  App.jsx                     routing, nav state, WakeScreen gate
-  api/client.js               singleton, warmUp(), likelySleeping(), smart retry
+  App.jsx              routing, nav state, loading-cover orchestration, plan-day wiring
+  api/client.js        singleton, warmUp(), likelySleeping(), offline queue, smart retry
   pages/
-    Focus.jsx                 home — pickNext(), bonus mode, dunk celebration, tap-bag-to-focus
-    Tournament.jsx            triage — Today(15)/Up Next(20) split, action menu, apply/overflow
-    Today.jsx                 Today(15)/Up Next(20) split, drag-to-reorder, inbox promote, fade animation
-    Capture.jsx               type-aware (task/appt/routine/note)
-    SelfCare.jsx              foundation log + full capacity bar
-    EODGate.jsx               mood gate (required) + warm summary
-    AllTasks.jsx              filter + batch snooze/date, optimistic updates
-    Projects.jsx              list + detail + AI generation + manual add
-    Search.jsx                title+notes search + batch date assign
-    Settings.jsx              integrations, CSV import, nav links
+    Focus.jsx          home — pickNext(), bonus mode, watercolor dunk celebration, tap-bag-to-focus
+    Today.jsx          Today / Up Next split, capacity slots, drag-reorder, planning gate
+    Capture.jsx        type-aware (task/appt/note/routine), two-button submit
+    Routines.jsx       CRUD, frequency/time-of-day/critical flags
+    SelfCare.jsx       foundation log + capacity bar
+    EODGate.jsx        evening mood gate + summary
+    AllTasks / Inbox / Waiting / Search   list surfaces, batch ops
+    Projects.jsx       list + detail + AI generation + manual add
+    Settings.jsx       integrations, daily caps, CSV import, display/theme
+    Login / Signup / Register / AlphaChallenge / OnboardingWelcome   auth + onboarding
   components/
-    TaskCard.jsx              inline edit (pencil), done/snooze actions
-    CapacityBar.jsx           compact (Focus/Triage) + full (Foundation)
-    BottomNav.jsx             mobile + desktop nav; uses ui-nav / ui-primary utilities
-    HamburgerMenu.jsx         slide-out nav
-    WakeScreen.jsx            5s splash → 60s diary + countdown + health check
-    EditTaskSheet.jsx         shared edit modal (title, notes, due_date, due_time)
-    SnoozeSheet.jsx           snooze date picker (used by Focus, not triage)
-    DomainPicker.jsx          pills + slide-down rule editor for project domains
-    DomainDateWarning.jsx     amber warning when picked date hits disallowed domain day
-    PageState.jsx             PageLoading / PageError / InlineSkeletonCards
-    Card.jsx / Button.jsx / Input.jsx
+    TaskCard.jsx       inline edit, done/snooze; used across surfaces
+    TeaBox.jsx         Focus tea-box bags, ordered by due then due_time
+    EditTaskSheet.jsx  shared edit modal (Focus + others)
+    CapacityBar.jsx    compact + full
+    NudgeModal.jsx / WeeklyInsightCard.jsx   Phase 6 nudge UI
+    WakeScreen.jsx     cold-start splash + diary prompt
+    CafeShelf.jsx      Cafe-theme animated shelf
+    Card / Button / Input / Logo / ConfirmModal / HamburgerMenu / PageState / PageProgress / SnoozeSheet / ProjectBadge
   context/
-    ThemeContext.jsx          manual theme picker; reads aria_theme localStorage; 8 themes registered
+    ThemeContext.jsx   two themes — Cafe (default) + Linen — reads aria_theme localStorage
   utils/
-    dnd.js                    SmartPointerSensor — blocks drag start on inputs/textareas/buttons
-    domain.js                 frontend mirror of next_allowed_date (for warning UI)
-    medicationStore.js        localStorage med name pseudonymization (server stores placeholders)
-    snooze.js                 weekend-aware snooze date math
-```
-
-## Test infrastructure (added 2026-05-17)
-
-153 pytest tests covering every backend route. Runs locally + on CI.
-
-```bash
-cd backend
-python -m pip install -r requirements-dev.txt   # pytest + httpx + tzdata
-python -m pytest tests/ -v
-```
-
-| File | Tests | Covers |
-|------|-------|--------|
-| test_auth.py            | 10 | setup/login/me, password min, expired token, no hashed_password leak |
-| test_domain_utils.py    | 13 | `next_allowed_date` snap, OR rule logic, prompt hint |
-| test_gcal.py            |  7 | sync_today_events, multi-cal loop (regression guard #21), dedup |
-| test_import_csv.py      |  6 | non-csv ext, 5MB cap, title-column required, BOM, date formats |
-| test_medication.py      |  7 | name verbatim, no dose accepted, log idempotency per day |
-| test_migrate.py         |  4 | idempotent re-runs, dose column drop, no-op when absent |
-| test_projects.py        |  5 | AI breakdown (mocked Anthropic), N+1 absence (sqlalchemy event listener) |
-| test_routines.py        | 10 | CRUD, `_is_routine_due` dispatch, lazy instance generation |
-| test_selfcare.py        |  7 | `_compute_capacity`, log upsert, snapshot recompute, daily summary |
-| test_tasks.py           |  8 | cascade date shift, `_find_target` daily caps |
-| test_tasks_lifecycle.py |  9 | `_app_today` tz, carry-forward, snoozes, demote, promote |
-| test_triage.py          | 45 | scoring levers, bin-pack, pins, apply-ordered, resolve-overflow |
-
-CI: `.github/workflows/test.yml` runs full suite on every push + PR to master (Python 3.12, ubuntu-latest, pip cache keyed off requirements-dev.txt).
-
-`conftest.py` provides `db_engine` (in-memory SQLite via `StaticPool`), `db_session`, `client` (FastAPI TestClient with `get_db` override), `primary_user_token`, `auth_headers`. Per-module autouse `_seed_user` fixture for tests that need the primary user without hitting HTTP.
-
-## Theme system (added 2026-05-17, 3.9.21; trimmed 3.9.23)
-
-Manual user-selected themes, 4 registered. Each `[data-theme="..."]` block in `index.css` defines 14 `--aria-*` vars + page-bg gradient + body bg. `color-mix()` derives subtext / border / primary-hover from the palette inputs.
-
-| Theme id          | Label     | Notes |
-|-------------------|-----------|-------|
-| `adhtea`          | Original  | Pixel pride / queer cozy. Has unique SVG starfield page-bg. |
-| `aria-berries`    | Berries   | Cream/plum pastel; 5-color (sky blue badge) |
-| `aria-americano`  | Americano | Cream + navy; cleanest contrast (AAA) |
-| `aria-chai`       | Chai      | Cream + cinnamon brown; 5-color (gray badge) |
-
-`ThemeContext` reads `aria_theme` from localStorage, defaults to `adhtea`, persists on every set, applies `data-theme` to `<html>`. Settings → Display → Theme provides 4-swatch grid; tap = instant swap. Unknown stored ids fall back to `adhtea` automatically.
-
-**Trimmed from initial 8:** Coffee, Tea, Omelette, Mint — user vetoed during palette review. If revived, palette hexes are preserved in commit history.
-
-## Diagnostic workflow (since 2026-05-14)
-
-After any push, the auto-stamped BUILD chip in the top-right confirms which deploy is in the user's browser. To verify from CLI:
-
-```bash
-bash scripts/deploy-check.sh                 # shows live JS/CSS hashes
-curl -sL https://adh-tea.fun/assets/<JS> | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}'
-```
-
-For API state with auth:
-```bash
-bash scripts/aria-api.sh /tasks/today          # any path; bearer auto-injected
-```
-
-Vercel CLI is linked; useful queries:
-```bash
-vercel ls                                      # recent deployments
-vercel inspect <preview-url>                   # commit, status, aliases, build logs
-vercel logs <preview-url>                      # runtime logs
+    dnd.js             SmartPointerSensor (blocks drag on inputs/buttons)
+    medicationStore.js localStorage med-name pseudonymization (server stores placeholders)
+    snooze.js          weekend-aware snooze date math
 ```
 
 ---
 
-## Further roadmap
+## Known issues / next
 
-- **Phase 6** — pattern learning: PowerModelObservation logging, weekly insights, actuator correlations (ActuatorCategory model exists with preset list)
-- **Play Store** — PWA is ready; wrap with Bubblewrap for Android TWA ($25 dev account). iOS via Capacitor ($99/yr).
+1. **Docs cleanup** — `PROJECT.md` (4.0.0) and `SESSION.md` (4.0.72) are stale; this HANDOFF is current. Fold or refresh them when convenient.
+2. **Orphan score columns** — `Task.score`, `score_components`, `score_updated_at`, `pinned_for` remain on the model + are exposed in `TaskResponse`, but nothing writes them now that the scoring engine is gone (they read back null). Left in place to avoid a destructive prod migration; drop them in a deliberate migration if you want them gone. Same for the never-read `max_tasks_per_day`/`max_total_per_day` DB columns (model + validation removed; columns left orphaned in prod).
+3. **Untracked artwork** — `frontend/public/flowers/{tea-cup-full, tea-kettle-full, wood[1-3]-{linen,warm}}.png` are uncommitted and unreferenced. Intended for "started"-state Today artwork; not yet wired. Commit + use or discard.
+4. **Settings visual pass** — pending since May.
+5. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
+6. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix.
+
+Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
+
+## Further roadmap
+- **Play Store** — PWA ready; wrap with Bubblewrap for Android TWA ($25). iOS via Capacitor ($99/yr).

@@ -1,8 +1,7 @@
 import { TAG_COLORS } from '../utils/taskColors'
 import { minutesUntil } from '../utils/timing'
 
-// The box holds at most 15 bags — a fully-triaged day never exceeds the
-// max_total_per_day cap, so this is also the natural display limit.
+// The box holds at most 15 bags — the natural display limit for a day's plan.
 const BOX_CAPACITY = 15
 
 const GOLD = {

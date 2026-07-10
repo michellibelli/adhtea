@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, triage, insights
+from routes import projects, insights
 
 load_dotenv()
 
@@ -92,10 +92,6 @@ def _migrate(target_engine=None):
                 conn.execute(text("DROP TABLE IF EXISTS domains"))
             except Exception:
                 pass
-            if "max_tasks_per_day" not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN max_tasks_per_day INTEGER NOT NULL DEFAULT 10"))
-            if "max_total_per_day" not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN max_total_per_day INTEGER NOT NULL DEFAULT 15"))
             if "rolled_over_on" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN rolled_over_on DATE"))
             if "planned_on" not in users_cols:
@@ -135,12 +131,6 @@ def _migrate(target_engine=None):
             ))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS day_start_hour INTEGER NOT NULL DEFAULT 6"
-            ))
-            conn.execute(text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_tasks_per_day INTEGER NOT NULL DEFAULT 10"
-            ))
-            conn.execute(text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS max_total_per_day INTEGER NOT NULL DEFAULT 15"
             ))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS rolled_over_on DATE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS planned_on DATE"))
@@ -201,7 +191,6 @@ app.include_router(medication.router,  tags=["medication"])
 app.include_router(import_csv.router,  tags=["import"])
 app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
-app.include_router(triage.router)
 app.include_router(insights.router)
 
 
