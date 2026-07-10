@@ -136,16 +136,32 @@ const EMPTY_FORM = {
   mood: null,
 }
 
-export default function SelfCare({ userId, gateMode = false, onComplete }) {
-  const [log,        setLog]        = useState(null)
-  const [capacity,   setCapacity]   = useState(null)
+function formFromLog(log) {
+  if (!log) return EMPTY_FORM
+  return {
+    sleep_hours:      log.sleep_hours,
+    sleep_quality:    log.sleep_quality,
+    meals:            log.meals,
+    exercise:         log.exercise,
+    exercise_minutes: log.exercise_minutes,
+    mood:             log.mood,
+  }
+}
+
+export default function SelfCare({ userId, gateMode = false, onComplete, preloadedLog, preloadedCapacity }) {
+  // When the app shell already fetched the log (the morning gate), seed state
+  // from it and skip the blocking spinner — the form paints instantly and meds
+  // load quietly in the background. Otherwise fall back to a normal blocking load.
+  const hasPreload = preloadedLog !== undefined
+  const [log,        setLog]        = useState(preloadedLog ?? null)
+  const [capacity,   setCapacity]   = useState(preloadedCapacity ?? null)
   const [medication, setMedication] = useState([])
   const [medLogs,    setMedLogs]    = useState({})   // schedule_id → log
-  const [loading,    setLoading]    = useState(true)
+  const [loading,    setLoading]    = useState(!hasPreload)
   const [error,      setError]      = useState(null)
   const [saving,     setSaving]     = useState(false)
   const [saved,      setSaved]      = useState(false)
-  const [form,       setForm]       = useState(EMPTY_FORM)
+  const [form,       setForm]       = useState(() => formFromLog(preloadedLog))
 
   const [showMedForm,   setShowMedForm]   = useState(false)
   const [medForm,       setMedForm]       = useState({ name: '', reminder_times: '' })
@@ -154,8 +170,11 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
   const [checkinDone,   setCheckinDone]   = useState(false)
   const [insightCopy,   setInsightCopy]   = useState(null)
 
-  function fetchAll() {
-    setLoading(true); setError(null)
+  // `background` mode (used when preloaded) refreshes data without the blocking
+  // spinner and without clobbering the form the user may already be editing.
+  function fetchAll(background = false) {
+    if (!background) setLoading(true)
+    setError(null)
     ;(async () => {
       try {
         const [todayLog, cap, rawMeds] = await Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
@@ -163,31 +182,22 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
         setLog(todayLog)
         setCapacity(cap)
         setMedication(meds)
-        if (todayLog) {
-          setForm({
-            sleep_hours:      todayLog.sleep_hours,
-            sleep_quality:    todayLog.sleep_quality,
-            meals:            todayLog.meals,
-            exercise:         todayLog.exercise,
-            exercise_minutes: todayLog.exercise_minutes,
-            mood:             todayLog.mood,
-          })
-        }
+        if (todayLog && !background) setForm(formFromLog(todayLog))
         const ml = {}
         await Promise.all(
           meds.map(m => getMedicationTodayLog(m.id).then(l => { if (l) ml[m.id] = l }))
         )
         setMedLogs(ml)
-      } catch (err) { console.error(err); setError(true) }
+      } catch (err) { console.error(err); if (!background) setError(true) }
       finally {
-        setLoading(false)
+        if (!background) setLoading(false)
         window.dispatchEvent(new Event('aria:page-loaded'))
       }
     })()
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(fetchAll, [])
+  useEffect(() => { fetchAll(hasPreload) }, [])
 
   useEffect(() => {
     if (!gateMode) return
@@ -260,8 +270,8 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
           <div className="mb-5 px-4 py-3 rounded-xl bg-ui-accent/10 border border-ui-accent/30">
             <p className="text-sm font-semibold text-ui-accent">Morning check-in</p>
             <p className="text-xs text-ui-subtext mt-0.5">
-              Quick log first — your capacity for today drives what Triage
-              surfaces next.
+              Quick log first — your capacity for today drives how many tasks
+              land on your plate.
             </p>
             {insightCopy && (
               <p className="text-xs text-ui-text mt-2 pt-2 border-t border-ui-accent/20 leading-relaxed">
@@ -463,7 +473,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete }) {
               onClick={onComplete}
               disabled={!log}
             >
-              {log ? 'Continue → Triage' : 'Log first to continue'}
+              {log ? 'Continue → Today' : 'Log first to continue'}
             </Button>
           </div>
         )}

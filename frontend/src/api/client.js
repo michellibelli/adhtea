@@ -3,7 +3,16 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const TOKEN_KEY = 'aria_token'
 const LAST_SUCCESS_KEY = 'aria_last_api_success'
+const LAST_LOGIN_KEY = 'aria_last_login_date'
 const SLEEP_THRESHOLD_MS = 10 * 60 * 1000  // Render sleeps after 15 min; check at 10
+
+// Local calendar date as YYYY-MM-DD (not UTC — we want the user's day boundary).
+function localDateStr() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -11,6 +20,8 @@ export function getToken() {
 
 export function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token)
+  // Stamp the login date so the app can require a fresh login each morning.
+  localStorage.setItem(LAST_LOGIN_KEY, localDateStr())
 }
 
 export function clearToken() {
@@ -20,6 +31,15 @@ export function clearToken() {
 export function isLoggedIn() {
   if (import.meta.env.DEV) return true
   return !!getToken()
+}
+
+// True when there's a token but the last login wasn't today — the user should
+// re-authenticate once per calendar day (a deliberate morning ritual, and a
+// small security backstop for a shared/found device).
+export function needsMorningLogin() {
+  if (import.meta.env.DEV) return false
+  if (!getToken()) return false
+  return localStorage.getItem(LAST_LOGIN_KEY) !== localDateStr()
 }
 
 function getLastSuccess() {

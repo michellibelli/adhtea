@@ -7,7 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, likelySleeping, warmUp } from './api/client'
+import { isLoggedIn, needsMorningLogin, likelySleeping, warmUp } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { createTask } from './api/tasks'
@@ -97,6 +97,7 @@ function AppShell() {
   const [ready, setReady]                     = useState(false)
   const [showEOD, setShowEOD]                 = useState(false)
   const [showCheckIn, setShowCheckIn]         = useState(false)
+  const [checkInLog, setCheckInLog]           = useState(undefined)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
   const [diaryEntry, setDiaryEntry]           = useState('')
@@ -151,6 +152,7 @@ function AppShell() {
         // on a cold morning, which is exactly the bug we're avoiding.
         try {
           const log = await getTodayLog()
+          setCheckInLog(log)   // hand to the gate so it paints without a 2nd fetch
           const hour = new Date().getHours()
           const isMorningWindow = hour < 14
           if (!log && isMorningWindow) {
@@ -365,6 +367,8 @@ function AppShell() {
         <SelfCare
           userId={user?.id}
           gateMode
+          preloadedLog={checkInLog}
+          preloadedCapacity={capacity}
           onComplete={() => {
             setShowCheckIn(false)
             setScreen('today')
@@ -517,7 +521,8 @@ function AppShell() {
 }
 
 export default function App() {
-  const [authed, setAuthed]           = useState(isLoggedIn())
+  // Require a fresh login each morning even if the 30-day token is still valid.
+  const [authed, setAuthed]           = useState(isLoggedIn() && !needsMorningLogin())
   const [preAuthScreen, setPreAuthScreen] = useState(
     () => window.location.pathname === '/signup' ? 'signup' : 'login'
   )

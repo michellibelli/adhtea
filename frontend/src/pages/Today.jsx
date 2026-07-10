@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { getToday, getInbox, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, scheduleToday, reorderTasks, planDay } from '../api/tasks'
+import { getToday, getInbox, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, scheduleToday, reorderTasks, planDay, createTask } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
@@ -95,6 +95,9 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   const [planned, setPlanned]       = useState(dayPlanned)
   const [applying, setApplying]     = useState(false)
   const planning = !planned
+  // Quick-add row (top of Today section)
+  const [newTitle, setNewTitle]     = useState('')
+  const [adding, setAdding]         = useState(false)
 
   async function handleStartDay() {
     setApplying(true)
@@ -102,6 +105,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     try {
       await planDay()
       onDayPlanned?.()
+      onNavigate?.('focus')   // day committed → jump to Focus to start working
     } catch (err) {
       console.error(err)
       setPlanned(false)       // revert on failure so the ritual can be retried
@@ -205,6 +209,23 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     catch (err) { console.error(err); fetchAll() }
   }
 
+  async function handleQuickAdd() {
+    const title = newTitle.trim()
+    if (!title || adding) return
+    setAdding(true)
+    // Local calendar date (user's day, not UTC) — a due_date <= today lands the
+    // task straight in Today (backend snaps to tomorrow only if Today is full).
+    const d = new Date()
+    const dueToday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    try {
+      const created = await createTask({ title, task_type: 'task', due_date: dueToday })
+      if (created.status === 'today') setTodayTasks(prev => [...prev, created])
+      else setInboxTasks(prev => [created, ...prev])   // Today full → landed in Up Next
+      setNewTitle('')
+    } catch (err) { console.error(err); fetchAll() }
+    finally { setAdding(false) }
+  }
+
   async function handlePromote(task) {
     setInboxTasks(prev => prev.filter(t => t.id !== task.id))
     setTodayTasks(prev => [...prev, task])
@@ -270,6 +291,31 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
             <p className="text-xs text-ui-subtext">Some items carried over from yesterday</p>
           </Card>
         )}
+
+        {/* Quick add — always available; drops the task straight into Today.
+            Enter (or Add) creates it; backend snaps to tomorrow only if full. */}
+        <form onSubmit={(e) => { e.preventDefault(); handleQuickAdd() }} className="mb-4">
+          <div className="flex items-center gap-2 rounded-xl border border-ui-border bg-ui-input px-3 py-2.5 focus-within:border-ui-accent transition-colors">
+            <span className="text-ui-subtext text-lg leading-none select-none">+</span>
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Add a task…"
+              aria-label="Add a task"
+              className="flex-1 bg-transparent text-sm text-ui-text placeholder-ui-subtext/60 outline-none"
+            />
+            {newTitle.trim() && (
+              <button
+                type="submit"
+                disabled={adding}
+                className="text-xs font-semibold text-ui-accent disabled:opacity-50"
+              >
+                {adding ? '…' : 'Add'}
+              </button>
+            )}
+          </div>
+        </form>
 
         {todayTasks.length === 0 && inboxTasks.length === 0 ? (
           <Card className="mt-16 text-center px-8 py-12">
