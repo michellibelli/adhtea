@@ -4,11 +4,27 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const TOKEN_KEY = 'aria_token'
 const LAST_SUCCESS_KEY = 'aria_last_api_success'
 const LAST_LOGIN_KEY = 'aria_last_login_date'
+const DAY_START_KEY = 'aria_day_start_hour'
+const DEFAULT_DAY_START_HOUR = 4   // keep in sync with backend models.py default
 const SLEEP_THRESHOLD_MS = 10 * 60 * 1000  // Render sleeps after 15 min; check at 10
 
-// Local calendar date as YYYY-MM-DD (not UTC — we want the user's day boundary).
-function localDateStr() {
+// Cache the user's rollover hour (from /me) so the pre-auth morning-login gate
+// can compute the same app-day boundary the backend uses.
+export function setDayStartHour(hour) {
+  if (typeof hour === 'number') localStorage.setItem(DAY_START_KEY, String(hour))
+}
+
+function getDayStartHour() {
+  const v = parseInt(localStorage.getItem(DAY_START_KEY) || '', 10)
+  return Number.isFinite(v) ? v : DEFAULT_DAY_START_HOUR
+}
+
+// The user's current app-day as YYYY-MM-DD: local calendar date, rolled back one
+// day when it's before day_start_hour, so everything (tasks, plan, self-care,
+// login) shares a single 4am-style boundary rather than calendar midnight.
+function appDayStr() {
   const d = new Date()
+  if (d.getHours() < getDayStartHour()) d.setDate(d.getDate() - 1)
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${m}-${day}`
@@ -20,8 +36,8 @@ export function getToken() {
 
 export function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token)
-  // Stamp the login date so the app can require a fresh login each morning.
-  localStorage.setItem(LAST_LOGIN_KEY, localDateStr())
+  // Stamp the login app-day so the app can require a fresh login each morning.
+  localStorage.setItem(LAST_LOGIN_KEY, appDayStr())
 }
 
 export function clearToken() {
@@ -39,7 +55,7 @@ export function isLoggedIn() {
 export function needsMorningLogin() {
   if (import.meta.env.DEV) return false
   if (!getToken()) return false
-  return localStorage.getItem(LAST_LOGIN_KEY) !== localDateStr()
+  return localStorage.getItem(LAST_LOGIN_KEY) !== appDayStr()
 }
 
 function getLastSuccess() {

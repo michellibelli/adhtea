@@ -515,7 +515,7 @@ def _user_day_start(user: User) -> datetime:
         tz = ZoneInfo("America/Los_Angeles")
     now_local = datetime.now(tz)
     d = now_local.date()
-    if now_local.hour < (getattr(user, "day_start_hour", 6) or 6):
+    if now_local.hour < (getattr(user, "day_start_hour", 4) or 4):
         d = d - timedelta(days=1)
     return datetime(d.year, d.month, d.day)
 

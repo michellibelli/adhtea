@@ -33,7 +33,7 @@ def _tz(user: User) -> ZoneInfo:
 
 
 def _day_start_hour(user: User) -> int:
-    return getattr(user, "day_start_hour", None) or 6
+    return getattr(user, "day_start_hour", None) or 4
 
 
 def _app_today(user: User) -> date:

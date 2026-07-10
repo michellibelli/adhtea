@@ -7,7 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, needsMorningLogin, likelySleeping, warmUp } from './api/client'
+import { isLoggedIn, needsMorningLogin, setDayStartHour, likelySleeping, warmUp } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { createTask } from './api/tasks'
@@ -120,6 +120,7 @@ function AppShell() {
       .then(async (u) => {
         setUser(u)
         setServerUp(true)
+        setDayStartHour(u.day_start_hour)   // keep the morning-login boundary in sync
 
         if (diaryRef.current.trim()) {
           createTask({

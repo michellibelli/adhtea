@@ -96,6 +96,10 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE users ADD COLUMN rolled_over_on DATE"))
             if "planned_on" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN planned_on DATE"))
+            # Move the day rollover from the old 6am default to 4am (see Postgres
+            # branch note). day_start_hour was never UI-exposed, so 6 == old default.
+            if "day_start_hour" in users_cols:
+                conn.execute(text("UPDATE users SET day_start_hour=4 WHERE day_start_hour=6"))
             # Security: every self-signup used to be created as `primary` (admin).
             # Demote all non-owner primaries to plain members. Owner keeps admin.
             conn.execute(text("UPDATE users SET role='member' WHERE is_owner=0 AND role='primary'"))
@@ -130,8 +134,13 @@ def _migrate(target_engine=None):
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
             ))
             conn.execute(text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS day_start_hour INTEGER NOT NULL DEFAULT 6"
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS day_start_hour INTEGER NOT NULL DEFAULT 4"
             ))
+            # Move the day rollover from the old 6am default to 4am. day_start_hour
+            # was never exposed in any UI, so a stored 6 always means "never
+            # customized" — safe to bump. Matches only old-default rows, so it's a
+            # no-op on every boot after the first.
+            conn.execute(text("UPDATE users SET day_start_hour=4 WHERE day_start_hour=6"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS rolled_over_on DATE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS planned_on DATE"))
             # Security: demote all non-owner primaries (every self-signup used to

@@ -65,10 +65,10 @@ def test_app_today_returns_today_after_day_start(db_session):
     assert result == date(2026, 5, 18)
 
 
-def test_day_start_hour_defaults_to_6():
+def test_day_start_hour_defaults_to_4():
     class _U:
         day_start_hour = None
-    assert _day_start_hour(_U()) == 6
+    assert _day_start_hour(_U()) == 4
 
 
 # ---------------------------------------------------------------------------

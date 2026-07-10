@@ -118,7 +118,7 @@ class User(Base):
     triage_start_hour = Column(Integer, default=8)
     triage_end_hour = Column(Integer, default=12)
     timezone = Column(String(50), default="America/Los_Angeles", nullable=False)
-    day_start_hour = Column(Integer, default=6, nullable=False)   # new day begins at this local hour
+    day_start_hour = Column(Integer, default=4, nullable=False)   # new day begins at this local hour
     alpha_code_version = Column(Integer, default=0, nullable=False)
     is_onboarded = Column(Boolean, default=False, nullable=False)
     # Last app-day the once-per-day rollover sweeps ran for this user. Used as an
