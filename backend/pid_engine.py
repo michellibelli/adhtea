@@ -103,9 +103,45 @@ def _progress_tag(var: str, averages: dict | None) -> str:
     return ""
 
 
-def rank_nudges(pid_state: dict, current_averages: dict | None = None) -> list[dict]:
+def satisfied_today(today_log: dict | None) -> set[str]:
+    """Variables the user has already logged today.
+
+    Micro-nudges ask about *today* ("Have you eaten?"), but they are scored on
+    the week's rolling averages, where one good day barely dents a deficit. So a
+    variable she has already noted in today's self-care log has to be dropped
+    from the ranking outright, or the app nudges her to do a thing she just told
+    it she did. Any entry counts — the questions are yes/no, and the pull toward
+    the actual target lives in the weekly insight, not in the micro-nudge.
+    """
+    if not today_log:
+        return set()
+
+    done = {"checkin"}  # a log row exists at all — that *is* the check-in
+
+    meals = today_log.get("meals")
+    if meals is not None and meals >= 1:
+        done.add("meals")
+
+    if today_log.get("exercise"):
+        done.add("exercise")
+
+    if today_log.get("sleep_hours") is not None:
+        done.add("sleep")
+
+    return done
+
+
+def rank_nudges(
+    pid_state: dict,
+    current_averages: dict | None = None,
+    exclude: set | None = None,
+) -> list[dict]:
+    skip = exclude or set()
     ranked = []
     for var, state in pid_state.items():
+        if var in skip:
+            continue
+
         score = state["score"]
         improving = state["d"] < 0
 

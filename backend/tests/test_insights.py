@@ -278,6 +278,97 @@ class TestGetNudge:
 
 
 # ---------------------------------------------------------------------------
+# Don't nudge for something already logged today
+# ---------------------------------------------------------------------------
+
+class TestTodayLogSuppressesNudge:
+    """The nudge asks about today ("Could you take a short walk today?") but is
+    scored on the week's averages, so a single logged day barely moves it. If
+    today's self-care log isn't consulted, the app nudges her to do a thing she
+    just told it she did."""
+
+    def _log(self, client, auth_headers, **fields):
+        body = {"log_date": date.today().isoformat(), "mood": 3}
+        body.update(fields)
+        client.post("/self-care/log", json=body, headers=auth_headers)
+
+    def test_exercise_logged_today_is_not_nudged(self, client, auth_headers):
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+        # A bad week on every axis — exercise would otherwise rank.
+        self._log(client, auth_headers, sleep_hours=4.0, meals=1, exercise=True)
+        client.post("/insights/compute-weekly", headers=auth_headers)
+
+        r = client.get("/insights/nudge", headers=auth_headers)
+        nudge = r.json()
+        assert nudge is None or nudge["variable"] != "exercise"
+
+    def test_meals_logged_today_is_not_nudged(self, client, auth_headers):
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+        self._log(client, auth_headers, sleep_hours=4.0, meals=1)
+        client.post("/insights/compute-weekly", headers=auth_headers)
+
+        r = client.get("/insights/nudge", headers=auth_headers)
+        nudge = r.json()
+        # One meal is under the 3-meal target, but she noted it — stay quiet.
+        assert nudge is None or nudge["variable"] != "meals"
+
+    def test_full_log_silences_the_nudge_entirely(self, client, auth_headers):
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+        self._log(client, auth_headers, sleep_hours=5.0, meals=2, exercise=True)
+        client.post("/insights/compute-weekly", headers=auth_headers)
+
+        r = client.get("/insights/nudge", headers=auth_headers)
+        assert r.json() is None
+
+    def test_unlogged_variable_still_nudges(self, client, auth_headers):
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+        # Sleep + meals noted, exercise not — exercise is still fair game.
+        self._log(client, auth_headers, sleep_hours=4.0, meals=1, exercise=False)
+        client.post("/insights/compute-weekly", headers=auth_headers)
+
+        r = client.get("/insights/nudge", headers=auth_headers)
+        nudge = r.json()
+        assert nudge is not None
+        assert nudge["variable"] == "exercise"
+
+
+# ---------------------------------------------------------------------------
+# The weekly snapshot has to follow the self-care log
+# ---------------------------------------------------------------------------
+
+class TestSnapshotStaysFresh:
+    def test_snapshot_rebuilds_after_a_new_log(self, client, auth_headers, db_session):
+        """The snapshot used to be written once per week and then frozen, so
+        anything logged later in the week never reached the nudge engine."""
+        today = date.today()
+        client.post("/self-care/log", json={
+            "log_date": today.isoformat(),
+            "sleep_hours": 4.0,
+            "meals": 1,
+            "mood": 2,
+        }, headers=auth_headers)
+
+        first = client.get("/insights/weekly", headers=auth_headers).json()
+        assert first["avg_sleep"] == 4.0
+
+        # She logs a better night — same week, after the snapshot exists.
+        client.post("/self-care/log", json={
+            "log_date": today.isoformat(),
+            "sleep_hours": 9.0,
+            "meals": 3,
+            "mood": 4,
+        }, headers=auth_headers)
+
+        second = client.get("/insights/weekly", headers=auth_headers).json()
+        assert second["avg_sleep"] == 9.0, "snapshot went stale — new log ignored"
+        assert second["avg_meals"] == 3.0
+
+
+# ---------------------------------------------------------------------------
 # /insights/nudge/{id}/respond
 # ---------------------------------------------------------------------------
 

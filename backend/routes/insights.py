@@ -13,7 +13,9 @@ from models import (
 from schemas import WeeklySnapshotResponse, NudgeResponse, NudgeRespondRequest
 from routes.auth import get_current_user
 from scoring import project_stall_map
-from pid_engine import compute_pid_state, rank_nudges, generate_weekly_insight
+from pid_engine import (
+    compute_pid_state, rank_nudges, generate_weekly_insight, satisfied_today,
+)
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 
@@ -192,8 +194,31 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
 
 
 def _ensure_current_snapshot(db: Session, user: User) -> WeeklySnapshot | None:
+    """Build this week's snapshot, or rebuild it if self-care has been logged since.
+
+    The snapshot is the only thing /nudge and /weekly read. It used to be written
+    once — the first time the week was touched — and then left alone, so every
+    self-care entry logged after that was invisible to the nudge engine for the
+    rest of the week. Recompute whenever a log in the window is newer than the
+    snapshot; there is no cron, so this lazy path is the only thing keeping the
+    numbers honest.
+    """
     today = _user_today(user)
     ws = _week_start(today)
+    window_end = min(ws + timedelta(days=6), today)
+
+    latest_log_at = (
+        db.query(func.max(SelfCareLog.logged_at))
+        .filter(
+            SelfCareLog.user_id == user.id,
+            SelfCareLog.log_date >= ws,
+            SelfCareLog.log_date <= window_end,
+        )
+        .scalar()
+    )
+    if latest_log_at is None:
+        return None
+
     existing = (
         db.query(WeeklySnapshot)
         .filter(
@@ -202,19 +227,9 @@ def _ensure_current_snapshot(db: Session, user: User) -> WeeklySnapshot | None:
         )
         .first()
     )
-    if existing:
+    if existing and existing.computed_at and existing.computed_at >= latest_log_at:
         return None
-    has_logs = (
-        db.query(SelfCareLog.id)
-        .filter(
-            SelfCareLog.user_id == user.id,
-            SelfCareLog.log_date >= ws,
-            SelfCareLog.log_date <= min(ws + timedelta(days=6), today),
-        )
-        .first()
-    )
-    if not has_logs:
-        return None
+
     snap, _ = _compute_snapshot(db, user, ws)
     return snap
 
@@ -320,7 +335,27 @@ def get_nudge(
         "checkin_days": snap.check_in_days or 0,
         "weekdays": snap.weekdays_in_period or 5,
     }
-    ranked = rank_nudges(pid_state, averages)
+
+    # Never nudge for something she already logged today.
+    today_log = (
+        db.query(SelfCareLog)
+        .filter(
+            SelfCareLog.user_id == current_user.id,
+            SelfCareLog.log_date == today,
+        )
+        .first()
+    )
+    handled = satisfied_today(
+        {
+            "meals": today_log.meals,
+            "exercise": today_log.exercise,
+            "sleep_hours": today_log.sleep_hours,
+        }
+        if today_log
+        else None
+    )
+
+    ranked = rank_nudges(pid_state, averages, exclude=handled)
     if not ranked:
         return None
 
