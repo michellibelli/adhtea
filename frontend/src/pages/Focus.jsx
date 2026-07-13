@@ -4,7 +4,8 @@ import SnoozeSheet from '../components/SnoozeSheet'
 import EditTaskSheet from '../components/EditTaskSheet'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import { minutesUntil, isTimedVisible } from '../utils/timing'
+import { isTimedVisible } from '../utils/timing'
+import { orderTasks } from '../utils/ordering'
 import TeaBox from '../components/TeaBox'
 import { PageError } from '../components/PageState'
 import NudgeModal from '../components/NudgeModal'
@@ -81,35 +82,14 @@ function tagDateLabel(task) {
   return null
 }
 
-function isImminent(task) {
-  if (!task.due_time) return false
-  if (task.task_type !== 'appointment' && task.task_type !== 'routine') return false
-  return minutesUntil(task.due_time) <= 5
-}
-
 function pickNext(tasks) {
-  // Step 1 — apply the time-of-day window. Appointments + routines only
-  // appear near their due time (see utils/timing.js for the windows).
+  // Step 1 — apply the time-of-day window. Appointments only appear near their
+  // due time (see utils/timing.js for the windows).
   const visible = tasks.filter(isTimedVisible)
 
-  // Step 2 — sort priorities (top wins):
-  //   1. Imminent timed items (≤ 5 min away) — always trump everything else
-  //   2. sort_order — user's manual priority from triage
-  const copy = [...visible]
-  copy.sort((a, b) => {
-    const aImm = isImminent(a)
-    const bImm = isImminent(b)
-    if (aImm && !bImm) return -1
-    if (bImm && !aImm) return 1
-    // Routines float above regular tasks only when due or overdue.
-    const aRtnDue = a.task_type === 'routine' && (!a.due_time || minutesUntil(a.due_time) <= 5)
-    const bRtnDue = b.task_type === 'routine' && (!b.due_time || minutesUntil(b.due_time) <= 5)
-    if (aRtnDue && !bRtnDue) return -1
-    if (bRtnDue && !aRtnDue) return 1
-    return (a.sort_order ?? 999) - (b.sort_order ?? 999)
-  })
-
-  return copy[0] ?? null  // null means the list is empty → show "all done" celebration
+  // Step 2 — take the top of the shared today-order, the same order the tea-box
+  // packs its bags in (see utils/ordering.js).
+  return orderTasks(visible)[0] ?? null  // null → list empty → "all done" celebration
 }
 
 // localStorage key for today's completed-bonus-task count — drives the gold

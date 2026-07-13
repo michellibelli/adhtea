@@ -1,5 +1,5 @@
 import { TAG_COLORS } from '../utils/taskColors'
-import { minutesUntil } from '../utils/timing'
+import { orderTasks } from '../utils/ordering'
 
 // The box holds at most 15 bags — the natural display limit for a day's plan.
 const BOX_CAPACITY = 15
@@ -10,24 +10,10 @@ const GOLD = {
   shadow: '#7C5912',
 }
 
-// Order bags: due/overdue routines first, then earlier clock time (so the box
-// reads morning → evening), then triage priority. Untimed items sort after
-// timed ones and fall back to sort_order.
-function isRoutineDue(t) {
-  return t.task_type === 'routine' && (!t.due_time || minutesUntil(t.due_time) <= 5)
-}
+// Bags sit in the shared today-order (see utils/ordering.js) — the same order
+// Focus picks from, so the focused task is the first selectable bag.
 function orderedBags(tasks) {
-  return [...tasks]
-    .sort((a, b) => {
-      const aDue = isRoutineDue(a) ? 0 : 1
-      const bDue = isRoutineDue(b) ? 0 : 1
-      if (aDue !== bDue) return aDue - bDue
-      const at = a.due_time || '99:99'
-      const bt = b.due_time || '99:99'
-      if (at !== bt) return at.localeCompare(bt)
-      return (a.sort_order ?? 999) - (b.sort_order ?? 999)
-    })
-    .slice(0, BOX_CAPACITY)
+  return orderTasks(tasks).slice(0, BOX_CAPACITY)
 }
 
 // One bag in the box. `gold` bags are completed bonus tasks — decorative,
