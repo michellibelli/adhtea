@@ -3,32 +3,15 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const TOKEN_KEY = 'aria_token'
 const LAST_SUCCESS_KEY = 'aria_last_api_success'
-const LAST_LOGIN_KEY = 'aria_last_login_date'
-const DAY_START_KEY = 'aria_day_start_hour'
-const DEFAULT_DAY_START_HOUR = 4   // keep in sync with backend models.py default
+const LAST_LOGIN_KEY = 'aria_last_login_at'
+// A login is good for this long, measured from the login itself. This used to be
+// pinned to the app-day boundary instead, which gave the session a deadline
+// rather than a duration: logging in at 9am bought 19 hours, logging in at 8pm
+// bought 8, and logging in at 2am bought 2. The day-start hour is still the
+// backend's rollover boundary for tasks and self-care — it just no longer has
+// anything to do with staying signed in.
+const LOGIN_MAX_AGE_MS = 20 * 60 * 60 * 1000
 const SLEEP_THRESHOLD_MS = 10 * 60 * 1000  // Render sleeps after 15 min; check at 10
-
-// Cache the user's rollover hour (from /me) so the pre-auth morning-login gate
-// can compute the same app-day boundary the backend uses.
-export function setDayStartHour(hour) {
-  if (typeof hour === 'number') localStorage.setItem(DAY_START_KEY, String(hour))
-}
-
-function getDayStartHour() {
-  const v = parseInt(localStorage.getItem(DAY_START_KEY) || '', 10)
-  return Number.isFinite(v) ? v : DEFAULT_DAY_START_HOUR
-}
-
-// The user's current app-day as YYYY-MM-DD: local calendar date, rolled back one
-// day when it's before day_start_hour, so everything (tasks, plan, self-care,
-// login) shares a single 4am-style boundary rather than calendar midnight.
-function appDayStr() {
-  const d = new Date()
-  if (d.getHours() < getDayStartHour()) d.setDate(d.getDate() - 1)
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
-}
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -36,8 +19,8 @@ export function getToken() {
 
 export function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token)
-  // Stamp the login app-day so the app can require a fresh login each morning.
-  localStorage.setItem(LAST_LOGIN_KEY, appDayStr())
+  // Stamp the login time so the app can retire the session ~a day later.
+  localStorage.setItem(LAST_LOGIN_KEY, String(Date.now()))
 }
 
 export function clearToken() {
@@ -49,13 +32,18 @@ export function isLoggedIn() {
   return !!getToken()
 }
 
-// True when there's a token but the last login wasn't today — the user should
-// re-authenticate once per calendar day (a deliberate morning ritual, and a
-// small security backstop for a shared/found device).
-export function needsMorningLogin() {
+// True when the token is older than LOGIN_MAX_AGE_MS and should be re-entered —
+// a small security backstop for a shared or found device. The server token itself
+// is good for 30 days; this is the shorter client-side leash.
+//
+// An unparseable stamp means either a pre-4.9.7 login (the stamp used to be a
+// date string) or a wiped stamp, so ask for the password once and move on.
+export function loginExpired() {
   if (import.meta.env.DEV) return false
   if (!getToken()) return false
-  return localStorage.getItem(LAST_LOGIN_KEY) !== appDayStr()
+  const at = parseInt(localStorage.getItem(LAST_LOGIN_KEY) || '', 10)
+  if (!Number.isFinite(at)) return true
+  return Date.now() - at > LOGIN_MAX_AGE_MS
 }
 
 function getLastSuccess() {

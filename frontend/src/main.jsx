@@ -4,20 +4,22 @@ import './index.css'
 import App from './App.jsx'
 
 // On new build: wipe stale localStorage so bug fixes reach users who haven't
-// manually cleared. Preserves the three irreplaceables: aria_token (session),
+// manually cleared. Preserves the irreplaceables: aria_token (session),
+// aria_last_login_at (dropping it forced a fresh login on every single deploy),
 // aria_theme (user pick), med_name_* (real medication names live ONLY here —
 // server has placeholders, wipe = permanent data loss).
 const BUILD = __BUILD_TIME__
+const KEEP_ON_BUILD_CHANGE = ['aria_token', 'aria_last_login_at', 'aria_theme']
 const prevBuild = localStorage.getItem('aria_build')
 if (prevBuild && prevBuild !== BUILD) {
-  const token = localStorage.getItem('aria_token')
-  const theme = localStorage.getItem('aria_theme')
-  const medKeys = Object.keys(localStorage).filter(k => k.startsWith('med_name_'))
-  const medPairs = medKeys.map(k => [k, localStorage.getItem(k)])
+  const kept = KEEP_ON_BUILD_CHANGE.map(k => [k, localStorage.getItem(k)])
+  const medPairs = Object.keys(localStorage)
+    .filter(k => k.startsWith('med_name_'))
+    .map(k => [k, localStorage.getItem(k)])
   localStorage.clear()
-  if (token) localStorage.setItem('aria_token', token)
-  if (theme) localStorage.setItem('aria_theme', theme)
-  for (const [k, v] of medPairs) localStorage.setItem(k, v)
+  for (const [k, v] of [...kept, ...medPairs]) {
+    if (v !== null) localStorage.setItem(k, v)
+  }
 }
 localStorage.setItem('aria_build', BUILD)
 

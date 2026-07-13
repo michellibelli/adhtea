@@ -7,7 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, needsMorningLogin, setDayStartHour, likelySleeping, warmUp } from './api/client'
+import { isLoggedIn, loginExpired, likelySleeping, warmUp } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { createTask } from './api/tasks'
@@ -120,7 +120,6 @@ function AppShell() {
       .then(async (u) => {
         setUser(u)
         setServerUp(true)
-        setDayStartHour(u.day_start_hour)   // keep the morning-login boundary in sync
 
         if (diaryRef.current.trim()) {
           createTask({
@@ -523,7 +522,7 @@ function AppShell() {
 
 export default function App() {
   // Require a fresh login each morning even if the 30-day token is still valid.
-  const [authed, setAuthed]           = useState(isLoggedIn() && !needsMorningLogin())
+  const [authed, setAuthed]           = useState(isLoggedIn() && !loginExpired())
   const [preAuthScreen, setPreAuthScreen] = useState(
     () => window.location.pathname === '/signup' ? 'signup' : 'login'
   )
