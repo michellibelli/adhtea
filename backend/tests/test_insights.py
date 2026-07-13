@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from models import SelfCareLog, CapacitySnapshot, Task, TaskStatus, TaskType, WeeklySnapshot, NudgeLog
+from routes.insights import NUDGE_DAILY_CAP
 from pid_engine import compute_pid_state, rank_nudges, generate_weekly_insight, TARGETS
 
 
@@ -257,7 +258,7 @@ class TestGetNudge:
                 r = client.get("/insights/nudge", headers=auth_headers)
                 results.append(r.json())
             non_null = [r for r in results if r is not None]
-            assert len(non_null) == 3
+            assert len(non_null) == NUDGE_DAILY_CAP == 1
 
     def test_weekend_returns_null(self, client, auth_headers):
         self._setup_snapshot(client, auth_headers)
@@ -413,3 +414,88 @@ class TestRespondNudge:
             headers=auth_headers,
         )
         assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Nudge frequency: one a day, and a dismissal means "not now"
+# ---------------------------------------------------------------------------
+
+class TestNudgeRestraint:
+    """Three nudges a day trained her to swat the modal shut without reading it.
+    A nudge she doesn't read is a nudge that can't work."""
+
+    def _bad_week(self, client, auth_headers):
+        # Nothing logged today, so nothing is suppressed by recency.
+        yesterday = date.today() - timedelta(days=1)
+        client.post("/self-care/log", json={
+            "log_date": yesterday.isoformat(),
+            "sleep_hours": 4.0, "meals": 1, "mood": 2,
+        }, headers=auth_headers)
+        client.post("/insights/compute-weekly", headers=auth_headers)
+
+    def test_dismissed_variable_goes_quiet(self, client, auth_headers):
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+        self._bad_week(client, auth_headers)
+
+        first = client.get("/insights/nudge", headers=auth_headers).json()
+        assert first is not None
+        client.post(f"/insights/nudge/{first['id']}/respond",
+                    json={"response": "dismissed"}, headers=auth_headers)
+
+        # Same day, cap and cooldown lifted: it must not come back with the same ask.
+        with patch("routes.insights.NUDGE_COOLDOWN_SECONDS", 0), \
+             patch("routes.insights.NUDGE_DAILY_CAP", 99):
+            again = client.get("/insights/nudge", headers=auth_headers).json()
+
+        assert again is None or again["variable"] != first["variable"]
+
+    def test_an_affirmative_answer_does_not_mute_the_variable(self, client, auth_headers):
+        # Only a dismissal backs off. Saying "on it" isn't a request for silence.
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+        self._bad_week(client, auth_headers)
+
+        first = client.get("/insights/nudge", headers=auth_headers).json()
+        client.post(f"/insights/nudge/{first['id']}/respond",
+                    json={"response": "yes"}, headers=auth_headers)
+
+        with patch("routes.insights.NUDGE_COOLDOWN_SECONDS", 0), \
+             patch("routes.insights.NUDGE_DAILY_CAP", 99):
+            again = client.get("/insights/nudge", headers=auth_headers).json()
+
+        assert again is not None
+        assert again["variable"] == first["variable"]
+
+
+class TestExerciseRecency:
+    def test_exercising_yesterday_silences_todays_exercise_nudge(self, client, auth_headers):
+        """The target is 4 days a week — every other day — so having moved
+        yesterday is a fine reason not to be asked about it today."""
+        if date.today().weekday() >= 5:
+            pytest.skip("Test requires weekday")
+
+        yesterday = date.today() - timedelta(days=1)
+        client.post("/self-care/log", json={
+            "log_date": yesterday.isoformat(),
+            "sleep_hours": 4.0, "meals": 1, "exercise": True, "mood": 3,
+        }, headers=auth_headers)
+        client.post("/insights/compute-weekly", headers=auth_headers)
+
+        r = client.get("/insights/nudge", headers=auth_headers).json()
+        assert r is None or r["variable"] != "exercise"
+
+    def test_exercise_two_days_ago_does_not_silence_it(self):
+        # The window is one day. Two days without moving is worth asking about.
+        from pid_engine import satisfied_recently
+        handled = satisfied_recently({2: {"meals": 3, "sleep_hours": 8.0, "exercise": True}})
+        assert "exercise" not in handled
+
+    def test_sleep_and_meals_do_not_carry_over_from_yesterday(self, client, auth_headers):
+        # They reset daily — eating yesterday is not eating today.
+        from pid_engine import satisfied_recently
+        handled = satisfied_recently({1: {"meals": 3, "sleep_hours": 8.0, "exercise": True}})
+        assert "exercise" in handled
+        assert "meals" not in handled
+        assert "sleep" not in handled
+        assert "checkin" not in handled

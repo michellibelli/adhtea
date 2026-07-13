@@ -103,30 +103,50 @@ def _progress_tag(var: str, averages: dict | None) -> str:
     return ""
 
 
-def satisfied_today(today_log: dict | None) -> set[str]:
-    """Variables the user has already logged today.
+# How recently a variable has to have been logged before nudging about it is just
+# noise. Sleep and meals reset daily, so only today counts. Exercise doesn't: the
+# target is 4 days a week — every other day — so having moved yesterday is a fine
+# reason not to be asked about it today.
+RECENCY_DAYS = {
+    "sleep": 0,
+    "meals": 0,
+    "checkin": 0,
+    "exercise": 1,
+}
 
-    Micro-nudges ask about *today* ("Have you eaten?"), but they are scored on
-    the week's rolling averages, where one good day barely dents a deficit. So a
-    variable she has already noted in today's self-care log has to be dropped
-    from the ranking outright, or the app nudges her to do a thing she just told
-    it she did. Any entry counts — the questions are yes/no, and the pull toward
-    the actual target lives in the weekly insight, not in the micro-nudge.
+
+def satisfied_recently(logs_by_age: dict[int, dict]) -> set[str]:
+    """Variables already handled recently enough that nudging is noise.
+
+    `logs_by_age` maps days-ago (0 = today) to that day's self-care log.
+
+    Micro-nudges ask about *now* ("Have you eaten?"), but they are scored on the
+    week's rolling averages, where one good day barely dents a deficit. So a
+    variable she has already noted has to be dropped from the ranking outright, or
+    the app nudges her to do a thing she just told it she did. Any entry counts —
+    the questions are yes/no, and the pull toward the actual target lives in the
+    weekly insight, not in the micro-nudge.
     """
-    if not today_log:
-        return set()
+    done = set()
 
-    done = {"checkin"}  # a log row exists at all — that *is* the check-in
+    for var, window in RECENCY_DAYS.items():
+        for age in range(window + 1):
+            log = logs_by_age.get(age)
+            if not log:
+                continue
 
-    meals = today_log.get("meals")
-    if meals is not None and meals >= 1:
-        done.add("meals")
-
-    if today_log.get("exercise"):
-        done.add("exercise")
-
-    if today_log.get("sleep_hours") is not None:
-        done.add("sleep")
+            if var == "checkin":
+                done.add(var)   # a log row exists at all — that *is* the check-in
+            elif var == "meals":
+                meals = log.get("meals")
+                if meals is not None and meals >= 1:
+                    done.add(var)
+            elif var == "exercise":
+                if log.get("exercise"):
+                    done.add(var)
+            elif var == "sleep":
+                if log.get("sleep_hours") is not None:
+                    done.add(var)
 
     return done
 

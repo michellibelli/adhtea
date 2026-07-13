@@ -193,7 +193,9 @@ export default function Focus({ onGoToList, onNavigate }) {
   }
 
   function nudgeCooldownOk() {
-    const COOLDOWN_MS = 2 * 60 * 60 * 1000
+    // Keep in sync with NUDGE_COOLDOWN_SECONDS in routes/insights.py. The server
+    // enforces this too (and a one-a-day cap); this just avoids the round trip.
+    const COOLDOWN_MS = 6 * 60 * 60 * 1000
     const last = Number(localStorage.getItem('aria_last_nudge_ts') || '0')
     return Date.now() - last >= COOLDOWN_MS
   }

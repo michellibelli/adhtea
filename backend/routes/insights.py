@@ -14,13 +14,21 @@ from schemas import WeeklySnapshotResponse, NudgeResponse, NudgeRespondRequest
 from routes.auth import get_current_user
 from scoring import project_stall_map
 from pid_engine import (
-    compute_pid_state, rank_nudges, generate_weekly_insight, satisfied_today,
+    compute_pid_state, rank_nudges, generate_weekly_insight, satisfied_recently,
+    RECENCY_DAYS,
 )
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 
-NUDGE_COOLDOWN_SECONDS = 2 * 60 * 60
-NUDGE_DAILY_CAP = 3
+# One nudge a day, at most. Three a day on a two-hour cooldown trained her to swat
+# the modal shut without reading it, which is worse than not nudging at all — a
+# nudge she doesn't read is a nudge that can't work.
+NUDGE_COOLDOWN_SECONDS = 6 * 60 * 60
+NUDGE_DAILY_CAP = 1
+
+# A dismissal is an answer: not now. Asking about the same thing again tomorrow is
+# how a nudge becomes wallpaper, so a dismissed variable goes quiet for a few days.
+DISMISSAL_BACKOFF_DAYS = 3
 
 
 def _tz(user: User) -> ZoneInfo:
@@ -336,24 +344,41 @@ def get_nudge(
         "weekdays": snap.weekdays_in_period or 5,
     }
 
-    # Never nudge for something she already logged today.
-    today_log = (
+    # Never nudge for something she already logged recently — today for sleep,
+    # meals and the check-in; today or yesterday for exercise.
+    lookback = max(RECENCY_DAYS.values())
+    logs = (
         db.query(SelfCareLog)
         .filter(
             SelfCareLog.user_id == current_user.id,
-            SelfCareLog.log_date == today,
+            SelfCareLog.log_date >= today - timedelta(days=lookback),
+            SelfCareLog.log_date <= today,
         )
-        .first()
+        .all()
     )
-    handled = satisfied_today(
-        {
-            "meals": today_log.meals,
-            "exercise": today_log.exercise,
-            "sleep_hours": today_log.sleep_hours,
+    logs_by_age = {
+        (today - l.log_date).days: {
+            "meals": l.meals,
+            "exercise": l.exercise,
+            "sleep_hours": l.sleep_hours,
         }
-        if today_log
-        else None
+        for l in logs
+    }
+    handled = satisfied_recently(logs_by_age)
+
+    # A dismissal is an answer. Stay off that subject for a few days.
+    backoff_cutoff = now - timedelta(days=DISMISSAL_BACKOFF_DAYS)
+    dismissed = (
+        db.query(NudgeLog.variable)
+        .filter(
+            NudgeLog.user_id == current_user.id,
+            NudgeLog.response == "dismissed",
+            NudgeLog.response_at > backoff_cutoff,
+        )
+        .distinct()
+        .all()
     )
+    handled |= {v for (v,) in dismissed}
 
     ranked = rank_nudges(pid_state, averages, exclude=handled)
     if not ranked:
