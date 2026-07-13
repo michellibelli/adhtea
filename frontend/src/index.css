@@ -786,7 +786,9 @@ body {
 }
 .tag-wc-inner {
   position: relative;
-  padding: 10px 14px 14px;
+  /* Bottom padding reserves the strip the corner actions sit in, so the date line
+     can't collide with them on a 130px tag. */
+  padding: 10px 14px 26px;
   text-align: center;
   border-radius: 10px;
   overflow: hidden;
@@ -867,6 +869,50 @@ body {
   display: block;
   margin-top: 2px;
 }
+
+/* Corner actions on the tag: pencil bottom-left, snooze bottom-right. These are
+   the only things on the tag that act — tapping the tag itself does nothing, so a
+   stray brush of the card can't open a sheet. Sit outside .tag-wc-inner because
+   that clips (overflow: hidden) for the paper grain. */
+.tag-wc .tag-corner {
+  position: absolute;
+  bottom: 3px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--wash-dark);
+  opacity: 0.5;
+  cursor: pointer;
+  z-index: 7;
+  transition: opacity 140ms ease, transform 140ms ease, background 140ms ease;
+  /* Touch targets on a 130px tag are tight; pad the hit area past the paint. */
+  -webkit-tap-highlight-color: transparent;
+}
+.tag-wc .tag-corner svg {
+  width: 14px;
+  height: 14px;
+}
+.tag-wc .tag-corner:hover:not(:disabled),
+.tag-wc .tag-corner:focus-visible:not(:disabled) {
+  opacity: 1;
+  background: color-mix(in srgb, var(--wash-dark) 12%, transparent);
+}
+.tag-wc .tag-corner:active:not(:disabled) {
+  transform: scale(0.88);
+  opacity: 1;
+}
+.tag-wc .tag-corner:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+.tag-wc .tag-corner-left  { left: 2px; }
+.tag-wc .tag-corner-right { right: 2px; }
 
 /* Painted dot where string meets tag */
 .tag-wc .tag-dot {

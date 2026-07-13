@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useContext } from 'react'
 import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
+import { resolveSnoozeDate } from '../utils/snooze'
 import EditTaskSheet from '../components/EditTaskSheet'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -80,6 +81,10 @@ function tagDateLabel(task) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
   return null
+}
+
+function tomorrowISO() {
+  return resolveSnoozeDate('tomorrow').toISOString()
 }
 
 function pickNext(tasks) {
@@ -373,12 +378,7 @@ export default function Focus({ onGoToList, onNavigate }) {
                 const name = isProject ? 'Project' : (TAG_NAMES[task?.task_type] || 'Task')
                 const fs = name.length <= 4 ? 20 : name.length <= 5 ? 18 : 16
                 return (
-                  <div
-                    className={`tag-wc wc-${wcType}`}
-                    onClick={() => !celebrate && setShowEdit(true)}
-                    title="Edit task"
-                    style={{ cursor: celebrate ? 'default' : 'pointer' }}
-                  >
+                  <div className={`tag-wc wc-${wcType}`}>
                     <div className="edge-bleed" />
                     <div className="tag-wc-inner">
                       <div className="tag-wc-speckles" style={{ backgroundImage: makeSpeckles(task?.id) }} />
@@ -390,6 +390,36 @@ export default function Focus({ onGoToList, onNavigate }) {
                       )}
                       {!isProject && tagDateLabel(task) && <span className="tag-date">{tagDateLabel(task)}</span>}
                     </div>
+
+                    {/* Corner actions. The whole tag used to be one big edit
+                        target, which made an accidental brush of the card open a
+                        sheet; the two corners are now the only things that act. */}
+                    <button
+                      className="tag-corner tag-corner-left"
+                      onClick={() => !celebrate && setShowEdit(true)}
+                      disabled={celebrate}
+                      aria-label="Edit task"
+                      title="Edit task"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                    <button
+                      className="tag-corner tag-corner-right"
+                      onClick={() => !celebrate && handleSnooze(tomorrowISO())}
+                      disabled={celebrate}
+                      aria-label="Snooze until tomorrow"
+                      title="Snooze until tomorrow"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="13" r="8" />
+                        <path d="M12 9v4l2.5 1.5" />
+                        <path d="M5 3 2.5 5.5M19 3l2.5 2.5" />
+                      </svg>
+                    </button>
+
                     <div className="tag-dot" />
                   </div>
                 )
@@ -452,11 +482,7 @@ export default function Focus({ onGoToList, onNavigate }) {
             {isBonusMode && !celebrate && (
               <div className="bonus-skip-wrap">
                 <div className="bonus-skip-tail left" />
-                <button className="bonus-skip" onClick={() => {
-                  const tomorrow = new Date()
-                  tomorrow.setDate(tomorrow.getDate() + 1)
-                  handleSnooze(tomorrow.toISOString().split('T')[0])
-                }}>
+                <button className="bonus-skip" onClick={() => handleSnooze(tomorrowISO())}>
                   <span>not now</span>
                 </button>
                 <div className="bonus-skip-tail right" />
