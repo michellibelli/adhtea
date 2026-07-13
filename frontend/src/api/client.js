@@ -3,28 +3,27 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const TOKEN_KEY = 'aria_token'
 const LAST_SUCCESS_KEY = 'aria_last_api_success'
-const LAST_LOGIN_KEY = 'aria_last_login_at'
-// A login is good for this long, measured from the login itself. This used to be
-// pinned to the app-day boundary instead, which gave the session a deadline
-// rather than a duration: logging in at 9am bought 19 hours, logging in at 8pm
-// bought 8, and logging in at 2am bought 2. The day-start hour is still the
-// backend's rollover boundary for tasks and self-care — it just no longer has
-// anything to do with staying signed in.
-const LOGIN_MAX_AGE_MS = 20 * 60 * 60 * 1000
+const EXPIRES_KEY = 'aria_session_expires_at'
 const SLEEP_THRESHOLD_MS = 10 * 60 * 1000  // Render sleeps after 15 min; check at 10
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-export function setToken(token) {
+// The server decides when a session dies — the user's next 4am — and hands the
+// moment back at login. Storing it (rather than recomputing a boundary here) keeps
+// the client from having to know about timezones or the day-start hour at all, and
+// means the two can't drift apart.
+export function setToken(token, expiresAt) {
   localStorage.setItem(TOKEN_KEY, token)
-  // Stamp the login time so the app can retire the session ~a day later.
-  localStorage.setItem(LAST_LOGIN_KEY, String(Date.now()))
+  const ms = expiresAt ? Date.parse(expiresAt.endsWith('Z') ? expiresAt : `${expiresAt}Z`) : NaN
+  if (Number.isFinite(ms)) localStorage.setItem(EXPIRES_KEY, String(ms))
+  else localStorage.removeItem(EXPIRES_KEY)
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(EXPIRES_KEY)
 }
 
 export function isLoggedIn() {
@@ -32,18 +31,17 @@ export function isLoggedIn() {
   return !!getToken()
 }
 
-// True when the token is older than LOGIN_MAX_AGE_MS and should be re-entered —
-// a small security backstop for a shared or found device. The server token itself
-// is good for 30 days; this is the shorter client-side leash.
+// True when the stored session has reached its expiry, so the app can show the
+// login screen up front instead of firing a request that 401s and reloads. The
+// server enforces the same moment; this only saves the round trip.
 //
-// An unparseable stamp means either a pre-4.9.7 login (the stamp used to be a
-// date string) or a wiped stamp, so ask for the password once and move on.
+// A missing expiry means a login from before 4.9.8, so ask once and move on.
 export function loginExpired() {
   if (import.meta.env.DEV) return false
   if (!getToken()) return false
-  const at = parseInt(localStorage.getItem(LAST_LOGIN_KEY) || '', 10)
+  const at = parseInt(localStorage.getItem(EXPIRES_KEY) || '', 10)
   if (!Number.isFinite(at)) return true
-  return Date.now() - at > LOGIN_MAX_AGE_MS
+  return Date.now() >= at
 }
 
 function getLastSuccess() {

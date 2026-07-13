@@ -20,6 +20,7 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     token: str
+    expires_at: datetime   # UTC; the client re-prompts at this moment instead of waiting for a 401
     user_id: int
     name: str
     role: UserRole

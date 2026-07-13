@@ -2,6 +2,7 @@ import secrets
 import hashlib
 import bcrypt
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -24,8 +25,9 @@ from schemas import (
 router = APIRouter()
 security = HTTPBearer()
 
-# How long a login session stays valid before the user must log in again
-TOKEN_EXPIRY_DAYS = 30
+# Sessions expire at the user's day_start_hour (4am), not after a fixed span — see
+# _session_expiry. A login closer than this to the boundary rolls to the next day.
+MIN_SESSION_HOURS = 4
 
 
 def _get_or_init_config(db: Session) -> SiteConfig:
@@ -46,19 +48,42 @@ def _hash_token(token_str: str) -> str:
     return hashlib.sha256(token_str.encode()).hexdigest()
 
 
-def _make_session(user_id: int, db: Session) -> str:
-    """Create a new auth token for user_id, store its HASH in the DB, and return the
-    raw token string (shown to the client once).
+def _session_expiry(user: User) -> datetime:
+    """When a session opened right now should die: the user's next day_start_hour
+    (4am by default), in their own timezone, returned as naive UTC to match the
+    SessionToken.expires_at column.
 
-    The token is a 64-character random hex string (32 bytes of entropy).
-    It expires after TOKEN_EXPIRY_DAYS days. The frontend stores it in localStorage
-    and sends it as a Bearer token on every API request; the server hashes the
-    incoming token to look up the session.
+    Sessions end at the same boundary the day itself rolls over on, so signing in
+    is part of the morning, not a thing that happens at a random hour. The floor
+    is the one concession: a login less than MIN_SESSION_HOURS before the boundary
+    would otherwise buy a session measured in minutes, so it rolls to the next day
+    instead — sign in at 3:50am and you are good until 4am tomorrow, not 4am today.
+    """
+    tz = ZoneInfo(user.timezone or "America/Los_Angeles")
+    hour = user.day_start_hour if user.day_start_hour is not None else 4
+
+    now_local = datetime.now(tz)
+    boundary = now_local.replace(hour=hour, minute=0, second=0, microsecond=0)
+    if boundary <= now_local:
+        boundary += timedelta(days=1)
+    if boundary - now_local < timedelta(hours=MIN_SESSION_HOURS):
+        boundary += timedelta(days=1)
+
+    return boundary.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _make_session(user: User, db: Session) -> tuple[str, datetime]:
+    """Create a new auth token for the user, store its HASH in the DB, and return
+    the raw token string (shown to the client once) alongside its expiry.
+
+    The token is a 64-character random hex string (32 bytes of entropy). The
+    frontend stores it in localStorage and sends it as a Bearer token on every API
+    request; the server hashes the incoming token to look up the session.
     """
     token_str = secrets.token_hex(32)
-    expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=TOKEN_EXPIRY_DAYS)
-    db.add(SessionToken(user_id=user_id, token=_hash_token(token_str), expires_at=expires))
-    return token_str
+    expires = _session_expiry(user)
+    db.add(SessionToken(user_id=user.id, token=_hash_token(token_str), expires_at=expires))
+    return token_str, expires
 
 PRESET_ACTUATORS = [
     {"name": "Engineering", "description": "Technical problem solving, building, and systems thinking."},
@@ -129,11 +154,12 @@ def setup(request: Request, req: SetupRequest, db: Session = Depends(get_db)):
             is_preset=True,
         ))
 
-    token_str = _make_session(user.id, db)
+    token_str, expires = _make_session(user, db)
     db.commit()
 
     return LoginResponse(
         token=token_str,
+        expires_at=expires,
         user_id=user.id,
         name=user.name,
         role=user.role,
@@ -156,11 +182,12 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     db.query(SessionToken).filter(SessionToken.expires_at < now).delete()
 
-    token_str = _make_session(user.id, db)
+    token_str, expires = _make_session(user, db)
     db.commit()
 
     return LoginResponse(
         token=token_str,
+        expires_at=expires,
         user_id=user.id,
         name=user.name,
         role=user.role,
@@ -403,9 +430,9 @@ def register(request: Request, req: RegisterRequest, db: Session = Depends(get_d
         db.add(ActuatorCategory(user_id=user.id, name=p["name"], description=p["description"], is_preset=True))
     invite.used_by = user.id
     invite.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    token_str = _make_session(user.id, db)
+    token_str, expires = _make_session(user, db)
     db.commit()
-    return LoginResponse(token=token_str, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
+    return LoginResponse(token=token_str, expires_at=expires, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
 
 
 # ---------------------------------------------------------------------------
@@ -443,9 +470,9 @@ def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
     db.flush()
     for p in PRESET_ACTUATORS:
         db.add(ActuatorCategory(user_id=user.id, name=p["name"], description=p["description"], is_preset=True))
-    token_str = _make_session(user.id, db)
+    token_str, expires = _make_session(user, db)
     db.commit()
-    return LoginResponse(token=token_str, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
+    return LoginResponse(token=token_str, expires_at=expires, user_id=user.id, name=user.name, role=user.role, task_visible_limit=user.task_visible_limit)
 
 
 # ---------------------------------------------------------------------------

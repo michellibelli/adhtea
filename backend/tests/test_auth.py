@@ -242,3 +242,81 @@ def test_delete_user_purges_all_owned_data_with_fk_enforced():
         assert db.query(model).filter_by(user_id=victim.id).count() == 0
     assert db.query(m.InviteToken).filter_by(created_by=victim.id).count() == 0
     db.close()
+
+
+# ---------------------------------------------------------------------------
+# Sessions expire at the user's 4am rollover, not after a fixed span
+# ---------------------------------------------------------------------------
+
+class TestSessionExpiry:
+    """The session ends at the same boundary the day itself rolls over on, so
+    signing in belongs to the morning rather than to a random hour."""
+
+    def _expiry_for(self, local_str, tz="America/Los_Angeles", day_start_hour=4):
+        from unittest.mock import patch
+        from zoneinfo import ZoneInfo
+        import routes.auth as auth
+
+        zone = ZoneInfo(tz)
+        now = datetime.strptime(local_str, "%Y-%m-%d %H:%M").replace(tzinfo=zone)
+
+        class FakeDT(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return now.astimezone(tz) if tz else now.replace(tzinfo=None)
+
+        user = User(timezone=tz, day_start_hour=day_start_hour)
+        with patch.object(auth, "datetime", FakeDT):
+            expires = auth._session_expiry(user)
+
+        local = expires.replace(tzinfo=timezone.utc).astimezone(zone)
+        hours = (expires.replace(tzinfo=timezone.utc) - now.astimezone(timezone.utc)).total_seconds() / 3600
+        return local, hours
+
+    def test_morning_login_lasts_until_tomorrow_4am(self):
+        local, hours = self._expiry_for("2026-07-13 09:00")
+        assert (local.hour, local.day) == (4, 14)
+        assert hours == 19.0
+
+    def test_evening_login_still_ends_at_the_same_4am(self):
+        local, hours = self._expiry_for("2026-07-13 20:00")
+        assert (local.hour, local.day) == (4, 14)
+        assert hours == 8.0
+
+    def test_late_night_login_is_floored_to_the_next_day(self):
+        # 3:50am is ten minutes from the boundary — expiring there would hand her
+        # a ten-minute session, so it rolls to the following 4am instead.
+        local, hours = self._expiry_for("2026-07-14 03:50")
+        assert (local.hour, local.day) == (4, 15)
+        assert hours > 4
+
+    def test_no_session_is_ever_shorter_than_the_floor(self):
+        for t in ("2026-07-13 23:59", "2026-07-14 00:01", "2026-07-14 01:00", "2026-07-14 03:59"):
+            _, hours = self._expiry_for(t)
+            assert hours >= 4, f"{t} produced a {hours:.2f}h session"
+
+    def test_honours_the_users_timezone(self):
+        local, _ = self._expiry_for("2026-07-13 09:00", tz="America/New_York")
+        assert local.hour == 4  # 4am in *her* clock, not UTC
+
+    def test_honours_a_custom_day_start_hour(self):
+        local, _ = self._expiry_for("2026-07-13 09:00", day_start_hour=6)
+        assert local.hour == 6
+
+    def test_survives_dst_spring_forward(self):
+        # Clocks jump 2am -> 3am on 2027-03-14, so this day is genuinely an hour short.
+        local, hours = self._expiry_for("2027-03-13 09:00")
+        assert local.hour == 4
+        assert hours == 18.0
+
+    def test_login_returns_the_expiry_to_the_client(self, client, primary_user_token):
+        r = client.post("/login", json={"username": "testuser", "password": "password123"})
+        assert r.status_code == 200
+        assert r.json()["expires_at"], "client needs the expiry to pre-empt the 401"
+
+    def test_stored_session_carries_the_same_expiry(self, client, primary_user_token, db_session):
+        r = client.post("/login", json={"username": "testuser", "password": "password123"})
+        returned = r.json()["expires_at"]
+
+        session = db_session.query(SessionToken).order_by(SessionToken.id.desc()).first()
+        assert session.expires_at.isoformat() == returned.rstrip("Z")

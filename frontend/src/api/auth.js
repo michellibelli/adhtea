@@ -2,7 +2,7 @@ import { api, setToken, clearToken } from './client'
 
 export async function login(username, password) {
   const res = await api.post('/login', { username, password })
-  setToken(res.token)
+  setToken(res.token, res.expires_at)
   return res
 }
 
@@ -16,7 +16,7 @@ export async function logout() {
 
 export async function setup(name, username, password) {
   const res = await api.post('/setup', { name, username, password })
-  setToken(res.token)
+  setToken(res.token, res.expires_at)
   return res
 }
 
@@ -42,7 +42,7 @@ export async function deleteUser(id) {
 
 export async function register(invite_token, name, username, password) {
   const res = await api.post('/register', { invite_token, name, username, password })
-  setToken(res.token)
+  setToken(res.token, res.expires_at)
   return res
 }
 
@@ -64,7 +64,7 @@ export async function getSignupConfig() {
 
 export async function signup(name, username, email, password, alphaCode) {
   const res = await api.post('/signup', { name, username, email: email || null, password, alpha_code: alphaCode || null })
-  setToken(res.token)
+  setToken(res.token, res.expires_at)
   return res
 }
 
