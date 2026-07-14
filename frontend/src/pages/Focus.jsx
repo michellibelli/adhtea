@@ -269,8 +269,8 @@ export default function Focus({ onGoToList, onNavigate }) {
     setCelebrate('dunk')
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = [
-      setTimeout(() => setCelebrate('wipe'), 4600),
-      setTimeout(() => skipCelebration(),    7100),
+      setTimeout(() => setCelebrate('wipe'), 3910),
+      setTimeout(() => skipCelebration(),    5650),
     ]
   }
 
@@ -355,7 +355,7 @@ export default function Focus({ onGoToList, onNavigate }) {
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
                 inside the descending wrapper. */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 4250ms linear 300ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
+            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 3610ms linear 255ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
 
             {/* Bonus ribbon — above tag, persists during animation */}
             {isBonusMode && celebrate !== 'wipe' && (
@@ -510,7 +510,7 @@ export default function Focus({ onGoToList, onNavigate }) {
                 width: 'fit-content', bottom: 70,
                 zIndex: 3, pointerEvents: 'none',
                 transform: 'translateX(0)',
-                animation: 'teacup-appear 400ms ease-out 800ms both',
+                animation: 'teacup-appear 340ms ease-out 680ms both',
               }}>
                 <TeaCup />
               </div>
@@ -522,7 +522,7 @@ export default function Focus({ onGoToList, onNavigate }) {
                 position: 'absolute', left: 0, right: 0, margin: '0 auto',
                 bottom: 50,
                 zIndex: 4, pointerEvents: 'none', textAlign: 'center',
-                animation: 'pun-rise-below-cup 2400ms ease-out 1200ms both',
+                animation: 'pun-rise-below-cup 2040ms ease-out 1020ms both',
               }}>
                 {/* eslint-disable-next-line react-hooks/refs -- punRef set in handleComplete before this renders */}
                 <span className="pun-text px-4">{punRef.current}</span>
