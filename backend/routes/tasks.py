@@ -647,6 +647,11 @@ def reorder_tasks(
     for idx, task_id in enumerate(body.ordered_ids):
         if task_id in task_map:
             task_map[task_id].sort_order = float(idx)
+    # A drag in the tea-box hands the rest of the app-day to her manual order —
+    # the box and the Focus card stop re-sorting by the time tiers. Reordering
+    # from the Today list leaves this alone (manual_box defaults false).
+    if body.manual_box:
+        current_user.box_ordered_on = _app_today(current_user)
     db.commit()
     return [task_map[i] for i in body.ordered_ids if i in task_map]
 

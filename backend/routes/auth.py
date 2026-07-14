@@ -230,7 +230,9 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
     # only fields explicitly declared in UserResponse are returned.
     response = UserResponse.model_validate(current_user).model_dump()
     response["needs_alpha_challenge"] = needs_challenge
-    response["day_planned"] = current_user.planned_on == _app_today(current_user)
+    today = _app_today(current_user)
+    response["day_planned"] = current_user.planned_on == today
+    response["box_manual"] = current_user.box_ordered_on == today
     return response
 
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useContext } from 'react'
-import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask } from '../api/tasks'
+import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask, reorderTasks } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
 import { resolveSnoozeDate } from '../utils/snooze'
 import EditTaskSheet from '../components/EditTaskSheet'
@@ -87,14 +87,15 @@ function tomorrowISO() {
   return resolveSnoozeDate('tomorrow').toISOString()
 }
 
-function pickNext(tasks) {
+function pickNext(tasks, manual = false) {
   // Step 1 — apply the time-of-day window. Appointments only appear near their
   // due time (see utils/timing.js for the windows).
   const visible = tasks.filter(isTimedVisible)
 
   // Step 2 — take the top of the shared today-order, the same order the tea-box
-  // packs its bags in (see utils/ordering.js).
-  return orderTasks(visible)[0] ?? null  // null → list empty → "all done" celebration
+  // packs its bags in (see utils/ordering.js). Once she's hand-ordered the box,
+  // that's the order — the front bag is the card.
+  return orderTasks(visible, manual)[0] ?? null  // null → list empty → "all done" celebration
 }
 
 // localStorage key for today's completed-bonus-task count — drives the gold
@@ -117,7 +118,8 @@ function TeaCup() {
 
 
 
-export default function Focus({ onGoToList, onNavigate }) {
+export default function Focus({ onGoToList, onNavigate, boxManual = false, onBoxOrdered }) {
+  const [manualOrder, setManualOrder] = useState(boxManual)
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -177,10 +179,10 @@ export default function Focus({ onGoToList, onNavigate }) {
   // pickNext ranking. Lets the user act on a specific item the time-of-day
   // window would otherwise hide — e.g. an 8am routine completed at 9am.
   const selectedTask = selectedId != null ? tasks.find(t => t.id === selectedId) : null
-  const todayVisible = pickNext(tasks) !== null
+  const todayVisible = pickNext(tasks, manualOrder) !== null
   const isBonusMode  = !selectedTask && !todayVisible && bonusTasks.length > 0
   const activeList   = isBonusMode ? bonusTasks : tasks
-  const task         = selectedTask ?? pickNext(activeList)
+  const task         = selectedTask ?? pickNext(activeList, manualOrder)
   const remaining   = activeList.length
   const totalDone   = doneTodayBase + localDone
 
@@ -304,6 +306,24 @@ export default function Focus({ onGoToList, onNavigate }) {
       setBonusTasks((prev) => prev.filter((t) => t.id !== task.id))
     } else {
       await advance(() => snoozeTask(task.id, isoDate))
+    }
+  }
+
+  // A bag dragged in the tea-box. Her order wins for the rest of the app-day, so
+  // the card follows the front bag from here on. Optimistic — the bags have
+  // already moved under her finger; a failed save reverts to the server's order.
+  async function handleReorder(reordered) {
+    const orderById = new Map(reordered.map(t => [t.id, t.sort_order]))
+    setTasks(prev => prev.map(t => orderById.has(t.id) ? { ...t, sort_order: orderById.get(t.id) } : t))
+    setManualOrder(true)
+    setSelectedId(null)   // the front bag is the card now; drop any manual pick
+    try {
+      await reorderTasks(reordered.map(t => t.id), true)
+      onBoxOrdered?.()
+    } catch (err) {
+      console.error(err)
+      setManualOrder(boxManual)
+      fetchAll()
     }
   }
 
@@ -575,7 +595,7 @@ export default function Focus({ onGoToList, onNavigate }) {
                 )}
               </button>
               <div className="flex-1 min-w-0">
-                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} overCapacity={tasks.length > 10} onOpen={onGoToList} onSelectTask={setSelectedId} onNavigate={onNavigate} />
+                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} overCapacity={tasks.length > 10} manualOrder={manualOrder} onOpen={onGoToList} onSelectTask={setSelectedId} onReorder={handleReorder} onNavigate={onNavigate} />
               </div>
               <button
                 onClick={handleComplete}

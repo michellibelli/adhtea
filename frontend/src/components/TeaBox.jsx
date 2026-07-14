@@ -1,5 +1,20 @@
+import { useRef, useState } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { TAG_COLORS } from '../utils/taskColors'
 import { orderTasks } from '../utils/ordering'
+import { SmartPointerSensor } from '../utils/dnd'
 
 // The box holds at most 15 bags — the natural display limit for a day's plan.
 const BOX_CAPACITY = 15
@@ -12,21 +27,23 @@ const GOLD = {
 
 // Bags sit in the shared today-order (see utils/ordering.js) — the same order
 // Focus picks from, so the focused task is the first selectable bag.
-function orderedBags(tasks) {
-  return orderTasks(tasks).slice(0, BOX_CAPACITY)
+function orderedBags(tasks, manual) {
+  return orderTasks(tasks, manual).slice(0, BOX_CAPACITY)
 }
 
 // One bag in the box. `gold` bags are completed bonus tasks — decorative,
 // not selectable. Each bag renders as a tag + string + body stack so the box
 // reads as teabags, not as a row of tiny books (the bookshelf backdrop
 // has narrow rectangles of similar muted colours).
-function Bag({ colors, active, gold, onClick, title }) {
+function Bag({ colors, active, gold, onClick, title, dragRef, dragProps, dragStyle, dragging }) {
   const stringColor = '#3F2F1A'
   return (
     <div
+      ref={dragRef}
       onClick={onClick}
       title={title}
       className={gold ? '' : 'cursor-pointer'}
+      {...dragProps}
       style={{
         position: 'relative',
         display: 'flex',
@@ -35,12 +52,16 @@ function Bag({ colors, active, gold, onClick, title }) {
         width: 20,
         transition: 'transform 0.3s ease, opacity 0.3s ease',
         flexShrink: 0,
-        zIndex: active ? 2 : 1,
+        zIndex: dragging ? 3 : active ? 2 : 1,
         // Bag colours pull from the same muted TAG_COLORS used by the
         // Focus tag + bookshelf, which made the bags too pale in the
         // tea-box. Re-saturate by 25% here only — keeps the rest of
         // the app calm but lets the bags pop against the wood + bg.
         filter: gold ? undefined : 'saturate(1.25)',
+        // Pointer events only reach dnd-kit if the browser isn't claiming the
+        // gesture for a scroll/pan first.
+        touchAction: gold ? undefined : 'none',
+        ...dragStyle,
       }}
     >
       <div style={{
@@ -63,12 +84,34 @@ function Bag({ colors, active, gold, onClick, title }) {
         border: `1.5px solid ${colors.border}`,
         borderTopWidth: 2.5,           // crimped fold
         borderRadius: '3px 3px 2px 2px',
-        boxShadow: active
-          ? `0 0 0 2px #241A0F, 0 1px 5px rgba(0,0,0,0.45)`
-          : `1px 1px 0 ${colors.shadow}`,
+        boxShadow: dragging
+          ? `0 0 0 2px #241A0F, 0 4px 10px rgba(0,0,0,0.5)`
+          : active
+            ? `0 0 0 2px #241A0F, 0 1px 5px rgba(0,0,0,0.45)`
+            : `1px 1px 0 ${colors.shadow}`,
         transition: 'box-shadow 200ms ease',
       }} />
     </div>
+  )
+}
+
+// A bag the user can pick up and drop somewhere else in the row.
+function SortableBag({ task, ...bagProps }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id })
+  return (
+    <Bag
+      {...bagProps}
+      dragRef={setNodeRef}
+      dragProps={{ ...attributes, ...listeners }}
+      dragging={isDragging}
+      dragStyle={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        // The lifted bag rides above its neighbours as they shuffle aside.
+        opacity: isDragging ? 0.9 : 1,
+      }}
+    />
   )
 }
 
@@ -79,11 +122,46 @@ function Bag({ colors, active, gold, onClick, title }) {
 // Today; clicking a bag focuses that task on the Focus card (via onSelectTask)
 // so the user can act on a specific item — e.g. an 8am routine done at 9am
 // that the time-of-day window would otherwise keep off the card.
-export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, overCapacity = false, onOpen, onSelectTask, onNavigate }) {
+//
+// Dragging a bag hands the day's order to her: onReorder persists the new
+// sort_order and flips the box into manual mode, where the clock stops
+// reshuffling the row (see utils/ordering.js). Since Focus picks the first bag,
+// dragging a bag to the front is how she chooses what she does next.
+export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, overCapacity = false, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate }) {
   const BOX_VISIBLE = 9
-  const colored = orderedBags(tasks).slice(0, BOX_VISIBLE)
+  const ordered = orderedBags(tasks, manualOrder)
+  const colored = ordered.slice(0, BOX_VISIBLE)
   const goldShown = Math.max(0, Math.min(goldCount, BOX_VISIBLE - colored.length))
   const boxFull = goldCount >= BOX_VISIBLE
+
+  // A drag ends with a click event on the bag the user let go of, which would
+  // otherwise focus it. Set on drag start, cleared on the macrotask after drop —
+  // pointerup → click all dispatch before the timeout, so the guard is up in time.
+  const draggedRef = useRef(false)
+  // Suppresses the box's press-scale for the duration of a drag: a 0.98 scale on
+  // the row would move every bag out from under dnd-kit's measured drop targets.
+  const [dragging, setDragging] = useState(false)
+  const sensors = useSensors(
+    useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
+  )
+
+  function handleDragStart() {
+    draggedRef.current = true
+    setDragging(true)
+  }
+
+  function handleDragEnd({ active, over }) {
+    setDragging(false)
+    const settle = () => setTimeout(() => { draggedRef.current = false }, 0)
+    if (!over || active.id === over.id) { settle(); return }
+    const from = ordered.findIndex(t => t.id === active.id)
+    const to   = ordered.findIndex(t => t.id === over.id)
+    if (from < 0 || to < 0) { settle(); return }
+    // Renumber the whole ordered list, not just the nine visible bags, so the
+    // bags below the fold keep a coherent sort_order behind the ones on screen.
+    onReorder?.(arrayMove(ordered, from, to).map((t, i) => ({ ...t, sort_order: i })))
+    settle()
+  }
 
   return (
     <>
@@ -96,9 +174,9 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
       )}
 
       <div
-        className="relative w-full select-none cursor-pointer active:scale-[0.98] transition-transform"
+        className={`relative w-full select-none cursor-pointer transition-transform${dragging ? '' : ' active:scale-[0.98]'}`}
         style={{ height: 62 }}
-        onClick={onOpen}
+        onClick={() => { if (!draggedRef.current) onOpen?.() }}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.() } }}
         role="button"
         tabIndex={0}
@@ -106,25 +184,39 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         title="Open today's list"
       >
         <div
-          className="absolute left-0 right-0 flex items-end justify-start px-3 overflow-hidden"
+          className="absolute left-0 right-0 flex items-end justify-start px-3"
           style={{ bottom: 16, transition: 'all 0.3s ease' }}
         >
-          {colored.map(t => {
-            const isProject = !!t.project_name
-            const colors = isProject
-              ? TAG_COLORS.project
-              : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
-            const active = activeTaskId != null && t.id === activeTaskId
-            return (
-              <Bag
-                key={t.id}
-                colors={colors}
-                active={active}
-                title={t.title}
-                onClick={e => { e.stopPropagation(); onSelectTask?.(t.id) }}
-              />
-            )
-          })}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={colored.map(t => t.id)} strategy={horizontalListSortingStrategy}>
+              {colored.map(t => {
+                const isProject = !!t.project_name
+                const colors = isProject
+                  ? TAG_COLORS.project
+                  : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
+                const active = activeTaskId != null && t.id === activeTaskId
+                return (
+                  <SortableBag
+                    key={t.id}
+                    task={t}
+                    colors={colors}
+                    active={active}
+                    title={t.title}
+                    onClick={e => {
+                      e.stopPropagation()
+                      if (draggedRef.current) return
+                      onSelectTask?.(t.id)
+                    }}
+                  />
+                )
+              })}
+            </SortableContext>
+          </DndContext>
           {Array.from({ length: goldShown }).map((_, i) => (
             <Bag key={`gold-${i}`} colors={GOLD} gold title="Bonus task done" />
           ))}

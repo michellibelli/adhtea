@@ -438,7 +438,14 @@ function AppShell() {
           page and it refetches fresh data instead of showing the stale cache. */}
       <main className="pt-[64px] relative z-10" key={refreshKey}>
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
-        {screen === 'focus'    && <Focus onGoToList={() => setScreen('today')} onNavigate={setScreen} />}
+        {screen === 'focus'    && (
+          <Focus
+            onGoToList={() => setScreen('today')}
+            onNavigate={setScreen}
+            boxManual={!!user?.box_manual}
+            onBoxOrdered={() => setUser(u => u ? { ...u, box_manual: true } : u)}
+          />
+        )}
         {screen === 'today'    && (
           <Today
             carriedOver={carriedOver}

@@ -64,7 +64,9 @@ export const unsnoozeTask = (id) => api.post(`/tasks/${id}/unsnooze`)
 export const deferTask = (id) => api.post(`/tasks/${id}/defer`)
 export const updateTask = (id, data) => api.patch(`/tasks/${id}`, data)
 export const deleteTask = (id) => api.delete(`/tasks/${id}`)
-export const reorderTasks = (ordered_ids) => api.post('/tasks/reorder', { ordered_ids })
+// manual_box: set by a tea-box drag — hands the day to her manual order.
+export const reorderTasks = (ordered_ids, manual_box = false) =>
+  api.post('/tasks/reorder', { ordered_ids, manual_box })
 
 // Actuator categories
 export const getActuatorCategories = () => api.get('/actuator-categories')

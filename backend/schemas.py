@@ -111,6 +111,7 @@ class UserResponse(BaseModel):
     needs_alpha_challenge: bool = False
     is_onboarded: bool = True
     day_planned: bool = False   # true once user hit "Start my day" this app-day
+    box_manual: bool = False    # true once user hand-ordered the tea-box this app-day
 
     model_config = {"from_attributes": True}
 
@@ -225,6 +226,9 @@ class TaskResponse(BaseModel):
 
 class TaskReorderRequest(BaseModel):
     ordered_ids: list[int]
+    # Set by a tea-box drag. Stamps box_ordered_on, which puts the box and the
+    # Focus card on the user's manual order for the rest of the app-day.
+    manual_box: bool = False
 
 
 # ---------------------------------------------------------------------------

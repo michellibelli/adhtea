@@ -129,6 +129,11 @@ class User(Base):
     # it opens in "planning" and shows the Start-my-day button. Resets at the
     # day_start_hour boundary automatically since it's compared against _app_today.
     planned_on = Column(Date, nullable=True)
+    # Last app-day the user hand-ordered the tea-box by dragging a bag. While this
+    # equals the current app-day the box and the Focus card follow her manual
+    # sort_order instead of the computed time tiers (see utils/ordering.js).
+    # Resets at the day_start_hour boundary, same as planned_on.
+    box_ordered_on = Column(Date, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")
