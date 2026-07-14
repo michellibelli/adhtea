@@ -14,7 +14,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { TAG_COLORS } from '../utils/taskColors'
 import { orderTasks } from '../utils/ordering'
-import { SmartPointerSensor } from '../utils/dnd'
+import { SmartPointerSensor, looseInBox } from '../utils/dnd'
 
 // The box holds at most 15 bags — the natural display limit for a day's plan.
 const BOX_CAPACITY = 15
@@ -190,6 +190,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            modifiers={[looseInBox]}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
