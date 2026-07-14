@@ -183,6 +183,9 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
         aria-label="Open today's list"
         title="Open today's list"
       >
+        {/* Deliberately unclipped: bags stand proud of the box and their tags and
+            selection rings must stay visible above the rim. A dragged bag is kept
+            off the side walls by the looseInBox modifier instead. */}
         <div
           className="absolute left-0 right-0 flex items-end justify-start px-3"
           style={{ bottom: 16, transition: 'all 0.3s ease' }}
