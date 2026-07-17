@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 Password = Annotated[str, Field(min_length=8, max_length=128)]
 from models import (
     UserRole, TaskType, TaskStatus, Priority,
-    Importance, Desire, TaskWeight, RoutineFrequency, TimeOfDay, LocationType
+    Desire, Effort, RoutineFrequency, TimeOfDay, LocationType
 )
 
 
@@ -158,9 +158,8 @@ class TaskUpdate(BaseModel):
     task_type: Optional[TaskType] = None
     status: Optional[TaskStatus] = None
     priority: Optional[Priority] = None
-    importance: Optional[Importance] = None
     desire: Optional[Desire] = None
-    weight: Optional[TaskWeight] = None
+    effort: Optional[Effort] = None
     scheduled_date: Optional[datetime] = None
     snooze_until: Optional[datetime] = None
     sort_order: Optional[float] = None
@@ -178,12 +177,10 @@ class TaskSnoozeRequest(BaseModel):
 
 
 class ScheduleTodayRequest(BaseModel):
-    """Optional priority fields set during triage — all optional so the
-    endpoint works for both quick scheduling and triage with full metadata."""
-    priority:   Optional[Priority]   = None
-    importance: Optional[Importance] = None
-    desire:     Optional[Desire]     = None
-    weight:     Optional[TaskWeight] = None
+    """Optional priority fields — all optional so the endpoint works for both
+    quick scheduling and scheduling with full metadata."""
+    priority: Optional[Priority] = None
+    desire:   Optional[Desire]   = None
 
 
 class TaskResponse(BaseModel):
@@ -199,9 +196,8 @@ class TaskResponse(BaseModel):
     task_type: TaskType
     status: TaskStatus
     priority: Optional[Priority]
-    importance: Optional[Importance]
     desire: Optional[Desire]
-    weight: TaskWeight
+    effort: Optional[Effort]
     is_critical: bool
     due_date: Optional[date]
     due_time: Optional[str]
@@ -389,7 +385,7 @@ class ProjectTaskSummary(BaseModel):
     id: int
     title: str
     notes: Optional[str]
-    weight: TaskWeight
+    effort: Optional[Effort]
     due_date: Optional[date]
     status: TaskStatus
     completed_at: Optional[datetime]
@@ -459,3 +455,29 @@ class NudgeResponse(BaseModel):
 
 class NudgeRespondRequest(BaseModel):
     response: str
+
+
+# ---------------------------------------------------------------------------
+# Morning Review (effort tagging of the prior day's finished tasks)
+# ---------------------------------------------------------------------------
+
+class ReviewTaskGuess(BaseModel):
+    id: int
+    title: str
+    effort_guess: Effort
+
+
+class ReviewPendingResponse(BaseModel):
+    date: date                    # the app-day being reviewed
+    greeting: str                 # sunny one-liner
+    tasks: list[ReviewTaskGuess]
+
+
+class ReviewCommitItem(BaseModel):
+    id: int
+    effort: Effort
+
+
+class ReviewCommitRequest(BaseModel):
+    date: date
+    tasks: list[ReviewCommitItem]

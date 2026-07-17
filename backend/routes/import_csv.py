@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Task, TaskStatus, TaskType, Priority, TaskWeight, utcnow
+from models import Task, TaskStatus, TaskType, Priority, utcnow
 from routes.auth import get_current_user
 from models import User
 
@@ -116,7 +116,6 @@ async def import_csv(
             status=status,
             priority=priority,
             due_date=due_date,
-            weight=TaskWeight.medium,
         )
         db.add(task)
         imported += 1

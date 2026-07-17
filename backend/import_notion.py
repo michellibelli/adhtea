@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from database import SessionLocal, engine, Base
 from models import (
-    Task, TaskStatus, TaskType, Priority, TaskWeight,
+    Task, TaskStatus, TaskType, Priority,
     Routine, RoutineFrequency, TimeOfDay, utcnow
 )
 
@@ -155,7 +155,6 @@ def run():
                     task_type=TaskType.task,
                     status=TaskStatus.inbox,
                     priority=priority,
-                    weight=TaskWeight.medium,
                     due_date=due_date,
                     due_time=due_time,
                 )

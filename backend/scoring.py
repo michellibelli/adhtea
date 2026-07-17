@@ -23,6 +23,19 @@ CAPACITY_TIER_HIGH = 70.0         # overall > this  → "high" day
 # A project with no completion in this many days counts as stalled.
 PROJECT_STALL_DAYS_THRESHOLD = 7
 
+# Effort weighting — a finished task's contribution to a day's output. The
+# single source of truth for the small/big ratio; the capacity-vs-output
+# analysis sums these instead of counting tasks equally. A big task is worth
+# two smalls. An unreviewed (null) effort scores as one small until tagged.
+EFFORT_POINTS = {"small": 1, "big": 2}
+
+
+def effort_points(effort) -> int:
+    """Points for a task's effort tag (Effort enum, its string value, or None).
+    None → 1 (treated as a small until reviewed)."""
+    key = getattr(effort, "value", effort)
+    return EFFORT_POINTS.get(key, 1)
+
 
 def capacity_tier(overall: float) -> str:
     """Bucket an overall-capacity number into low / medium / high."""

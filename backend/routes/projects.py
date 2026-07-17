@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Project, Task, TaskStatus, TaskType, TaskWeight, User
+from models import Project, Task, TaskStatus, TaskType, User
 from schemas import (
     ProjectCreate, ProjectUpdate, ProjectGenerateRequest,
     ProjectResponse, ProjectDetailResponse, TaskResponse,
@@ -224,7 +224,6 @@ def generate_tasks(
     created = []
     for item in items:
         offset = max(1, int(item.get("day_offset", 1)))
-        weight = TaskWeight.light if item.get("size") == "small" else TaskWeight.medium
         due = today + timedelta(days=offset)
         t = Task(
             owner_id=current_user.id,
@@ -233,7 +232,6 @@ def generate_tasks(
             notes=item.get("notes") or None,
             task_type=TaskType.task,
             status=TaskStatus.inbox,
-            weight=weight,
             due_date=due,
         )
         db.add(t)

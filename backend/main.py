@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, insights
+from routes import projects, insights, review
 
 load_dotenv()
 
@@ -98,6 +98,19 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE users ADD COLUMN planned_on DATE"))
             if "box_ordered_on" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN box_ordered_on DATE"))
+            if "reviewed_through" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reviewed_through DATE"))
+            # Effort model (4.11): retrospective small/big tag replaces the
+            # never-used 3-level weight. Add effort; drop weight + importance
+            # (both dead — importance was settable-only, weight had no UI).
+            if "effort" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN effort VARCHAR(10)"))
+            for _dead in ("weight", "importance"):
+                if _dead in tasks_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE tasks DROP COLUMN {_dead}"))
+                    except Exception:
+                        pass
             # Move the day rollover from the old 6am default to 4am (see Postgres
             # branch note). day_start_hour was never UI-exposed, so 6 == old default.
             if "day_start_hour" in users_cols:
@@ -146,6 +159,18 @@ def _migrate(target_engine=None):
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS rolled_over_on DATE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS planned_on DATE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS box_ordered_on DATE"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reviewed_through DATE"))
+            # Effort model (4.11): add the retrospective small/big tag, then drop
+            # the dead weight + importance columns (irreversible). create_all
+            # already made the `effort` enum type via effort_examples; this DO
+            # block is a no-op fallback in case ordering ever changes.
+            conn.execute(text(
+                "DO $$ BEGIN CREATE TYPE effort AS ENUM ('small','big'); "
+                "EXCEPTION WHEN duplicate_object THEN null; END $$;"
+            ))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS effort effort"))
+            conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS weight"))
+            conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS importance"))
             # Security: demote all non-owner primaries (every self-signup used to
             # be created as admin). Owner keeps primary/admin.
             conn.execute(text("UPDATE users SET role='member' WHERE is_owner=FALSE AND role='primary'"))
@@ -165,6 +190,7 @@ def _migrate(target_engine=None):
                 "medication_schedules", "medication_logs", "invite_tokens",
                 "google_calendar_tokens", "capacity_snapshots",
                 "weekly_snapshots", "nudge_logs", "oauth_states",
+                "effort_examples",
             ):
                 conn.execute(text(f"ALTER TABLE {_table} ENABLE ROW LEVEL SECURITY"))
             conn.commit()
@@ -204,6 +230,7 @@ app.include_router(import_csv.router,  tags=["import"])
 app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
 app.include_router(insights.router)
+app.include_router(review.router,      tags=["review"])
 
 
 @app.get("/health")

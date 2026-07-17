@@ -10,6 +10,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn, loginExpired, likelySleeping, warmUp } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
+import { getReviewPending } from './api/review'
 import { createTask } from './api/tasks'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -19,6 +20,7 @@ import Capture from './pages/Capture'
 // Tournament removed — triage merged into Today page
 import Focus from './pages/Focus'
 import Today from './pages/Today'
+import MorningReview from './pages/MorningReview'
 import Inbox from './pages/Inbox'
 import Waiting from './pages/Waiting'
 import Routines from './pages/Routines'
@@ -97,6 +99,8 @@ function AppShell() {
   const [ready, setReady]                     = useState(false)
   const [showEOD, setShowEOD]                 = useState(false)
   const [showCheckIn, setShowCheckIn]         = useState(false)
+  const [showReview, setShowReview]           = useState(false)
+  const [review, setReview]                   = useState(null)
   const [checkInLog, setCheckInLog]           = useState(undefined)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
@@ -151,14 +155,20 @@ function AppShell() {
         // fast — await it directly. A timeout here would risk skipping the gate
         // on a cold morning, which is exactly the bug we're avoiding.
         try {
-          const log = await getTodayLog()
+          // Fetch the self-care log and any pending morning review together —
+          // getMe already warmed the server, so both land fast.
+          const [log, pending] = await Promise.all([
+            getTodayLog().catch(() => undefined),
+            getReviewPending().catch(() => null),
+          ])
           setCheckInLog(log)   // hand to the gate so it paints without a 2nd fetch
-          const hour = new Date().getHours()
-          const isMorningWindow = hour < 14
-          if (!log && isMorningWindow) {
-            setShowCheckIn(true)
-          } else if (log && isEODWindow(u)) {
-            setShowEOD(true)
+          if (pending && pending.tasks && pending.tasks.length) {
+            // Review yesterday first; its Continue button runs the self-care
+            // gate decision below (see MorningReview onComplete).
+            setReview(pending)
+            setShowReview(true)
+          } else {
+            applyDayGate(log, u)
           }
         } catch { /* slow/cold server — proceed without blocking */ }
         setReady(true)
@@ -298,6 +308,16 @@ function AppShell() {
 
   function handleLogout() { logout().then(() => window.location.reload()) }
 
+  // The morning self-care / EOD gate decision. Faithful to the original inline
+  // logic — used both when there's no pending review and (via MorningReview's
+  // Continue) right after the review is committed.
+  function applyDayGate(log, u = user) {
+    const hour = new Date().getHours()
+    const isMorningWindow = hour < 14
+    if (!log && isMorningWindow) setShowCheckIn(true)
+    else if (log && isEODWindow(u)) setShowEOD(true)
+  }
+
   // handleTriageDone + openTriage removed — triage merged into Today
 
   if (!ready) {
@@ -357,6 +377,24 @@ function AppShell() {
     return (
       <ThemeProvider>
         <OnboardingWelcome onDone={() => { setShowOnboarding(false); setScreen('focus') }} />
+      </ThemeProvider>
+    )
+  }
+
+  if (showReview && review) {
+    return (
+      <ThemeProvider>
+        <MorningReview
+          data={review}
+          onComplete={() => {
+            setShowReview(false)
+            // Now run the normal morning gate: self-care if not yet logged,
+            // otherwise straight into Today (the plan surface).
+            const hour = new Date().getHours()
+            if (!checkInLog && hour < 14) setShowCheckIn(true)
+            else setScreen('today')
+          }}
+        />
       </ThemeProvider>
     )
   }

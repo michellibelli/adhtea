@@ -12,7 +12,7 @@ from rate_limit import limiter
 from routes.task_lifecycle import _app_today
 from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
-    Task, Routine, Project, TaskType, TaskStatus, TaskWeight, RoutineFrequency, TimeOfDay,
+    Task, Routine, Project, TaskType, TaskStatus, RoutineFrequency, TimeOfDay,
     SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
     CapacitySnapshot, WeeklySnapshot, NudgeLog, OAuthState,
 )
@@ -566,7 +566,6 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         status=TaskStatus.today,
         scheduled_date=sched,
         notes="You made it! Tap the checkmark to complete this one right now.",
-        weight=TaskWeight.light,
     ))
 
     # Routine: 15 min self-care daily
@@ -586,7 +585,6 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         status=TaskStatus.today,
         scheduled_date=sched,
         notes="Go to Routines (moon icon) to set a time for your 15-min self-care. Even a small daily ritual makes a big difference.",
-        weight=TaskWeight.light,
     ))
 
     # Project: Spill the tea babe
@@ -608,7 +606,6 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         status=TaskStatus.today,
         scheduled_date=sched,
         notes="Tap '+ Task 🛠️' on the Projects page to add tasks here. One thing you want to tackle tomorrow is enough.",
-        weight=TaskWeight.light,
     ))
 
     # Subtask 2: What's your morning routine?
@@ -620,7 +617,6 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         status=TaskStatus.today,
         scheduled_date=sched,
         notes="Go to Routines (moon icon) and tap '+ Routine' to build your morning ritual. Once added, tap 'Schedule' to lock it into your day.",
-        weight=TaskWeight.light,
     ))
 
     # Task: Log first morning check-in
@@ -631,7 +627,6 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         status=TaskStatus.today,
         scheduled_date=sched,
         notes="Head to the Log page (heart icon) and tap 'Check in ✏️' to record how you're doing today.",
-        weight=TaskWeight.light,
     ))
 
     current_user.is_onboarded = True

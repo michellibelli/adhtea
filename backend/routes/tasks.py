@@ -46,59 +46,6 @@ def own_task(task_id: int, user: User, db: Session) -> Task:
 
 
 # ---------------------------------------------------------------------------
-# Triage summary — inbox count + today's load level (used by the triage page
-# to show a live load indicator as items are scheduled)
-# ---------------------------------------------------------------------------
-
-# Task weight as a number: light=1, medium=2, heavy=3.
-# Sum these across all today's tasks to get a "load score" for the day.
-WEIGHT_VALUES = {"light": 1, "medium": 2, "heavy": 3}
-
-def load_level(tasks):
-    """Classify the day's workload as a string label based on total task weight.
-
-    Thresholds (sum of all task weights):
-      ≤ 6  → "light"      (≈ up to 3 light tasks or 2 mediums)
-      ≤ 12 → "manageable" (≈ a typical full day)
-      ≤ 18 → "heavy"      (≈ packed day)
-      > 18 → "overloaded" (more than a realistic day)
-
-    Note: the frontend has a parallel computeLoad() that uses the same thresholds
-    but returns richer UI data (color, percent bar). Keep both in sync if thresholds change.
-    """
-    if not tasks: return "clear"
-    s = sum(WEIGHT_VALUES.get(str(t.weight.value if hasattr(t.weight, 'value') else t.weight), 2) for t in tasks)
-    if s <= 6:  return "light"
-    if s <= 12: return "manageable"
-    if s <= 18: return "heavy"
-    return "overloaded"
-
-
-@router.get("/tasks/triage-summary")
-def triage_summary(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    run_daily_rollover(current_user, db)
-    resolve_snoozes(current_user, db)
-    promote_due_tasks(current_user, db)
-    inbox_count = db.query(Task).filter(
-        Task.owner_id == current_user.id, Task.status == TaskStatus.inbox
-    ).count()
-    today_tasks = db.query(Task).filter(
-        Task.owner_id == current_user.id,
-        Task.status == TaskStatus.today,
-        Task.scheduled_date >= _day_start(current_user),
-        Task.scheduled_date <= _day_end(current_user),
-    ).all()
-    return {
-        "inbox_count": inbox_count,
-        "today_count": len(today_tasks),
-        "load_level": load_level(today_tasks),
-    }
-
-
-# ---------------------------------------------------------------------------
 # Critical list — shown when triage is skipped (low-focus fallback)
 # Returns: urgent tasks + today's appointments + is_critical routine instances
 # ---------------------------------------------------------------------------
@@ -456,11 +403,9 @@ def schedule_today(
     task.status = TaskStatus.today
     task.scheduled_date = _day_start(current_user)
     task.snooze_until = None
-    # Apply any priority metadata set during triage
-    if body.priority   is not None: task.priority   = body.priority
-    if body.importance is not None: task.importance = body.importance
-    if body.desire     is not None: task.desire     = body.desire
-    if body.weight     is not None: task.weight     = body.weight
+    # Apply any priority metadata set during scheduling
+    if body.priority is not None: task.priority = body.priority
+    if body.desire   is not None: task.desire   = body.desire
     # Sort order: append to end of today's list
     max_order = (
         db.query(Task)

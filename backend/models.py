@@ -53,23 +53,19 @@ class Priority(str, enum.Enum):
     low = "low"
 
 
-class Importance(str, enum.Enum):
-    critical = "critical"
-    high = "high"
-    normal = "normal"
-    low = "low"
-
-
 class Desire(str, enum.Enum):
     high = "high"
     medium = "medium"
     low = "low"
 
 
-class TaskWeight(str, enum.Enum):
-    light = "light"
-    medium = "medium"
-    heavy = "heavy"
+class Effort(str, enum.Enum):
+    """Retrospective effort tag, set during the morning review of the prior
+    day's finished tasks. Two levels on purpose — deciding quick-vs-big is fast;
+    a finer scale isn't worth the friction. Points: small=1, big=2 (see
+    EFFORT_POINTS in scoring.py). Null on a Task means not-yet-reviewed."""
+    small = "small"
+    big = "big"
 
 
 class RoutineFrequency(str, enum.Enum):
@@ -134,6 +130,11 @@ class User(Base):
     # sort_order instead of the computed time tiers (see utils/ordering.js).
     # Resets at the day_start_hour boundary, same as planned_on.
     box_ordered_on = Column(Date, nullable=True)
+    # Most recent app-day whose finished tasks she has reviewed (tagged
+    # small/big) in the morning review. The review surfaces the most recent
+    # activity-day *after* this date; stamping it here marks that day done.
+    # Weekend/sick gaps self-handle — Monday surfaces Friday.
+    reviewed_through = Column(Date, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")
@@ -207,11 +208,13 @@ class Task(Base):
     task_type = Column(SAEnum(TaskType), default=TaskType.task, nullable=False)
     status = Column(SAEnum(TaskStatus), default=TaskStatus.inbox, nullable=False, index=True)
 
-    # Priority fields (set during triage)
+    # Priority fields
     priority = Column(SAEnum(Priority), nullable=True)
-    importance = Column(SAEnum(Importance), nullable=True)
     desire = Column(SAEnum(Desire), nullable=True)
-    weight = Column(SAEnum(TaskWeight), default=TaskWeight.medium, nullable=False)
+    # Retrospective effort tag. Null until the task is reviewed the next morning;
+    # set to small/big there. Feeds the capacity-vs-output analysis (see
+    # scoring.py::EFFORT_POINTS).
+    effort = Column(SAEnum(Effort), nullable=True)
     is_critical = Column(Boolean, default=False)        # always surface on low-focus list
 
     # Deadline / scheduling
@@ -259,6 +262,24 @@ class Task(Base):
     @property
     def project_name(self):
         return self.project.title if self.project else None
+
+
+# ---------------------------------------------------------------------------
+# Effort Example (learning store for the morning-review guess engine)
+# ---------------------------------------------------------------------------
+
+class EffortExample(Base):
+    """One remembered (task title -> effort) correction per distinct title.
+    Doubles as an exact-title override cache and as few-shot examples fed to
+    Haiku, so the small/big guesses sharpen as she corrects them. Keyed on a
+    lowercased title so the same task re-uses her last answer."""
+    __tablename__ = "effort_examples"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title_key = Column(String(500), nullable=False, index=True)  # lowercased title
+    effort = Column(SAEnum(Effort), nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 # ---------------------------------------------------------------------------

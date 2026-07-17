@@ -23,8 +23,7 @@ export async function getToday() {
 export const getWaiting = () => api.get('/tasks/waiting')
 export const getDoneToday = () => api.get('/tasks/done')
 
-// Triage summary + low-focus critical list
-export const getTriageSummary = () => api.get('/tasks/triage-summary')
+// Low-focus critical list
 export const getCriticalList  = () => api.get('/tasks/critical-list')
 export const getBacklog       = () => api.get('/tasks/backlog')
 export async function getBonusTasks() {
