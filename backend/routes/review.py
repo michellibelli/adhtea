@@ -7,7 +7,7 @@ so she only flips the wrong ones, then a single button carries her into the
 existing self-care gate.
 """
 
-from datetime import timezone, timedelta, date
+from datetime import datetime, timezone, timedelta, date
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -156,6 +156,29 @@ def commit_review(
             continue
         task.effort = item.effort
         corrections.append((task.title, item.effort.value))
+
+    # Tasks she did but never had in the app — log them now, backdated to the
+    # reviewed day (local noon → naive UTC, so they bucket into that app-day)
+    # and marked done, so they count toward the day's output.
+    if body.added:
+        local_noon = datetime(
+            body.date.year, body.date.month, body.date.day, 12, 0,
+            tzinfo=_tz(current_user),
+        )
+        completed = local_noon.astimezone(timezone.utc).replace(tzinfo=None)
+        for item in body.added:
+            title = (item.title or "").strip()
+            if not title:
+                continue
+            db.add(Task(
+                owner_id=current_user.id,
+                title=title[:500],
+                task_type=TaskType.task,
+                status=TaskStatus.done,
+                effort=item.effort,
+                completed_at=completed,
+            ))
+            corrections.append((title, item.effort.value))
 
     review_engine.record_corrections(db, current_user.id, corrections)
 

@@ -478,6 +478,14 @@ class ReviewCommitItem(BaseModel):
     effort: Effort
 
 
+class ReviewAddedItem(BaseModel):
+    """A task she did yesterday that was never in the app — logged now,
+    backdated to the reviewed day, so it counts toward the day's output."""
+    title: str
+    effort: Effort
+
+
 class ReviewCommitRequest(BaseModel):
     date: date
-    tasks: list[ReviewCommitItem]
+    tasks: list[ReviewCommitItem] = []
+    added: list[ReviewAddedItem] = []

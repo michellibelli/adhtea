@@ -75,6 +75,38 @@ def test_commit_stamps_effort_and_watermark_and_learns(client, auth_headers, db_
     assert ex.title_key == "call pharmacy" and ex.effort == Effort.big
 
 
+def test_commit_adds_backdated_done_tasks(client, auth_headers, db_session):
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    review_date = pending["date"]
+
+    r = client.post("/review/commit", headers=auth_headers, json={
+        "date": review_date,
+        "tasks": [{"id": t1.id, "effort": "small"}],
+        "added": [{"title": "Folded all the laundry", "effort": "big"}],
+    })
+    assert r.status_code == 200, r.text
+
+    db_session.expire_all()
+    new = db_session.query(Task).filter_by(
+        owner_id=u.id, title="Folded all the laundry"
+    ).one()
+    assert new.status == TaskStatus.done
+    assert new.effort == Effort.big
+    assert new.completed_at is not None
+    # The added task now belongs to the reviewed day, so re-fetching pending
+    # finds nothing (that day is stamped reviewed).
+    assert client.get("/review/pending", headers=auth_headers).json() is None
+    # And its effort was learned.
+    ex = db_session.query(EffortExample).filter_by(
+        user_id=u.id, title_key="folded all the laundry"
+    ).one()
+    assert ex.effort == Effort.big
+
+
 def test_reviewed_day_not_resurfaced(client, auth_headers, db_session):
     u = _user(db_session)
     day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
