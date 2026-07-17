@@ -113,6 +113,10 @@ def log_taken(
     db.add(log)
     db.commit()
     db.refresh(log)
+    # Meds feed the executive-capacitor term, so refresh today's capacity
+    # snapshot (no-op until she's done the self-care check-in for the day).
+    from routes.selfcare import recompute_snapshot
+    recompute_snapshot(db, current_user.id, today)
     return log
 
 

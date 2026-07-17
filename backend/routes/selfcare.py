@@ -3,7 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import SelfCareLog, CapacitySnapshot, Task, TaskStatus, TaskType, MedicationLog, utcnow
+from models import (
+    SelfCareLog, CapacitySnapshot, Task, TaskStatus, TaskType,
+    MedicationSchedule, MedicationLog, utcnow,
+)
 from schemas import SelfCareLogCreate, SelfCareLogResponse, CapacitySnapshotResponse
 from routes.auth import get_current_user
 from routes.task_lifecycle import _app_today
@@ -16,7 +19,27 @@ router = APIRouter()
 # Capacity computation (rules-based, v1)
 # ---------------------------------------------------------------------------
 
-def _compute_capacity(log: SelfCareLog) -> dict:
+def _med_adherence(db: Session, user_id: int, log_date) -> float | None:
+    """Fraction of the day's active medication schedules she actually logged
+    (0.0–1.0). None when she has no active meds — no regimen means meds should
+    neither help nor hurt her capacity. Distinct schedules taken / active count."""
+    active = (
+        db.query(MedicationSchedule)
+        .filter(MedicationSchedule.user_id == user_id, MedicationSchedule.active == True)
+        .count()
+    )
+    if active == 0:
+        return None
+    taken = (
+        db.query(MedicationLog.schedule_id)
+        .filter(MedicationLog.user_id == user_id, MedicationLog.log_date == log_date)
+        .distinct()
+        .count()
+    )
+    return min(taken / active, 1.0)
+
+
+def _compute_capacity(log: SelfCareLog, med_adherence: float | None = None) -> dict:
     hours = log.sleep_hours or 0
     quality = log.sleep_quality or 3
 
@@ -38,7 +61,11 @@ def _compute_capacity(log: SelfCareLog) -> dict:
     # Environment: not directly logged — stable default
     environment_battery = 60.0
 
-    # Executive capacitor: sleep-dominated, sharply non-linear
+    # Executive capacitor: sleep-dominated, sharply non-linear, then modulated
+    # by sleep quality and — for ADHD meds — medication adherence. Meds are an
+    # executive-function lever, so skipping them pulls this term down: full
+    # adherence keeps it as-is, zero adherence knocks 40% off. No regimen
+    # (med_adherence is None) leaves it untouched.
     if hours >= 8:
         exec_cap = 90.0
     elif hours >= 7:
@@ -49,7 +76,10 @@ def _compute_capacity(log: SelfCareLog) -> dict:
         exec_cap = 30.0
     else:
         exec_cap = 15.0
-    exec_cap = min(exec_cap * (0.6 + 0.4 * quality / 5.0), 100.0)
+    exec_cap *= (0.6 + 0.4 * quality / 5.0)
+    if med_adherence is not None:
+        exec_cap *= (0.6 + 0.4 * med_adherence)
+    exec_cap = min(exec_cap, 100.0)
 
     overall = (
         sleep_battery       * 0.25 +
@@ -72,7 +102,7 @@ def _compute_capacity(log: SelfCareLog) -> dict:
 
 
 def _upsert_snapshot(log: SelfCareLog, user_id: int, db: Session) -> CapacitySnapshot:
-    vals = _compute_capacity(log)
+    vals = _compute_capacity(log, _med_adherence(db, user_id, log.log_date))
     snap = db.query(CapacitySnapshot).filter(
         CapacitySnapshot.user_id == user_id,
         CapacitySnapshot.log_date == log.log_date,
@@ -87,6 +117,19 @@ def _upsert_snapshot(log: SelfCareLog, user_id: int, db: Session) -> CapacitySna
     db.commit()
     db.refresh(snap)
     return snap
+
+
+def recompute_snapshot(db: Session, user_id: int, log_date) -> None:
+    """Re-derive the capacity snapshot for a date from its self-care log, if one
+    exists. Called when medication is logged after the morning check-in, so
+    marking meds updates today's capacity instead of waiting for the next log."""
+    log = (
+        db.query(SelfCareLog)
+        .filter(SelfCareLog.user_id == user_id, SelfCareLog.log_date == log_date)
+        .first()
+    )
+    if log is not None:
+        _upsert_snapshot(log, user_id, db)
 
 
 # ---------------------------------------------------------------------------
