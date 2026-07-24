@@ -12,6 +12,7 @@ import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { getReviewPending } from './api/review'
 import { createTask } from './api/tasks'
+import { prefetchFirstScreenAssets } from './utils/prefetch'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Signup from './pages/Signup'
@@ -582,9 +583,13 @@ export default function App() {
 
   // Wake the (free-tier, likely-sleeping) server in parallel while the user is
   // on the login screen, so submitting credentials doesn't then wait ~40s for
-  // the cold start. No-op if already warm.
+  // the cold start. No-op if already warm. Also warm the first-screen image
+  // cache so the post-login Focus paint doesn't pop in asset-by-asset.
   useEffect(() => {
-    if (!authed && likelySleeping()) warmUp(() => {}).catch(() => {})
+    if (!authed) {
+      if (likelySleeping()) warmUp(() => {}).catch(() => {})
+      prefetchFirstScreenAssets()
+    }
   }, [authed])
 
   function handleAuthed() {
