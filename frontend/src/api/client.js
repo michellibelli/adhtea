@@ -208,6 +208,36 @@ export function removeSnooze(taskId) {
   setPendingSnoozes(getPendingSnoozes().filter(s => s.id !== taskId))
 }
 
+// ---------------------------------------------------------------------------
+// Offline-resilient morning-review queue
+// The morning review's Continue tap often lands on a cold/slow Render backend.
+// If that POST is lost, `reviewed_through` never advances and the same day
+// resurfaces the next morning. So persist the commit and flush it on wake,
+// exactly like completions/snoozes. Keyed by review date; a later commit for
+// the same date replaces the earlier one.
+// ---------------------------------------------------------------------------
+
+const PENDING_REVIEW_KEY = 'aria_pending_reviews'
+
+export function getPendingReviews() {
+  try { return JSON.parse(localStorage.getItem(PENDING_REVIEW_KEY) || '[]') }
+  catch { return [] }
+}
+
+function setPendingReviews(items) {
+  localStorage.setItem(PENDING_REVIEW_KEY, JSON.stringify(items))
+}
+
+export function queueReviewCommit(payload) {
+  const pending = getPendingReviews().filter(p => p.date !== payload.date)
+  pending.push(payload)
+  setPendingReviews(pending)
+}
+
+export function removeReviewCommit(date) {
+  setPendingReviews(getPendingReviews().filter(p => p.date !== date))
+}
+
 let _flushing = false
 
 // A 4xx (except timeout/rate-limit) means the request will never succeed —
@@ -220,7 +250,8 @@ function _isPermanentFailure(err) {
 
 async function flushQueues() {
   if (_flushing || likelySleeping()) return
-  if (!getPendingCompletes().length && !getPendingSnoozes().length) return
+  if (!getPendingCompletes().length && !getPendingSnoozes().length &&
+      !getPendingReviews().length) return
   _flushing = true
 
   // Re-read queue before each item and remove individually after success.
@@ -249,6 +280,19 @@ async function flushQueues() {
       else break
     }
     snoozes = getPendingSnoozes()
+  }
+
+  let reviews = getPendingReviews()
+  while (reviews.length) {
+    const r = reviews[0]
+    try {
+      await request('POST', '/review/commit', r)
+      removeReviewCommit(r.date)
+    } catch (err) {
+      if (_isPermanentFailure(err)) removeReviewCommit(r.date)
+      else break
+    }
+    reviews = getPendingReviews()
   }
 
   _flushing = false

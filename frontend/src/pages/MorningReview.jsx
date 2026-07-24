@@ -57,15 +57,14 @@ export default function MorningReview({ data, onComplete }) {
 
   async function handleContinue() {
     setSaving(true)
-    try {
-      await commitReview({
-        date: data.date,
-        tasks: (data.tasks || []).map(t => ({ id: t.id, effort: efforts[t.id] })),
-        added: added.map(x => ({ title: x.title, effort: x.effort })),
-      })
-    } catch {
-      // Never block her morning on this — proceed even if the save failed.
-    }
+    // commitReview is durable — on a cold-backend failure it queues the commit
+    // for background flush rather than throwing, so the morning is never blocked
+    // and `reviewed_through` still lands once the backend wakes.
+    await commitReview({
+      date: data.date,
+      tasks: (data.tasks || []).map(t => ({ id: t.id, effort: efforts[t.id] })),
+      added: added.map(x => ({ title: x.title, effort: x.effort })),
+    })
     onComplete()
   }
 
