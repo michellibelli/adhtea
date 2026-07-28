@@ -150,10 +150,9 @@ frontend/src/
 
 1. **Docs cleanup** — `PROJECT.md` (4.0.0) and `SESSION.md` (4.0.72) are stale; this HANDOFF is current. Fold or refresh them when convenient.
 2. **Orphan score columns** — `Task.score`, `score_components`, `score_updated_at`, `pinned_for` remain on the model + are exposed in `TaskResponse`, but nothing writes them now that the scoring engine is gone (they read back null). Left in place to avoid a destructive prod migration; drop them in a deliberate migration if you want them gone. Same for the never-read `max_tasks_per_day`/`max_total_per_day` DB columns (model + validation removed; columns left orphaned in prod).
-3. **Untracked artwork** — `frontend/public/flowers/{tea-cup-full, tea-kettle-full, wood[1-3]-{linen,warm}}.png` are uncommitted and unreferenced. Intended for "started"-state Today artwork; not yet wired. Commit + use or discard.
-4. **Settings visual pass** — pending since May.
-5. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
-6. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix.
+3. **Settings visual pass** — pending since May.
+4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
+5. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix.
 
 Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
 
