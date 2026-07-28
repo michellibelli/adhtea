@@ -366,11 +366,7 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
                 {[{ v: true, l: 'Yes' }, { v: false, l: 'No' }].map(({ v, l }) => (
                   <button
                     key={l}
-                    onClick={() => setForm(f => ({
-                      ...f,
-                      exercise: v,
-                      exercise_minutes: v ? (f.exercise_minutes ?? 30) : null,
-                    }))}
+                    onClick={() => setForm(f => ({ ...f, exercise: v }))}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                       form.exercise === v
                         ? 'bg-ui-primary text-ui-primary-text border-transparent'
@@ -380,17 +376,6 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
                     {l}
                   </button>
                 ))}
-                {form.exercise && (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number" min={5} max={180}
-                      value={form.exercise_minutes ?? 30}
-                      onChange={e => setForm(f => ({ ...f, exercise_minutes: parseInt(e.target.value) || 30 }))}
-                      className="w-16 px-2 py-1.5 text-xs rounded-lg bg-ui-input border border-ui-input-border text-ui-text outline-none focus:border-ui-input-focus"
-                    />
-                    <span className="text-xs text-ui-subtext">min</span>
-                  </div>
-                )}
               </div>
             </div>
 
