@@ -7,7 +7,7 @@ function readShowBuildChip() {
 }
 
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, loginExpired, likelySleeping, warmUp } from './api/client'
+import { isLoggedIn, loginExpired, likelySleeping, warmUp, getPendingReviews } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { getReviewPending } from './api/review'
@@ -163,7 +163,14 @@ function AppShell() {
             getReviewPending().catch(() => null),
           ])
           setCheckInLog(log)   // hand to the gate so it paints without a 2nd fetch
-          if (pending && pending.tasks && pending.tasks.length) {
+          // A commit for this day may already be sitting in the local queue —
+          // durable-committed on a cold backend that never advanced
+          // `reviewed_through`, so /review/pending still returns it. Treat that
+          // day as already reviewed (the 30s flush will sync it) so we don't
+          // fire the same morning review a second time.
+          const queuedDates = new Set(getPendingReviews().map(p => p.date))
+          if (pending && pending.tasks && pending.tasks.length &&
+              !queuedDates.has(pending.date)) {
             // Review yesterday first; its Continue button runs the self-care
             // gate decision below (see MorningReview onComplete).
             setReview(pending)

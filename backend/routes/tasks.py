@@ -22,7 +22,7 @@ from routes.auth import get_current_user
 # `from routes.tasks import carry_forward`, e.g. triage.py and the tests) keep
 # working unchanged.
 from routes.task_lifecycle import (
-    _tz, _day_start_hour, _app_today, _day_start, _day_end,
+    _tz, _day_start_hour, _app_today, _day_start, _day_end, _app_day_start_utc,
     DAILY_CAP, count_today, _exempt_from_cap,
     _is_routine_due, generate_routine_instances, run_daily_rollover,
     carry_forward, resolve_snoozes, promote_due_tasks,
@@ -369,7 +369,7 @@ def get_done_today(
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.done,
-            Task.completed_at >= _day_start(current_user),
+            Task.completed_at >= _app_day_start_utc(current_user),
         )
         .order_by(Task.completed_at.desc())
         .all()

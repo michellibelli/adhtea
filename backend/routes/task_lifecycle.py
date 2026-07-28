@@ -45,9 +45,24 @@ def _app_today(user: User) -> date:
 
 
 def _day_start(user: User) -> datetime:
-    """Naive datetime for midnight of user's current app-day (for DB comparisons)."""
+    """Naive datetime for midnight of user's current app-day (for DB comparisons).
+
+    Local-midnight convention — matches how `scheduled_date` is stored. Do NOT
+    compare this against `completed_at` (which is naive UTC); use
+    `_app_day_start_utc` for that."""
     d = _app_today(user)
     return datetime(d.year, d.month, d.day, 0, 0, 0)
+
+
+def _app_day_start_utc(user: User) -> datetime:
+    """Naive-UTC instant at which the user's current app-day began (its
+    day_start_hour boundary). For comparing against `completed_at`, which is
+    stored as naive UTC. `_day_start` (local-midnight) is ~the tz offset off
+    here and would drop yesterday-evening completions from the app-day."""
+    d = _app_today(user)
+    local = datetime(d.year, d.month, d.day, _day_start_hour(user), 0, 0,
+                     tzinfo=_tz(user))
+    return local.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _day_end(user: User) -> datetime:

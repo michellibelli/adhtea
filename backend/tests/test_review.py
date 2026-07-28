@@ -7,6 +7,7 @@ sunny-fallback path end to end (Haiku is never called).
 from datetime import datetime, timezone, timedelta
 
 from models import User, Task, TaskStatus, TaskType, Effort, EffortExample
+from routes.task_lifecycle import _day_start, _app_day_start_utc
 
 
 def _mk_done(db, user_id, title, completed_at):
@@ -120,6 +121,24 @@ def test_reviewed_day_not_resurfaced(client, auth_headers, db_session):
     # Same day already reviewed -> nothing pending now.
     again = client.get("/review/pending", headers=auth_headers)
     assert again.json() is None
+
+
+def test_evening_completion_still_surfaces(client, auth_headers, db_session):
+    """Regression: `completed_at` is naive UTC, but the old exclusion boundary
+    used local-midnight (`_day_start`). For a west-of-UTC user that dropped
+    yesterday-evening completions from the review, so an evening-heavy day
+    surfaced nothing. A completion in that gap must now still surface."""
+    u = _user(db_session)
+    # A task finished late yesterday (local): its naive-UTC completed_at sits
+    # after local-midnight (old boundary) but before the true app-day start.
+    gap = _app_day_start_utc(u) - _day_start(u)
+    assert gap > timedelta(0), "test only meaningful for a non-UTC user tz"
+    evening = _day_start(u) + timedelta(minutes=30)
+    _mk_done(db_session, u.id, "Bath and lights-out routine", evening)
+
+    data = client.get("/review/pending", headers=auth_headers).json()
+    assert data is not None, "yesterday-evening completion was dropped"
+    assert any(t["title"] == "Bath and lights-out routine" for t in data["tasks"])
 
 
 def test_stored_override_beats_heuristic(client, auth_headers, db_session):

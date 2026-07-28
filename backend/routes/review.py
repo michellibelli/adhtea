@@ -16,7 +16,7 @@ from database import get_db
 from models import Task, TaskStatus, TaskType, SelfCareLog, User, Effort, utcnow
 from schemas import ReviewPendingResponse, ReviewCommitRequest
 from routes.auth import get_current_user
-from routes.task_lifecycle import _app_today, _day_start, _tz, _day_start_hour
+from routes.task_lifecycle import _app_today, _app_day_start_utc, _tz, _day_start_hour
 import review_engine
 
 router = APIRouter()
@@ -54,7 +54,7 @@ def _pending_day_and_tasks(user: User, db: Session):
             Task.task_type == TaskType.task,
             Task.completed_at.isnot(None),
             Task.completed_at >= since,
-            Task.completed_at < _day_start(user),   # exclude today's app-day
+            Task.completed_at < _app_day_start_utc(user),   # exclude today's app-day
         )
         .order_by(Task.completed_at.desc())
         .all()
