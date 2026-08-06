@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-07-10 (BUILD 4.9.1)*
+*Last updated: 2026-08-06 (BUILD 4.11.6)*
 
 > Deeper design notes → `PROJECT.md` (note: PROJECT.md itself is stale at 4.0.0; this file is the current source of truth).
 
@@ -55,11 +55,31 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.9.1 (2026-07-09)
+## Current status — BUILD 4.11.6 (2026-07-28)
 
-`master` clean, synced with origin. Backend suite **186 passed**. `npm run build` clean. Live.
+`master` clean, synced with origin. Backend suite **159 passed**. `npm run build` clean. Live.
 
-The last ~six weeks were reliability + subtraction: three subsystems (domains, tournament triage, difficulty/weight) were removed, security was hardened, and cold-start/sleep-wake loading was made robust. Feature surface is stable.
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. The last two releases were subtraction and repair — this is a settled stopping point, not a mid-feature pause.
+
+### Big shifts since BUILD 4.9.1
+
+**One 4am rollover for everything (4.9.4, 2026-07-10).** Task carry-forward, plan reset, self-care gate, and the morning-login gate now share a single boundary. `day_start_hour` default moved 6 → 4 (one-time migration bumps existing rows, guarded on `WHERE day_start_hour=6`). Sessions expire on it too (4.9.8): `_session_expiry` computes the next `day_start_hour` in the user's tz and stores it as the token's `expires_at`, so the server enforces it — `TOKEN_EXPIRY_DAYS` is gone. `MIN_SESSION_HOURS` floors it, so a 3:50am login runs to 4am *tomorrow*. `/login` returns `expires_at` and the client stores that moment verbatim; the client has no day-boundary math of its own left to drift.
+
+**One shared today-order, then hand-ordering (4.9.5 → 4.10.2, 2026-07-13–14).** The box and the Focus card used to sort with two different comparators, so the focused task wasn't always the front bag. The rule now lives in one place — `frontend/src/utils/ordering.js` — and both surfaces sort with it. Tiers: imminent timed items (≤5 min) → due/overdue routines → earlier clock time (untimed last) → manual `sort_order`.
+
+Then 4.10.0 made the bags draggable. **The first drag of the day hands the order to the user**: the box and Focus card follow `sort_order` alone (`compareTasksManual`) instead of the computed tiers, for the rest of the app-day. Resets at the 4am rollover. Sole exception: an appointment inside its on-screen window (5 min before → 30 min after, `isAppointmentNow`) still floats to the front — deliberately narrower than `isImminent`, which counts anything past its due_time and would let an 08:00 routine pin itself to the front all afternoon. Backend: `User.box_ordered_on` mirrors `planned_on`, `/me` exposes `box_manual`, `POST /tasks/reorder` takes `manual_box` to stamp it. A drag in the *Today list* leaves the flag alone. The flag is server-side because `main.jsx` wipes localStorage on every BUILD change, which would silently revert the box to the time sort on each deploy.
+
+**Morning review (4.11.0–4.11.1, 4.11.3, 4.11.6, 2026-07-17–28).** First sign-in of the day surfaces the most recent unreviewed activity-day: yesterday's finished tasks pre-tagged small/big, tap to flip the wrong ones, one button into the self-care gate. "Last unreviewed day" is tracked via `User.reviewed_through`, so weekend/sick gaps self-heal (Monday surfaces Friday). One cheap Haiku call each morning both classifies the tasks and writes a warm sunny greeting; corrections feed back as few-shot examples + exact-title overrides via the `EffortExample` store. Falls back to a keyword heuristic + rotating line if Haiku is slow — never blocks the gate. 4.11.1 added an input for logging things she did that were never captured (backdated to local noon of the reviewed day).
+
+New with it: `Task.effort` (small|big, nullable), `User.reviewed_through`, `EffortExample`, `scoring.EFFORT_POINTS` (small=1, big=2), `review_engine.py`, `routes/review.py`, `MorningReview.jsx`. Removed at the same time: the dead weight/importance system (`TaskWeight`/`Importance` enums + columns, dropped in migration), `_workload_label`, and the uncalled `/tasks/triage-summary`.
+
+Two trigger bugs were fixed in 4.11.3/4.11.6, both worth knowing since the pattern recurs. **Durability:** the commit was a fire-and-forget POST whose failure was swallowed, so on a napping Render backend `reviewed_through` never advanced and the same day resurfaced forever. It's now durable like completions/snoozes — persisted on transient failure, flushed on wake, only permanent 4xx dropped. **Timezone:** `completed_at` is naive UTC but the "exclude today" boundary used `_day_start` (naive *local* midnight); west of UTC that lands ~7–8h early and dropped yesterday-evening completions, so an evening-heavy day surfaced nothing. `_app_day_start_utc` now handles anything compared against `completed_at`; `_day_start` stays for `scheduled_date`, which shares the local-midnight convention.
+
+**Medication adherence feeds capacity (4.11.2).** Marking meds moves the executive-capacitor term (and so overall capacity / slot count) the way sleep and meals do — the formula previously ignored meds entirely. Adherence = distinct active schedules logged that day / active count. Full adherence leaves executive as-is, zero knocks 40% off, no regimen (`None`) is untouched. Logging a med recomputes today's snapshot immediately.
+
+**Nudges dialed back (4.9.6, 4.9.9).** Three a day on a 2h cooldown had become wallpaper — swatted shut on sight. Now **one a day, 6h cooldown**. A dismissal is finally read back and mutes that variable for `DISMISSAL_BACKOFF_DAYS` (an affirmative answer doesn't — "on it" isn't a request for silence). Suppression widened from today to a per-variable window (`satisfied_recently`): sleep/meals/check-in reset daily, exercise looks back a day, since its target is 4 days a week. The weekly snapshot is also rebuilt whenever a log in the window is newer than it — it used to be written once and never again, making every later self-care entry invisible to the engine.
+
+**Smaller UI (4.9.10, 4.9.11, 4.11.4, 4.11.5).** Tag edit/snooze moved to two corner buttons (the whole tag was one big edit target); completion celebration cut 7100ms → 5650ms; login now prefetches the heavy Focus images off-DOM while she types, matching the backend wake; self-care exercise question is Yes/No only (backend falls back to 30 min when `exercise_minutes` is null).
 
 ### Big shifts since BUILD 4.0.x
 
@@ -77,7 +97,7 @@ The last ~six weeks were reliability + subtraction: three subsystems (domains, t
 
 **Cold-start / sleep-wake loading covers (4.8.0–4.9.1).** Render free-tier cold starts and mid-session sleeps used to show loading→"…" skeleton jank. Now: pages (`Focus`, `Today`, `SelfCare`) dispatch `aria:page-loaded` when their primary fetch settles; App raises an opaque z-50 cover on nav + reactive wakes and lifts it only on `aria:page-loaded` (data renders underneath). Sleep-on-return funnels through a single `aria:server-waking` event (visibilitychange/focus + reactive on any request to a sleeping server). Completions/snoozes are queued to localStorage before the request, so the triggering action is never lost. 4.9.1 fixed the cold first-open specifically: removed a 2.5s `Promise.race` on `getTodayLog` that was losing the race on cold starts and skipping the self-care gate; killed the double-loader; added parallel login-screen warm-up. Correct morning flow now: (login → parallel wake) → single loading screen → self-care gate → Today → Start my day.
 
-**Visual direction: Cafe + Linen themes only** (Americano/Berries/Chai removed 4.2.19). Cafe = warm amber, Lora serif, wood shadows, CafeShelf idle animations. Linen = soft plum/lavender paper, botanical header pill, pressed-flower SVG, paper-grain Focus card. Watercolor tea assets throughout. Tea-box metaphor on Focus (bags = tasks, ordered morning→evening by due_time). Capture has a two-button submit (tea-cup = save+return, `+` = save+add-another).
+**Visual direction: Cafe + Linen themes only** (Americano/Berries/Chai removed 4.2.19). Cafe = warm amber, Lora serif, wood shadows, CafeShelf idle animations. Linen = soft plum/lavender paper, botanical header pill, pressed-flower SVG, paper-grain Focus card. Watercolor tea assets throughout. Tea-box metaphor on Focus (bags = tasks, ordered morning→evening — see `utils/ordering.js`, and 4.10.0 above for hand-ordering). Capture has a two-button submit (tea-cup = save+return, `+` = save+add-another).
 
 ---
 
@@ -91,7 +111,8 @@ backend/
   schemas.py          Pydantic schemas
   rate_limit.py       shared slowapi Limiter (keyed on client IP)
   pid_engine.py       pure PID math for nudges (no DB imports)
-  scoring.py          shared capacity_tier + project_stall_map (used by selfcare + insights)
+  scoring.py          shared capacity_tier + project_stall_map + EFFORT_POINTS
+  review_engine.py    morning-review effort classification (Haiku + learned corrections + keyword fallback)
   routes/
     auth.py           login (rate-limited), session tokens (hashed), settings, invite codes
     tasks.py          CRUD + today/inbox/bonus/search/plan-day endpoints
@@ -102,13 +123,14 @@ backend/
     gcal.py           Google Calendar OAuth 2.0 + lazy sync (OAuth state persisted in DB)
     projects.py       Project CRUD + Claude Haiku AI breakdown + sub-task date cascade
     insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
+    review.py         morning review — /review/pending + /review/commit
     import_csv.py     Notion CSV import
-  tests/              125 pytest tests (conftest + 12 test files); CI on every push/PR
+  tests/              159 pytest tests (conftest + 16 test files); CI on every push/PR
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 
 Run tests: `cd backend && python -m pip install -r requirements-dev.txt && python -m pytest tests/ -v`
-Test files: auth, gcal, import_csv, insights, medication, migrate, plan_day, projects, routines, selfcare, tasks, tasks_lifecycle, today_merge.
+Test files: auth, box_order, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, projects, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
 
 ## Frontend file map
 
@@ -119,6 +141,7 @@ frontend/src/
   pages/
     Focus.jsx          home — pickNext(), bonus mode, watercolor dunk celebration, tap-bag-to-focus
     Today.jsx          Today / Up Next split, capacity slots, drag-reorder, planning gate
+    MorningReview.jsx  first-sign-in review — effort tags, add-what-you-did, durable commit
     Capture.jsx        type-aware (task/appt/note/routine), two-button submit
     Routines.jsx       CRUD, frequency/time-of-day/critical flags
     SelfCare.jsx       foundation log + capacity bar
@@ -139,6 +162,8 @@ frontend/src/
   context/
     ThemeContext.jsx   two themes — Cafe (default) + Linen — reads aria_theme localStorage
   utils/
+    ordering.js        THE today-order rule — shared by TeaBox + Focus; computed tiers vs. manual
+    prefetch.js        theme-aware off-DOM image warm-up during login
     dnd.js             SmartPointerSensor (blocks drag on inputs/buttons)
     medicationStore.js localStorage med-name pseudonymization (server stores placeholders)
     snooze.js          weekend-aware snooze date math
@@ -153,6 +178,7 @@ frontend/src/
 3. **Settings visual pass** — pending since May.
 4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
 5. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix.
+6. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
 
 Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
 
