@@ -452,6 +452,24 @@ def snooze_task(
     task.snooze_until = body.snooze_until
     task.scheduled_date = None
     task.push_count = (task.push_count or 0) + 1
+
+    # Carry due_date forward with the snooze. Without this the task returns to
+    # the inbox still due today, and promote_due_tasks puts it straight back in
+    # Today — the snooze undone by the sweep that runs a moment later. Only
+    # pushed forward, never pulled back: a task already due after the snooze
+    # target keeps its own later date.
+    #
+    # snooze_until is naive UTC; due_date is a local calendar date. Read the
+    # wake date in the user's timezone or an evening snooze lands a day late
+    # (8pm Pacific is already tomorrow in UTC).
+    if task.snooze_until is not None:
+        wake_utc = task.snooze_until
+        if wake_utc.tzinfo is None:
+            wake_utc = wake_utc.replace(tzinfo=timezone.utc)
+        wake = wake_utc.astimezone(_tz(current_user)).date()
+        if task.due_date is None or task.due_date < wake:
+            task.due_date = wake
+
     db.commit()
     db.refresh(task)
     return task

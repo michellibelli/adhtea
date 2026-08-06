@@ -23,6 +23,9 @@ CAPACITY_TIER_HIGH = 70.0         # overall > this  → "high" day
 # A project with no completion in this many days counts as stalled.
 PROJECT_STALL_DAYS_THRESHOLD = 7
 
+# Today slots at 100% capacity — the scale factor behind max_slots_for.
+CAPACITY_SLOTS_AT_FULL = 10
+
 # Effort weighting — a finished task's contribution to a day's output. The
 # single source of truth for the small/big ratio; the capacity-vs-output
 # analysis sums these instead of counting tasks equally. A big task is worth
@@ -35,6 +38,15 @@ def effort_points(effort) -> int:
     None → 1 (treated as a small until reviewed)."""
     key = getattr(effort, "value", effort)
     return EFFORT_POINTS.get(key, 1)
+
+
+def max_slots_for(overall: float) -> int:
+    """How many Today slots a day's overall capacity is worth.
+
+    Drives both the `(X/N)` chip on Today and the ceiling auto-promotion fills
+    to, so the number she plans against is the number the promoter respects.
+    Floored at 1 — a terrible day still gets one thing."""
+    return max(1, round(CAPACITY_SLOTS_AT_FULL * (overall / 100.0)))
 
 
 def capacity_tier(overall: float) -> str:

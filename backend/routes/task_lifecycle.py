@@ -169,7 +169,9 @@ def run_daily_rollover(user: User, db: Session) -> bool:
     concurrent caller flips it and proceeds; the rest see 0 rows and skip.
 
     Intraday sweeps (resolve_snoozes, promote_due_tasks, the demotions) are NOT
-    run here — they must run on every request and are already idempotent.
+    run here — they run on every request. Note that "idempotent" for
+    promote_due_tasks means it won't duplicate rows, NOT that repeat calls are
+    inert: it refills freed slots, which is why it is gated on planned_on.
 
     Returns True if this call performed the rollover, False if it was already done.
     """
@@ -311,8 +313,46 @@ def resolve_snoozes(user: User, db: Session):
 # Auto-promote: inbox tasks with due_date <= today move into Today list
 # ---------------------------------------------------------------------------
 
+def _capacity_slots(user: User, db: Session) -> int:
+    """Today's capacity-driven slot count — the same number the `(X/N)` chip
+    shows. Falls back to DAILY_CAP before the self-care check-in exists, since
+    with no snapshot we have no basis to claim the day is a small one."""
+    from models import CapacitySnapshot
+    from scoring import max_slots_for
+
+    snap = (
+        db.query(CapacitySnapshot)
+        .filter(
+            CapacitySnapshot.user_id == user.id,
+            CapacitySnapshot.log_date == _app_today(user),
+        )
+        .first()
+    )
+    if snap is None:
+        return DAILY_CAP
+    return min(DAILY_CAP, max_slots_for(snap.overall))
+
+
 def promote_due_tasks(user: User, db: Session):
+    """Pull inbox tasks that are due into Today.
+
+    This is a PLANNING-time sweep. It stops once she commits the day with
+    "Start my day" (User.planned_on), and that gate is the whole point: `room`
+    below is recomputed live, so while promotion was running on every read, any
+    slot she freed was immediately refilled from the inbox. Completing a task
+    pulled in a replacement; pruning the plan down to capacity pulled the
+    prunings' replacements in behind her. The plan could never stay put.
+
+    After the commit, newly-due items wait in Up Next and she promotes them by
+    hand. Appointments are NOT special-cased here — a task appearing in Today
+    unbidden is the exact thing being fixed, and a synced appointment still
+    shows in Up Next with its time on it.
+    """
     today_local = _app_today(user)
+
+    if user.planned_on == today_local:
+        return
+
     due = (
         db.query(Task)
         .filter(
@@ -327,9 +367,10 @@ def promote_due_tasks(user: User, db: Session):
     if not due:
         return
 
-    # Daily cap: appointments always promote (time-bound); plain tasks only
-    # promote while Today has room, otherwise they wait in the inbox.
-    room = DAILY_CAP - count_today(user, db)
+    # Fill to the capacity-shaped slot count, not the hard 15: the plan she is
+    # about to prune should already be the size of the day she actually has.
+    # Appointments are time-bound and still bypass it.
+    room = _capacity_slots(user, db) - count_today(user, db)
     promotable = []
     for task in due:
         if _exempt_from_cap(task.task_type):

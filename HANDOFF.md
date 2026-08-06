@@ -55,13 +55,21 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.11.6 (2026-07-28)
+## Current status — BUILD 4.12.0 (2026-08-06)
 
-`master` clean, synced with origin. Backend suite **159 passed**. `npm run build` clean. Live.
+`master` clean, synced with origin. Backend suite **171 passed**. `npm run build` clean. Live.
 
-The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. The last two releases were subtraction and repair — this is a settled stopping point, not a mid-feature pause.
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold.
 
 ### Big shifts since BUILD 4.9.1
+
+**The plan stays put (4.12.0, 2026-08-06).** Reported symptom: plan the day to capacity, start working, and items keep appearing in Today — including ones already snoozed — forcing a re-plan several times a day.
+
+Cause: `promote_due_tasks` ran on **every** `GET /tasks/today` (Focus mount, Today mount, and after every completion via `fetchAll`) and computed `room = cap - count_today()` *live*. Anything that left Today — completed, snoozed, deferred, deleted — opened a slot that the next read refilled from the due-inbox. Completing a task summoned a replacement; pruning the plan to capacity pulled the prunings' replacements in behind her. `run_daily_rollover`'s docstring asserted these intraday sweeps were "already idempotent" — true for row duplication, false for effect. Compounding it, `snooze_task` never touched `due_date`, so a resolved snooze returned to the inbox still due today and was immediately re-promoted: the snooze undone by the sweep a moment later. And `plan_day` stamped `planned_on` but nothing read it for admission — the ritual had zero effect on what entered Today.
+
+Fixes: promotion is now a **planning-time sweep only**, gated on `planned_on == _app_today` — after "Start my day", nothing enters Today unless she taps `+`. It fills to the **capacity-driven** slot count (`scoring.max_slots_for`, extracted from `selfcare.py` so the `(X/N)` chip and the promoter share one number) rather than the hard `DAILY_CAP=15`; with no capacity snapshot yet it falls back to `DAILY_CAP`. Snooze now carries `due_date` forward to the wake day — forward only, so a task already due later keeps its own date, and the wake date is read in the user's tz because `snooze_until` is naive UTC (an 8pm Pacific snooze is already tomorrow in UTC).
+
+Appointments are deliberately **not** exempted from the plan gate — an item appearing unbidden is the thing being fixed. They still bypass the *capacity ceiling* during planning. Because of that, Up Next on Today now lists appointments as well as tasks (it filtered to `task` only, which would have left a held appointment with nowhere to show), and the Up Next divider carries a "N due today" badge after the day is planned so held ≠ lost. Tests: `test_promotion_gate.py`.
 
 **One 4am rollover for everything (4.9.4, 2026-07-10).** Task carry-forward, plan reset, self-care gate, and the morning-login gate now share a single boundary. `day_start_hour` default moved 6 → 4 (one-time migration bumps existing rows, guarded on `WHERE day_start_hour=6`). Sessions expire on it too (4.9.8): `_session_expiry` computes the next `day_start_hour` in the user's tz and stores it as the token's `expires_at`, so the server enforces it — `TOKEN_EXPIRY_DAYS` is gone. `MIN_SESSION_HOURS` floors it, so a 3:50am login runs to 4am *tomorrow*. `/login` returns `expires_at` and the client stores that moment verbatim; the client has no day-boundary math of its own left to drift.
 
@@ -125,12 +133,12 @@ backend/
     insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
     review.py         morning review — /review/pending + /review/commit
     import_csv.py     Notion CSV import
-  tests/              159 pytest tests (conftest + 16 test files); CI on every push/PR
+  tests/              171 pytest tests (conftest + 17 test files); CI on every push/PR
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 
 Run tests: `cd backend && python -m pip install -r requirements-dev.txt && python -m pytest tests/ -v`
-Test files: auth, box_order, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, projects, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
+Test files: auth, box_order, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, projects, promotion_gate, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
 
 ## Frontend file map
 

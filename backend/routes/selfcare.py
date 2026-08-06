@@ -211,10 +211,10 @@ def get_today_capacity(
     ).first()
     if snap is None:
         return None
-    from scoring import capacity_tier
+    from scoring import capacity_tier, max_slots_for
     resp = CapacitySnapshotResponse.model_validate(snap)
     resp.tier = capacity_tier(snap.overall)
-    resp.max_slots = max(1, round(10 * (snap.overall / 100.0)))
+    resp.max_slots = max_slots_for(snap.overall)
     return resp
 
 

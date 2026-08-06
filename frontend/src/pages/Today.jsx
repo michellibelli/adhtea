@@ -161,9 +161,19 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   const overCapacity = regular.length > maxToday
 
   const upNextSlots = Math.max(0, MAX_TOTAL - regular.length - timed.length)
-  const upNext = inboxTasks
-    .filter(t => t.task_type === 'task')
-    .slice(0, upNextSlots)
+  // Appointments belong here too now. Auto-promotion stops once the day is
+  // planned (backend gates on planned_on), so a synced appointment that used to
+  // walk straight into Today now waits here — filtering to task-only would have
+  // left it with nowhere to appear at all.
+  const upNextAll = inboxTasks.filter(t => t.task_type === 'task' || t.task_type === 'appointment')
+  const upNext = upNextAll.slice(0, upNextSlots)
+
+  // Things that came due while she was working. Held back deliberately so the
+  // committed plan stays put — surfaced as a count so "held" never reads as "lost".
+  const todayISO = new Date().toLocaleDateString('en-CA')
+  const dueWaiting = planned
+    ? upNextAll.filter(t => t.due_date && t.due_date <= todayISO).length
+    : 0
 
   async function handleComplete(id) {
     setCompletingId(id)
@@ -409,6 +419,14 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                 <div className="flex items-center gap-3 px-0.5">
                   <div className="flex-1 h-px bg-ui-border" />
                   <span className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider">Up Next</span>
+                  {dueWaiting > 0 && (
+                    <span
+                      title="Came due after you started your day — your plan is left alone. Tap + to pull one in."
+                      className="text-[10px] font-medium text-ui-accent border border-ui-accent/40 rounded-full px-2 py-0.5 whitespace-nowrap"
+                    >
+                      {dueWaiting} due today
+                    </span>
+                  )}
                   <div className="flex-1 h-px bg-ui-border" />
                 </div>
 
