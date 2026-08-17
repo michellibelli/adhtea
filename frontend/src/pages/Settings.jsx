@@ -396,6 +396,17 @@ export default function Settings({ onNavigate, user }) {
         </section>
 
         <section className="mb-6">
+          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Export</h2>
+          <Card className="px-5 py-4">
+            <p className="text-sm font-medium text-ui-text mb-1">Export to CSV</p>
+            <p className="text-xs text-ui-subtext mb-4 leading-relaxed">
+              Download every task — dates, status, project, notes — as a spreadsheet.
+            </p>
+            <CSVExportForm />
+          </Card>
+        </section>
+
+        <section className="mb-6">
           <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Display</h2>
           <ThemePicker />
           <div className="mt-3">
@@ -553,5 +564,51 @@ function CSVImportForm() {
         {loading ? 'Importing…' : 'Import'}
       </Button>
     </form>
+  )
+}
+
+
+function CSVExportForm() {
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [done,    setDone]    = useState(null)
+  const [error,   setError]   = useState(null)
+
+  async function handleExport() {
+    setLoading(true)
+    setError(null)
+    setDone(null)
+    try {
+      const path = `/export/tasks.csv${includeDeleted ? '?include_deleted=true' : ''}`
+      const filename = await api.download(path, 'adhtea-tasks.csv')
+      setDone(filename)
+    } catch (err) {
+      setError(err?.message || 'Export failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="flex items-center gap-2 mb-3 text-xs text-ui-subtext cursor-pointer">
+        <input
+          type="checkbox"
+          checked={includeDeleted}
+          onChange={(e) => { setIncludeDeleted(e.target.checked); setDone(null) }}
+          className="accent-ui-accent"
+        />
+        Include deleted tasks
+      </label>
+      {done && (
+        <p className="mb-3 text-xs text-emerald-400 font-medium">Saved {done}</p>
+      )}
+      {error && (
+        <p className="mb-3 text-xs text-red-400">{error}</p>
+      )}
+      <Button size="sm" onClick={handleExport} disabled={loading}>
+        {loading ? 'Exporting…' : 'Download CSV'}
+      </Button>
+    </div>
   )
 }

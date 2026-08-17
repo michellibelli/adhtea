@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, insights, review
+from routes import projects, insights, review, export_csv
 
 load_dotenv()
 
@@ -227,6 +227,7 @@ app.include_router(routines.router,    tags=["routines"])
 app.include_router(selfcare.router,    tags=["self-care"])
 app.include_router(medication.router,  tags=["medication"])
 app.include_router(import_csv.router,  tags=["import"])
+app.include_router(export_csv.router,  tags=["export"])
 app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(projects.router,    tags=["projects"])
 app.include_router(insights.router)

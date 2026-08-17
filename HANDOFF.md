@@ -55,13 +55,17 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.12.0 (2026-08-06)
+## Current status — BUILD 4.13.0 (2026-08-17)
 
-`master` clean, synced with origin. Backend suite **171 passed**. `npm run build` clean. Live.
+`master` clean, synced with origin. Backend suite **181 passed**. `npm run build` clean. Live.
 
-The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold.
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side.
 
 ### Big shifts since BUILD 4.9.1
+
+**CSV export (4.13.0, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 21 columns (id, title, type, status, priority, effort, critical, dates, project/routine titles, tags, location, push_count, timestamps, notes). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
+
+Two things worth knowing. **Column names are the importer's vocabulary** (`title`, `due_date`, `notes`, `tags`, `priority`, `status`), so an export round-trips back through `/import/csv` — there's a test pinning that. **Timestamps are converted to the user's tz** on the way out (`completed_at` etc. are naive UTC), while `due_date`/`scheduled_date` are written verbatim because they use the local-midnight convention — the same split that bit the review trigger in 4.11.6. The frontend downloads via `api.download()` in `client.js` (a bearer token can't ride on a plain `<a href>`, so it fetches the blob and clicks a synthetic link); the route sets `Access-Control-Expose-Headers` so the cross-origin client can read the server-chosen filename. Body is written with a UTF-8 BOM + CRLF for Excel. Tests: `test_export_csv.py`.
 
 **The plan stays put (4.12.0, 2026-08-06).** Reported symptom: plan the day to capacity, start working, and items keep appearing in Today — including ones already snoozed — forcing a re-plan several times a day.
 
@@ -133,12 +137,13 @@ backend/
     insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
     review.py         morning review — /review/pending + /review/commit
     import_csv.py     Notion CSV import
-  tests/              171 pytest tests (conftest + 17 test files); CI on every push/PR
+    export_csv.py     CSV export — GET /export/tasks.csv (all owned tasks, one row each)
+  tests/              181 pytest tests (conftest + 18 test files); CI on every push/PR
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 
 Run tests: `cd backend && python -m pip install -r requirements-dev.txt && python -m pytest tests/ -v`
-Test files: auth, box_order, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, projects, promotion_gate, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
+Test files: auth, box_order, export_csv, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, projects, promotion_gate, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
 
 ## Frontend file map
 
@@ -156,7 +161,7 @@ frontend/src/
     EODGate.jsx        evening mood gate + summary
     AllTasks / Inbox / Waiting / Search   list surfaces, batch ops
     Projects.jsx       list + detail + AI generation + manual add
-    Settings.jsx       integrations, daily caps, CSV import, display/theme
+    Settings.jsx       integrations, CSV import + export, display/theme
     Login / Signup / Register / AlphaChallenge / OnboardingWelcome   auth + onboarding
   components/
     TaskCard.jsx       inline edit, done/snooze; used across surfaces

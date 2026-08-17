@@ -153,6 +153,60 @@ async function request(method, path, body = undefined, isForm = false) {
 }
 
 // ---------------------------------------------------------------------------
+// File download
+// A plain <a href> can't carry the bearer token, so fetch the body ourselves
+// and hand the browser an object URL. Same 401 + wake-retry behavior as
+// request(); the response is a blob rather than JSON.
+// ---------------------------------------------------------------------------
+
+async function rawDownload(path, fallbackName) {
+  const token = getToken()
+  const headers = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(`${BASE_URL}${path}`, { headers })
+
+  if (res.status === 401) {
+    if (import.meta.env.DEV) throw new Error('Auth required (dev mode — skipping reload)')
+    clearToken()
+    window.location.reload()
+    return
+  }
+
+  if (!res.ok) {
+    let detail = `Download failed: ${res.status}`
+    try {
+      const err = await res.json()
+      detail = err.detail || detail
+    } catch (_) {}
+    const error = new Error(detail)
+    error.status = res.status
+    throw error
+  }
+
+  markSuccess()
+
+  // Server names the file (it knows the user's app-day); header is exposed via
+  // Access-Control-Expose-Headers on the route.
+  const disposition = res.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename="?([^";]+)"?/i)
+  const filename = match ? match[1] : fallbackName
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  // Revoke on the next tick — revoking synchronously can cancel the download
+  // in Safari before it has read the blob.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  return filename
+}
+
+// ---------------------------------------------------------------------------
 // Offline-resilient completion queue
 // Stores task IDs that were completed locally but failed to sync. Flushed
 // automatically whenever any API request succeeds (i.e. backend is awake).
@@ -306,4 +360,13 @@ export const api = {
   patch:    (path, body) => request('PATCH',  path, body),
   delete:   (path)       => request('DELETE', path),
   postForm: (path, form) => request('POST',   path, form, true),
+  download: async (path, fallbackName) => {
+    try {
+      return await rawDownload(path, fallbackName)
+    } catch (err) {
+      if (!likelySleeping()) throw err
+      await warmUp(() => {})
+      return rawDownload(path, fallbackName)
+    }
+  },
 }
