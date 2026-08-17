@@ -177,6 +177,100 @@ def test_export_round_trips_through_the_importer(client, auth_headers, db_sessio
     assert {c.notes for c in copies} == {"carried over"}
 
 
+# ---------------------------------------------------------------------------
+# Filters — the row count is dominated by generated history (one routine row per
+# day, one appointment row per occurrence), so these are what make the export
+# usable for "just my actual tasks".
+# ---------------------------------------------------------------------------
+
+def test_export_types_filter_drops_the_generated_rows(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    _mk_task(db_session, user.id, title="Real task")
+    _mk_task(db_session, user.id, title="Daily meds", task_type=TaskType.routine)
+    _mk_task(db_session, user.id, title="Dentist", task_type=TaskType.appointment)
+    _mk_task(db_session, user.id, title="A thought", task_type=TaskType.note)
+
+    titles = [r["title"] for r in _rows(
+        client.get("/export/tasks.csv?types=task,note", headers=auth_headers))]
+    assert sorted(titles) == ["A thought", "Real task"]
+
+    titles = [r["title"] for r in _rows(
+        client.get("/export/tasks.csv?types=task", headers=auth_headers))]
+    assert titles == ["Real task"]
+
+
+def test_export_rejects_an_unknown_type(client, auth_headers):
+    r = client.get("/export/tasks.csv?types=task,chore", headers=auth_headers)
+    assert r.status_code == 400
+    assert "chore" in r.json()["detail"]
+
+
+def test_export_rejects_an_empty_type_list(client, auth_headers):
+    r = client.get("/export/tasks.csv?types=", headers=auth_headers)
+    assert r.status_code == 400
+
+
+def test_since_window_uses_the_day_the_row_belongs_to(client, auth_headers, db_session):
+    """Completion day for finished work, due date for open work — not created_at,
+    which would drop a still-open task captured months ago."""
+    user = _mk_user(db_session)
+    old = datetime(2026, 1, 5, 18, 0, 0)
+
+    _mk_task(db_session, user.id, title="Finished long ago", status=TaskStatus.done,
+             completed_at=old, created_at=old)
+    _mk_task(db_session, user.id, title="Finished recently", status=TaskStatus.done,
+             completed_at=datetime(2026, 8, 15, 18, 0, 0), created_at=old)
+    _mk_task(db_session, user.id, title="Old but still due soon",
+             due_date=date(2026, 8, 20), created_at=old)
+
+    titles = [r["title"] for r in _rows(
+        client.get("/export/tasks.csv?since=2026-08-01", headers=auth_headers))]
+    assert sorted(titles) == ["Finished recently", "Old but still due soon"]
+
+
+def test_until_window_and_combination_with_since(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    for day in (10, 20, 30):
+        _mk_task(db_session, user.id, title=f"Due {day}", due_date=date(2026, 6, day))
+
+    titles = [r["title"] for r in _rows(
+        client.get("/export/tasks.csv?until=2026-06-20", headers=auth_headers))]
+    assert sorted(titles) == ["Due 10", "Due 20"]
+
+    titles = [r["title"] for r in _rows(
+        client.get("/export/tasks.csv?since=2026-06-15&until=2026-06-25", headers=auth_headers))]
+    assert titles == ["Due 20"]
+
+
+def test_since_reads_completed_at_in_the_users_timezone(client, auth_headers, db_session):
+    """2026-08-01 05:00 UTC is still July 31st in Los Angeles, so an August-1st
+    cutoff must exclude it."""
+    user = _mk_user(db_session)
+    user.timezone = "America/Los_Angeles"
+    db_session.commit()
+
+    _mk_task(db_session, user.id, title="Late July", status=TaskStatus.done,
+             completed_at=datetime(2026, 8, 1, 5, 0, 0))
+
+    rows = _rows(client.get("/export/tasks.csv?since=2026-08-01", headers=auth_headers))
+    assert rows == []
+
+    rows = _rows(client.get("/export/tasks.csv?since=2026-07-31", headers=auth_headers))
+    assert [r["title"] for r in rows] == ["Late July"]
+
+
+def test_filters_compose_with_include_deleted(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    _mk_task(db_session, user.id, title="Skipped routine", task_type=TaskType.routine,
+             status=TaskStatus.deleted, due_date=date(2026, 8, 10))
+    _mk_task(db_session, user.id, title="Kept task", due_date=date(2026, 8, 10))
+
+    titles = [r["title"] for r in _rows(client.get(
+        "/export/tasks.csv?include_deleted=true&types=routine&since=2026-08-01",
+        headers=auth_headers))]
+    assert titles == ["Skipped routine"]
+
+
 def test_export_handles_an_empty_account(client, auth_headers):
     r = client.get("/export/tasks.csv", headers=auth_headers)
     assert r.status_code == 200

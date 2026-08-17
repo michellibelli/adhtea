@@ -1,15 +1,17 @@
 # Session bookmark
-*Last wrap: 2026-08-17 — BUILD 4.13.0*
+*Last wrap: 2026-08-17 — BUILD 4.13.1*
 
 ## State
 
-Live build: **4.13.0** (latest commit on master). Vercel + Render auto-deploy from `master`. Backend suite 181 passed; `npm run build` clean.
+Live build: **4.13.1** (latest commit on master). Vercel + Render auto-deploy from `master`. Backend suite 188 passed; `npm run build` clean.
 
 HANDOFF.md is the real source of truth for architecture — this file is just the bookmark.
 
 ## What shipped this session
 
 - **4.13.0 — CSV export.** `GET /export/tasks.csv` (`backend/routes/export_csv.py`): every owned task, one row, 21 columns, project/routine as titles. Deleted rows excluded unless `?include_deleted=true`. Timestamps converted to user tz; `due_date`/`scheduled_date` written verbatim (local-midnight convention). UTF-8 BOM + CRLF for Excel; column names match the importer's vocabulary so an export round-trips through `/import/csv`. Frontend: `api.download()` in `client.js` (bearer token can't ride on `<a href>`, so blob + synthetic link) and an Export card in Settings. Tests: `test_export_csv.py` (10).
+
+- **4.13.1 — export filters.** First real export came back mostly generated history: one routine row per day, one appointment row per gcal occurrence, nothing ever purging either. Added `?types=` (validated, 400 on unknown), `?since=`, `?until=`. Window measured against the day a row belongs to — completed_at → due_date → scheduled_date → created_at, computed in Python because a SQL COALESCE would mix the naive-UTC and local-midnight columns. Settings has checkboxes for the two noisy types + a since date.
 
 ## Open / next session
 

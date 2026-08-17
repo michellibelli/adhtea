@@ -401,6 +401,8 @@ export default function Settings({ onNavigate, user }) {
             <p className="text-sm font-medium text-ui-text mb-1">Export to CSV</p>
             <p className="text-xs text-ui-subtext mb-4 leading-relaxed">
               Download every task — dates, status, project, notes — as a spreadsheet.
+              Routine check-offs are one row per day and synced appointments one row
+              per occurrence, so leave those out for just the tasks you wrote.
             </p>
             <CSVExportForm />
           </Card>
@@ -568,19 +570,39 @@ function CSVImportForm() {
 }
 
 
+// Routine check-offs and synced calendar events are one row per day / per
+// occurrence, so they swamp the hand-written tasks in a long export. Both are
+// droppable here; everything is included until she says otherwise.
+const ALL_EXPORT_TYPES = ['task', 'appointment', 'routine', 'note']
+
 function CSVExportForm() {
-  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const [includeDeleted,  setIncludeDeleted]  = useState(false)
+  const [skipRoutines,    setSkipRoutines]    = useState(false)
+  const [skipAppointments, setSkipAppointments] = useState(false)
+  const [since,   setSince]   = useState('')
   const [loading, setLoading] = useState(false)
   const [done,    setDone]    = useState(null)
   const [error,   setError]   = useState(null)
 
+  function clearResult() { setDone(null); setError(null) }
+
   async function handleExport() {
     setLoading(true)
-    setError(null)
-    setDone(null)
+    clearResult()
     try {
-      const path = `/export/tasks.csv${includeDeleted ? '?include_deleted=true' : ''}`
-      const filename = await api.download(path, 'adhtea-tasks.csv')
+      const params = new URLSearchParams()
+      if (includeDeleted) params.set('include_deleted', 'true')
+      if (skipRoutines || skipAppointments) {
+        const types = ALL_EXPORT_TYPES.filter(t =>
+          !(skipRoutines && t === 'routine') && !(skipAppointments && t === 'appointment')
+        )
+        params.set('types', types.join(','))
+      }
+      if (since) params.set('since', since)
+      const qs = params.toString()
+      const filename = await api.download(
+        `/export/tasks.csv${qs ? `?${qs}` : ''}`, 'adhtea-tasks.csv'
+      )
       setDone(filename)
     } catch (err) {
       setError(err?.message || 'Export failed')
@@ -589,16 +611,33 @@ function CSVExportForm() {
     }
   }
 
+  const checkbox = (checked, onChange, label) => (
+    <label className="flex items-center gap-2 text-xs text-ui-subtext cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => { onChange(e.target.checked); clearResult() }}
+        className="accent-ui-accent"
+      />
+      {label}
+    </label>
+  )
+
   return (
     <div>
-      <label className="flex items-center gap-2 mb-3 text-xs text-ui-subtext cursor-pointer">
+      <div className="space-y-2 mb-3">
+        {checkbox(skipRoutines, setSkipRoutines, 'Leave out routine check-offs')}
+        {checkbox(skipAppointments, setSkipAppointments, 'Leave out calendar appointments')}
+        {checkbox(includeDeleted, setIncludeDeleted, 'Include deleted tasks')}
+      </div>
+      <label className="block text-xs text-ui-subtext mb-3">
+        <span className="block mb-1">Only since (optional)</span>
         <input
-          type="checkbox"
-          checked={includeDeleted}
-          onChange={(e) => { setIncludeDeleted(e.target.checked); setDone(null) }}
-          className="accent-ui-accent"
+          type="date"
+          value={since}
+          onChange={(e) => { setSince(e.target.value); clearResult() }}
+          className="px-2 py-1 rounded-sm border border-ui-border bg-ui-surface text-ui-text text-xs"
         />
-        Include deleted tasks
       </label>
       {done && (
         <p className="mb-3 text-xs text-emerald-400 font-medium">Saved {done}</p>

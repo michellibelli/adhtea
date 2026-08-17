@@ -55,15 +55,17 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.13.0 (2026-08-17)
+## Current status — BUILD 4.13.1 (2026-08-17)
 
-`master` clean, synced with origin. Backend suite **181 passed**. `npm run build` clean. Live.
+`master` clean, synced with origin. Backend suite **188 passed**. `npm run build` clean. Live.
 
 The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side.
 
 ### Big shifts since BUILD 4.9.1
 
-**CSV export (4.13.0, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 21 columns (id, title, type, status, priority, effort, critical, dates, project/routine titles, tags, location, push_count, timestamps, notes). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
+**CSV export (4.13.0–4.13.1, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 21 columns (id, title, type, status, priority, effort, critical, dates, project/routine titles, tags, location, push_count, timestamps, notes). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
+
+4.13.1 added filters, because the first real export was mostly machine-generated history: `generate_routine_instances` writes one Task row per active routine per day (completed ones persist; skipped ones are soft-deleted at the 4am carry-forward), and `sync_today_events` writes one appointment row per occurrence, auto-completed by `archive_past_appointments` once its day passes. Nothing purges either — there is no retention sweep anywhere in the codebase. So: `?types=task,note` (validated against `TaskType`, 400 on an unknown one) plus `?since=`/`?until=`. The window is measured against the day a row *belongs to* — `completed_at` for finished work, else `due_date`, else `scheduled_date`, else `created_at` — computed in Python rather than SQL, since a COALESCE would compare the naive-UTC and local-midnight columns as if they shared a convention.
 
 Two things worth knowing. **Column names are the importer's vocabulary** (`title`, `due_date`, `notes`, `tags`, `priority`, `status`), so an export round-trips back through `/import/csv` — there's a test pinning that. **Timestamps are converted to the user's tz** on the way out (`completed_at` etc. are naive UTC), while `due_date`/`scheduled_date` are written verbatim because they use the local-midnight convention — the same split that bit the review trigger in 4.11.6. The frontend downloads via `api.download()` in `client.js` (a bearer token can't ride on a plain `<a href>`, so it fetches the blob and clicks a synthetic link); the route sets `Access-Control-Expose-Headers` so the cross-origin client can read the server-chosen filename. Body is written with a UTF-8 BOM + CRLF for Excel. Tests: `test_export_csv.py`.
 
@@ -137,8 +139,8 @@ backend/
     insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
     review.py         morning review — /review/pending + /review/commit
     import_csv.py     Notion CSV import
-    export_csv.py     CSV export — GET /export/tasks.csv (all owned tasks, one row each)
-  tests/              181 pytest tests (conftest + 18 test files); CI on every push/PR
+    export_csv.py     CSV export — GET /export/tasks.csv (+ types / since / until filters)
+  tests/              188 pytest tests (conftest + 18 test files); CI on every push/PR
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 

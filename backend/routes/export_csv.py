@@ -14,14 +14,14 @@ verbatim — mixing the two conventions is the bug that bit the morning review i
 
 import csv
 import io
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Task, TaskStatus, User, Routine
+from models import Task, TaskStatus, TaskType, User, Routine
 from routes.auth import get_current_user
 from routes.task_lifecycle import _tz, _app_today
 
@@ -104,17 +104,63 @@ def _row(task: Task, routine_titles: dict[int, str], tz) -> list[str]:
     ]
 
 
+def _row_date(task: Task, tz) -> date:
+    """The day a row *belongs to*, for the since/until window.
+
+    A routine check-off or an archived appointment is about the day it happened,
+    an open task is about the day it's due, and anything else falls back to when
+    it was captured. Computed in Python rather than SQL because the three columns
+    use two different storage conventions (naive UTC vs local midnight) and
+    COALESCE across them would silently compare apples to oranges.
+    """
+    if task.completed_at:
+        return task.completed_at.replace(tzinfo=timezone.utc).astimezone(tz).date()
+    if task.due_date:
+        return task.due_date
+    if task.scheduled_date:
+        return task.scheduled_date.date()
+    if task.created_at:
+        return task.created_at.replace(tzinfo=timezone.utc).astimezone(tz).date()
+    return date.min
+
+
 @router.get("/export/tasks.csv")
 def export_tasks_csv(
     include_deleted: bool = Query(False, description="Include soft-deleted tasks"),
+    types: str | None = Query(
+        None,
+        description="Comma-separated task types to include: task, appointment, "
+                    "routine, note. Omit for all.",
+    ),
+    since: date | None = Query(None, description="Only rows on/after this date"),
+    until: date | None = Query(None, description="Only rows on/before this date"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """All of the user's tasks as a CSV download.
+    """The user's tasks as a CSV download.
 
-    Soft-deleted tasks are excluded by default — they're deleted from her point
-    of view — but `?include_deleted=true` brings them back for a true full dump.
+    Everything by default. The filters exist because the row count is dominated
+    by machine-generated history — a daily routine is one row per day since it
+    was created, and a recurring calendar event is one row per occurrence — so
+    "just my actual tasks" needs a way to drop those.
+
+    Soft-deleted tasks are excluded by default (they're deleted from her point of
+    view); `?include_deleted=true` gives the true full dump.
     """
+    wanted_types = None
+    if types is not None:
+        valid = {t.value for t in TaskType}
+        wanted_types = {t.strip().lower() for t in types.split(",") if t.strip()}
+        unknown = wanted_types - valid
+        if unknown:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown task type(s): {', '.join(sorted(unknown))}. "
+                       f"Valid: {', '.join(sorted(valid))}.",
+            )
+        if not wanted_types:
+            raise HTTPException(status_code=400, detail="No task types selected.")
+
     q = (
         db.query(Task)
         .options(joinedload(Task.project))
@@ -122,8 +168,18 @@ def export_tasks_csv(
     )
     if not include_deleted:
         q = q.filter(Task.status != TaskStatus.deleted)
+    if wanted_types is not None:
+        q = q.filter(Task.task_type.in_([TaskType(t) for t in wanted_types]))
 
     tasks = q.order_by(Task.created_at.asc(), Task.id.asc()).all()
+
+    if since or until:
+        tz_for_window = _tz(current_user)
+        tasks = [
+            t for t in tasks
+            if (since is None or _row_date(t, tz_for_window) >= since)
+            and (until is None or _row_date(t, tz_for_window) <= until)
+        ]
 
     # Routine titles in one query rather than a lazy load per generated instance
     # — a daily routine going back months is most of the export's row count.
