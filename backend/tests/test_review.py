@@ -69,8 +69,8 @@ def test_commit_stamps_effort_and_watermark_and_learns(client, auth_headers, db_
     assert r.json()["reviewed_through"] == review_date
 
     db_session.expire_all()
-    assert db_session.query(Task).get(t1.id).effort == Effort.big
-    assert db_session.query(User).get(u.id).reviewed_through.isoformat() == review_date
+    assert db_session.get(Task, t1.id).effort == Effort.big
+    assert db_session.get(User, u.id).reviewed_through.isoformat() == review_date
     # Correction stored for future few-shot / override.
     ex = db_session.query(EffortExample).filter_by(user_id=u.id).one()
     assert ex.title_key == "call pharmacy" and ex.effort == Effort.big

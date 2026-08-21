@@ -1,335 +1,182 @@
-# adhTea — Project Documentation
-*Last updated: 2026-05-19 (BUILD 4.0.0)*
+# adhTea — Design Documentation
+*Last updated: 2026-08-20 (BUILD 4.13.1)*
+
+> **Scope.** This file covers the *why* and the *look*: design philosophy and the
+> design system. Everything operational — architecture, file maps, deployment,
+> release process, current status, known issues, roadmap — lives in
+> **`HANDOFF.md`**, which is the source of truth.
+>
+> Split this way deliberately. Before 2026-08-20 this file duplicated HANDOFF's
+> operational sections and drifted four minor versions behind, still documenting
+> Triage, project domains, the Americano theme, and 30-day tokens — all removed
+> builds ago. Duplicated docs rot. Don't re-add an architecture section here.
+
+---
 
 ## What is this
 
-**adhTea** is a personal ADHD productivity app built for the user and her family. It's not a generic todo app — it's designed around the specific cognitive patterns of ADHD: low-friction capture, structured morning triage, capacity-aware scheduling, and foundation habit tracking (sleep, meals, medication, mood).
+**adhTea** is a personal ADHD productivity app built for the user. Not a generic
+todo app — it is designed around the cognitive patterns of ADHD: low-friction
+capture, capacity-aware daily planning, foundation-habit tracking (sleep, meals,
+meds, mood), and warm behavior-change nudges.
 
 Live at **[adh-tea.fun](https://adh-tea.fun)**.
+
+(see HANDOFF, "Deferred: Phase 4"). Do not start it without an explicit greenlight.
 
 ---
 
 ## Design philosophy
 
-**Problem:** Standard productivity apps assume consistent executive function. ADHD doesn't work that way — some days you have full capacity, some days you need a critical list of 3 things.
+**Problem.** Standard productivity apps assume consistent executive function.
+ADHD does not work that way. Some days carry full capacity; some days need a
+list of three things and permission to stop there.
 
-**Solution:** A system that adapts to your current capacity. Triage each morning decides what goes on today's plate. A capacity bar tracks load. A critical list exists for low-focus days.
+**The core promise.** At any moment she opens the app, the surfaced next action
+is worth doing *now* — priority × current capacity. It won't duplicate work she
+has already done, and it won't let her miss an appointment.
 
-**Vibe:** Calm rustic cafe (cohesion direction since 3.9.33). Lora serif display, soft warm wood card shadows, honey→amber→oak gradient buttons, dusty-rose hairline accents, falling tea-leaf overlay. Default theme: Americano (warm amber sunrise). Earlier "queer Stardew Valley / pixel pride" register intentionally toned down — feminine accents kept as hover/hairline, not primary.
+**How that cashes out.** Four commitments, each of which has survived a feature
+being deleted to protect it:
 
----
+- **Capacity is measured, not assumed.** Sleep, meals, meds, and mood feed a
+  capacity snapshot that sets the day's slot count. The `(X/N)` chip and the
+  task promoter read the same number, so the UI cannot promise a capacity the
+  scheduler ignores.
+- **The plan holds once committed.** "Start my day" is a ritual with teeth.
+  After it, nothing enters Today unless she taps `+`. This was not true until
+  4.12.0, and the bug it fixed — completing a task silently summoning a
+  replacement — is the clearest example of the philosophy being violated by
+  a technically-correct implementation.
+- **The order is hers on request.** Computed time-tiers order the tea-box until
+  she drags a bag; from that first drag until the 4am rollover, her hand-order
+  wins outright.
+- **Nudges are rare and warm.** One a day, 6h cooldown, weekday-only. A
+  dismissal mutes that variable for days. Three-a-day nudges became wallpaper
+  and were swatted shut on sight — frequency destroyed the signal.
 
-## Stack
+**What gets deleted.** This codebase has removed more features than most add:
+the tournament/triage page, project domains, the difficulty/weight system, and
+the whole scoring engine. The pattern is consistent — a system that asked her to
+supply structure the app could infer, or that added a decision to a moment that
+needed fewer decisions, got cut. Prefer removing a feature to tuning it.
 
-| Layer | Tech |
-|-------|------|
-| Frontend | React 19 + Vite + Tailwind v4 |
-| Backend | FastAPI (Python) |
-| Database | SQLite (dev) / Supabase PostgreSQL (prod) |
-| Auth | Bearer tokens, 30-day expiry, invite code registration |
-| AI | Anthropic Claude Haiku 4.5 (project task breakdown) |
-| Hosting | Vercel (frontend) + Render (backend) |
-
----
-
-## Deployment
-
-| Service | URL | Notes |
-|---------|-----|-------|
-| Frontend | https://adh-tea.fun | Vercel, auto-deploys on push to master |
-| Backend | https://api.adh-tea.fun | Render free tier, sleeps after 15 min idle |
-| Database | Supabase PostgreSQL | Project ref `yyolrtwpsbtamncihmls` |
-
-**Render sleeps** — set up UptimeRobot ping to `https://api.adh-tea.fun/health` every 5 min to prevent cold starts.
-
-**Render DATABASE_URL** — special characters in password must be URL-encoded (`&` → `%26`, `@` → `%40`).
-
-Primary user: `demo_user` (user_id=2).
-
----
-
-## Environment variables
-
-### Backend (Render + local `.env`)
-
-```
-DATABASE_URL=sqlite:///./aria.db          # or Supabase postgres URL
-SECRET_KEY=<random string>
-ALLOWED_ORIGINS=http://localhost:5173,https://adh-tea.fun,https://www.adh-tea.fun
-FRONTEND_URL=https://adh-tea.fun
-ANTHROPIC_API_KEY=<sk-ant-...>            # required for AI project breakdown
-GOOGLE_CLIENT_ID=                         # optional — Google Calendar integration
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=https://api.adh-tea.fun/gcal/callback
-```
-
-### Frontend
-
-No `.env` needed. Base API URL is configured in `frontend/src/api/client.js`.
-
----
-
-## Running locally
-
-```bash
-# Backend
-cd backend
-python -m uvicorn main:app --reload
-
-# Frontend
-cd frontend
-npm run dev
-```
-
----
-
-## Feature overview
-
-### Core loop
-
-The daily workflow:
-
-1. **Capture** — quick-add anything (task, appointment, routine, note) with type-specific required fields
-2. **Triage** (morning) — inbox items presented one-at-a-time; schedule today, defer, or snooze
-3. **Focus** (home screen) — single centered card showing the next task; done/snooze/back actions
-4. **Today list** — full list, drag to reorder
-5. **Carry-forward** — incomplete today items return to inbox at midnight
-
-### Snooze system
-
-Snooze options: tonight / tomorrow / end of week / next week / custom date. Snoozed items live in Waiting until the date arrives, then return to inbox.
-
-### Triage
-
-One item at a time (large card). Actions:
-- **→ Today** — schedules immediately (slide right)
-- **Defer** — Tomorrow / End of week / Next week / Pick date (slide left, sets due_date, stays inbox)
-- **Snooze 1 month** — true snooze (disappears from triage)
-
-Triage is done-flagged for the day (resets midnight). "Low focus" skip → Critical List (urgent tasks + today's appointments + is_critical routines).
-
-### Capacity model
-
-Rules-based score from self-care log inputs:
-- Sleep hours + quality
-- Meals eaten
-- Exercise
-- Medication taken
-- Yesterday's mood
-
-Displayed as a color bar: light → manageable → heavy → overloaded. Appears compact in Focus/Triage, full in Foundation page.
-
-### Routines
-
-- Frequency: daily / weekdays / weekends / weekly / custom days
-- Time of day: morning / afternoon / evening / anytime
-- Optional exact time (HH:MM)
-- `is_critical` flag — surfaces on Critical List for low-focus days
-- Lazy daily instance generation (no background jobs)
-- Missed instances tracked separately (not dumped into inbox)
-
-### Foundation (self-care)
-
-Daily log: sleep hours/quality, meals, exercise/minutes, medication taken, mood (1–5), notes. One log per day per user (upsert). Triggers capacity snapshot recompute.
-
-### EOD Gate
-
-Triggers after 5 PM if no log today. Requires only a mood emoji (1–5). Submit → warm daily summary. "Skip for now" always available.
-
-### WakeScreen
-
-Shown when the Render backend has been idle and needs to wake up. 5-second splash → 60-second wake phase with diary prompt and countdown. Auto-saves diary entry as a note task. Transitions to app when server responds.
-
-### Google Calendar
-
-Full OAuth 2.0 (read-only). Connect via Settings → Integrations. Lazy morning sync on inbox load. Manual sync available. Pulls today's events → appointment tasks in Today list. Deduplicates by title + date.
-
-### Projects + AI breakdown
-
-Create a project with a description → hit ✨ → Claude Haiku generates 4–12 bite-sized tasks respecting a 90-min daily budget, spread across day_offset (tomorrow, day after, etc.). Tasks auto-created in inbox with weights and due dates. Manual task add also available.
-
-**Sub-task date cascade:** Editing a project task's `due_date` shifts all later sibling tasks (status not done/deleted) by the same delta. Pushing back an earlier item makes the rest follow automatically.
-
-**Multi-select / batch date:** Project page has selection checkboxes; selecting 2+ surfaces a sticky bar to set a single due date across all selected tasks.
-
-**Uncomplete:** clicking the filled circle on a completed sub-task reverts it to inbox.
-
-**Open/close animation:** project cards expand/collapse with a 300ms grid-rows transition.
-
-### Project domains
-
-Each project can be tagged with a **Domain** that constrains where its tasks land:
-
-- **Work** (default seeded per user) — weekday-only.
-- **Home** (default seeded per user) — light tasks on weekday evenings; anything on weekends.
-- **Other** — user-defined. Inline "+ Other" button in the create form opens an editor for days / times-of-day / task weights.
-
-Backend model: `Domain` has a JSON `rules` list. Each rule is `{ days?, times?, weights? }`. A task is allowed if it matches at least one rule (empty fields = unrestricted). Lazy seed: defaults are inserted the first time a user hits `GET /domains`.
-
-Domain can be changed at any time from the expanded project view. Settings → "Project domains" lists every domain with full rule editor (add/remove rules, edit days/times/weights/name; delete non-default).
-
-*Enforcement note:* Phase 1 ships data + UI + selection. Date enforcement and AI generation respecting domain rules are tracked for Phase 2.
-
-### AllTasks + Search
-
-AllTasks: all active tasks with filter bar, batch snooze, batch date assignment, optimistic updates.
-Search: case-insensitive title + notes search with same batch operations.
-
-### Bonus mode
-
-When today's list has nothing *visible* (no immediately-actionable item — done, snoozed, or only timed routines >5 min away), Focus enters amber "bonus mode" showing future-dated inbox and snoozed tasks. The bag turns golden with twinkling sparkles. "Skip" removes locally (not inbox). Done button turns amber.
-
-### Focus teabag visual
-
-The Focus card is rendered as a teabag pillow:
-- **Bag body**: chamfered hex via `clip-path`, cream paper background (`#FBF6E5`) with a fine yellow-brown dot mesh for texture.
-- **String**: short vertical gradient from the top of the bag to the **tag**.
-- **Tag**: colored block whose color/label reflects task type. For project sub-tasks, the tag is amber with "Project" + the parent project name on a second line.
-- **Bonus mode**: bag turns golden; five `✦` sparkles twinkle at staggered intervals around the card.
-- **Next button**: bumps the current task's `sort_order` past the rest of the queue so `pickNext()` advances. Works in both regular and bonus modes.
+**Vibe.** Calm and papery. Warm, hand-made, unhurried — closer to a recipe box
+or a cafe menu than to a dashboard. An earlier "pixel pride" register was
+intentionally toned down; a few classnames survive from it (see below) but the
+visual language does not.
 
 ---
 
 ## Design system
 
-Implemented in `frontend/src/index.css` using Tailwind v4 `@theme inline {}` syntax.
+Implemented in `frontend/src/index.css` with Tailwind v4 `@theme inline {}`.
 
-### Color tokens
+### Token indirection
 
-| Token | Hex | Use |
-|-------|-----|-----|
-| `--color-ui-surface` | `#FFFBF0` | Page background |
-| `--color-ui-text` | `#2A0F40` | Primary text |
-| `--color-ui-subtext` | `#7A5090` | Secondary text |
-| `--color-ui-border` | `#C4A8D4` | Card borders |
-| `--color-ui-accent` | `#C490D1` | Periwinkle accent |
-| `--color-ui-primary` | `#B4A8E0` | Light lavender |
-| `--color-ui-nav` | `#130828` | Bottom nav background |
-| Pride stripe | RGB gradient | red → violet |
+Two layers, and the indirection matters:
+
+```
+--color-ui-*   (Tailwind theme tokens — what components consume)
+     ↓ var()
+--aria-*       (per-theme raw values — set under [data-theme="..."])
+```
+
+Components reference `--color-ui-*` only. Restyling a theme means editing the
+`--aria-*` block, never the component. **Do not hardcode a hex in a component**;
+it will be correct in one theme and wrong in the other.
+
+### Themes
+
+Two, both light. Selected via `ThemeContext.jsx`, persisted in the
+`aria_theme` localStorage key.
+
+**Cafe** (default) — Solarized Light. Cream paper throughout, ink text,
+amber/rust accents. The nav is paper too, not a dark slab.
+
+| Token | Value |
+|-------|-------|
+| `--aria-surface` | `#FAF6E8` |
+| `--aria-body-bg` | `#FDF6E3` |
+| `--aria-text` | `#002B36` |
+| `--aria-subtext` | `#586E75` |
+| `--aria-accent` | `#B58900` (amber) |
+| `--aria-primary` | `#CB4B16` (rust) |
+| `--aria-nav` | `#EEE8D5` (paper) |
+
+**Linen** — lavender-mauve stationery. Cool cream ground, plum ink, muted
+lavender accents. "Elegant recipe box," not "rustic cafe." Unlike Cafe, its nav
+*is* a dark slab (`#3D3545`) with light text.
+
+| Token | Value |
+|-------|-------|
+| `--aria-surface` | `#FDFBFE` |
+| `--aria-body-bg` | `#F4F0F6` |
+| `--aria-text` | `#3D3545` |
+| `--aria-subtext` | `#8A8494` |
+| `--aria-accent` | `#B8A0C4` |
+| `--aria-primary` | `#9B7DB8` |
+| `--aria-nav` | `#3D3545` (dark) |
+
+Borders and hover states are derived with `color-mix()` rather than hand-picked,
+so they stay in-family when a base color is retuned.
+
+### Cafe retints
+
+A long block of `[data-theme="aria-cafe"]` overrides mutes saturated Tailwind
+utility colors (`text-red-400`, `bg-amber-400/20`, `border-red-500/20`, …) to
+printed-on-paper Solarized equivalents. This exists because status colors are
+applied with raw Tailwind classes across many components; retinting centrally
+was cheaper than tokenizing every call site.
+
+Consequence worth knowing: **a new saturated Tailwind color used in a component
+will look out of place in Cafe until it is added to that block.**
 
 ### Typography
 
-- **Headings:** Press Start 2P (Google Fonts)
-- **Body:** System sans (readable at small sizes)
+- **Display / headings:** Lora (humanist serif), fallback Georgia.
+- **Body:** system sans — `system-ui, 'Segoe UI', Roboto`.
+- **Handwriting accents:** Caveat.
 
-### Pixel utilities
+### Legacy classnames
 
-- `.pixel-card` — 4px border, box-shadow offset, noise texture, pride stripe top/bottom
-- `.pixel-btn` — 4px border, press effect on hover/active
-- `.pixel-btn-rainbow` — gradient border with pride stripe
-- `.pixel-heading` — Press Start 2P font
+These are pixel-era names kept deliberately for code stability. The names lie;
+the styles are current. Do not rename them, and do not infer a pixel aesthetic
+from them:
 
-### Animations
+| Class / var | Actually is |
+|-------------|-------------|
+| `--font-pixel` | Lora serif |
+| `.pixel-heading` | Lora section heading |
+| `.pixel-card` | soft card, theme-tinted diffuse shadow |
+| `.pixel-btn` | standard button, press effect |
 
-Page fade-in, steam wisps, floating bob, dot pulse, nav icon animations (steam, star twinkle, heartbeat, flower spin), celebrate slide/rainbow/pun/dunk.
+### Motion
 
----
+Page fade-in, steam wisps, floating bob, dot pulse, animated nav icons, and the
+watercolor dunk celebration on task completion (5650ms — cut from 7100ms in
+4.9.10 because it outlasted the satisfaction it was meant to deliver).
 
-## File map
-
-### Backend
-
-```
-backend/
-  main.py             app setup, CORS, router registration, auto-migration
-  database.py         SQLAlchemy engine + session, DATABASE_URL env var
-  models.py           all ORM models
-  schemas.py          Pydantic request/response schemas
-  routes/
-    auth.py           login, session tokens, invite code flow, alpha gating
-    tasks.py          CRUD + today/inbox/bonus/search/backlog/critical-list
-    routines.py       routine CRUD + lazy daily instance generation
-    selfcare.py       SelfCareLog + CapacitySnapshot
-    medication.py     MedicationSchedule + MedicationLog
-    gcal.py           Google Calendar OAuth 2.0 + sync
-    projects.py       Project CRUD + Claude Haiku AI breakdown + date cascade
-    domains.py        Project domain CRUD; lazy-seeds Work/Home for new users
-    import_csv.py     Notion CSV import
-```
-
-### Frontend
-
-```
-frontend/src/
-  App.jsx                     routing, nav state, WakeScreen gate
-  api/
-    client.js                 singleton API client, warmUp, smart retry
-    tasks.js / routines.js / selfcare.js / medication.js
-    gcal.js / projects.js / domains.js / auth.js
-  pages/
-    Focus.jsx                 home — next task card, bonus mode, imminent appts
-    Triage.jsx                one-at-a-time triage with slide animation
-    Today.jsx                 full today list, drag to reorder
-    Inbox.jsx                 inbox list
-    Waiting.jsx               snoozed items
-    Capture.jsx               type-aware capture (task/appt/routine/note)
-    Routines.jsx              routine CRUD
-    SelfCare.jsx              foundation / self-care log
-    EODGate.jsx               end-of-day mood gate + summary
-    AllTasks.jsx              consolidated search + batch actions
-    Projects.jsx              project list, detail, AI breakdown
-    Search.jsx                title + notes search
-    Settings.jsx              integrations, CSV import, nav links
-    Login.jsx / Signup.jsx    auth pages
-    AlphaChallenge.jsx        alpha code gate
-    OnboardingWelcome.jsx     first-run welcome
-  components/
-    Focus.jsx → TaskCard.jsx  today/inbox item card with inline edit
-    TriageCard.jsx            triage item card
-    CapacityBar.jsx           load indicator (compact + full modes)
-    BottomNav.jsx             mobile bottom nav + FAB
-    HamburgerMenu.jsx         slide-out nav
-    SnoozeSheet.jsx           snooze date picker
-    WakeScreen.jsx            backend wake splash
-    PageProgress.jsx          pride progress bar
-    DomainPicker.jsx          pill picker for project domain + inline "Other" editor
-    Card.jsx / Button.jsx / Input.jsx   base UI primitives
-  utils/
-    dnd.js                    SmartPointerSensor — blocks drag on interactive elements
-```
-
-### Diagnostic / deploy tooling
-
-```
-scripts/
-  deploy-check.sh             unauth'd curl check: production HTML/JS/CSS hashes,
-                              optional marker grep, backend health, local HEAD compare
-  aria-api.sh <path>          authenticated production API helper.
-                              Reads bearer token from ~/.aria-token (outside repo).
-                              Get token: localStorage.getItem('aria_token') on
-                              adh-tea.fun while logged in.
-```
-
-The `BUILD <timestamp>` chip in the top-right corner of every page is the
-live-deployment marker — its value is injected by `vite.config.js` `define`
-at build time. If a fix isn't propagating, hard-refresh and check the chip.
-
----
-
-## Database models
-
-`User`, `SessionToken`, `InviteToken`, `Task`, `Routine`, `RoutineInstance`, `SelfCareLog`, `CapacitySnapshot`, `MedicationSchedule`, `MedicationLog`, `GoogleCalendarToken`, `ActuatorCategory`, `Project`, `SiteConfig`
-
-**Auto-migration** in `main.py` — `_migrate()` adds new columns without dropping data. No Alembic needed for additive changes.
+Watercolor tea assets are used throughout. Focus renders the tea-box metaphor:
+bags are tasks, ordered morning→evening by `utils/ordering.js`.
 
 ---
 
 ## PWA
 
-`vite-plugin-pwa` installed and configured in `vite.config.js`. Manifest with theme color, all icon sizes (64/192/512/maskable). Workbox caching: NetworkFirst for API, CacheFirst for fonts.
+Installable, offline-capable, `vite-plugin-pwa` with `generateSW`. Current
+precache: 45 entries / ~4.4 MB, mostly watercolor art.
 
-Install: open adh-tea.fun in Chrome → three dots → "Add to Home Screen". iOS: Safari → Share → "Add to Home Screen".
+Play Store wrapping is possible via Bubblewrap (Android TWA, $25); iOS via
+Capacitor ($99/yr). Neither is done — see HANDOFF roadmap.
 
 ---
 
-## Roadmap
+## Where to look next
 
-| Phase | Status | Summary |
-|-------|--------|---------|
-| 1 — Core loop | ✅ | Capture, inbox, today, waiting, snooze, carry-forward |
-| 2 — Morning triage | ✅ | One-at-a-time triage, capacity bar, critical list |
-| 3 — Foundation | ✅ | Routines, self-care log, medication, EOD gate |
-| 3.5 — Focus + Capture | ✅ | Focus home, type-aware capture, GCal OAuth |
-| 3.6 — Nav + Intelligence | ✅ | AllTasks, Search, batch ops, bonus mode, deployment |
-| 3.7 — AI Projects | ✅ | Project CRUD + Claude Haiku task generation |
-| 6 — Pattern learning | 🔲 | Insights, actuator correlations, circuit visualization |
+| Question | File |
+|----------|------|
+| Architecture, file maps, what shipped when | `HANDOFF.md` |
+| Current build state, open items | `SESSION.md` |
+| Release process, conventions | `WORKFLOW.md` |
+| Data-retention analysis | `docs/retention.md` |

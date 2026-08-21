@@ -1,7 +1,9 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-08-06 (BUILD 4.11.6)*
+*Last updated: 2026-08-20 (BUILD 4.13.1)*
 
-> Deeper design notes → `PROJECT.md` (note: PROJECT.md itself is stale at 4.0.0; this file is the current source of truth).
+> This file is the source of truth for architecture and operations.
+> Design philosophy + the design system live in `PROJECT.md`.
+> Data-retention analysis lives in `docs/retention.md`.
 
 ## What it is
 
@@ -14,8 +16,10 @@ aria/
   frontend/  React 19 + Vite + Tailwind v4
   BUILD      version string — the UI chip reads THIS file (see RELEASE GOTCHA)
   HANDOFF.md this file — current source of truth
-  PROJECT.md older design doc (stale at 4.0.0; philosophy still valid)
-  SESSION.md session bookmark (stale at 4.0.72)
+  PROJECT.md design philosophy + design system (tokens, themes, type)
+  SESSION.md session bookmark — current build + open items
+  WORKFLOW.md release process and conventions
+  docs/      retention.md (data-growth design), design.md, phases.md, tests.md
 ```
 
 Repo: `github.com/michellibelli/aria`. Local clone: `C:\Users\Chris\aria-work`.
@@ -188,12 +192,14 @@ frontend/src/
 
 ## Known issues / next
 
-1. **Docs cleanup** — `PROJECT.md` (4.0.0) and `SESSION.md` (4.0.72) are stale; this HANDOFF is current. Fold or refresh them when convenient.
+1. **~~Docs cleanup~~ — done 2026-08-20.** `PROJECT.md` was rewritten as a design-only doc (philosophy + design system); every operational section it duplicated from this file was deleted rather than refreshed, so there is now exactly one home for each fact. Don't re-add an architecture section there.
 2. **Orphan score columns** — `Task.score`, `score_components`, `score_updated_at`, `pinned_for` remain on the model + are exposed in `TaskResponse`, but nothing writes them now that the scoring engine is gone (they read back null). Left in place to avoid a destructive prod migration; drop them in a deliberate migration if you want them gone. Same for the never-read `max_tasks_per_day`/`max_total_per_day` DB columns (model + validation removed; columns left orphaned in prod).
 3. **Settings visual pass** — pending since May.
 4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
-5. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix.
-6. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
+5. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
+6. **Cloudflare challenge on `api.adh-tea.fun`** — the API host now sometimes serves a Cloudflare managed-challenge interstitial ("Just a moment…") to non-browser clients. `scripts/deploy-check.sh` and `scripts/aria-api.sh` hit it intermittently, and any uptime pinger (the UptimeRobot keep-alive above) will fail it too. Browser traffic solves the challenge transparently. Add a WAF bypass rule for `/health` before relying on a pinger.
+7. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
+8. **No data retention** — nothing purges generated rows. `generate_routine_instances` writes one Task per active routine per day and `sync_today_events` one per calendar occurrence, forever; soft-deleted rows are never reaped. ~2,200 rows/year at six routines. Not urgent (single user, small for Postgres) but it already forced the 4.13.1 export filters, and `project_stall_map` does an N+1 over the growing table. Analysis + proposed design in **`docs/retention.md`** — read the `project_stall_map` trap there before writing any DELETE.
 
 Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
 

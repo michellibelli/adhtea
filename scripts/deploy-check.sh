@@ -33,8 +33,47 @@ fi
 
 echo
 echo "=== Backend (Render) ==="
-HEALTH=$(curl -s "$BACKEND/health")
-echo "  /health: $HEALTH"
+# Read status + Render's routing header rather than dumping the body. A sleeping
+# or broken instance returns an HTML error page (or a Cloudflare challenge), and
+# echoing that buried the actual signal in a screenful of markup.
+HDRS=$(curl -s -m 60 -D - -o /dev/null -w '%{http_code}'        -H 'Accept: application/json' "$BACKEND/health")
+CODE=$(printf '%s' "$HDRS" | tail -1)
+ROUTING=$(printf '%s' "$HDRS" | sed -n 's/^[Xx]-[Rr]ender-[Rr]outing: *//p' | tr -d '[:cntrl:]')
+SERVER=$(printf '%s' "$HDRS" | sed -n 's/^[Ss]erver: *//p' | tr -d '[:cntrl:]')
+
+echo "  /health status: ${CODE:-no-response}"
+[[ -n "${ROUTING:-}" ]] && echo "  x-render-routing: $ROUTING"
+
+if [[ "$CODE" == "200" ]]; then
+  BODY=$(curl -s -m 60 "$BACKEND/health" | head -c 200)
+  echo "  body: $BODY"
+  echo "  → backend UP"
+else
+  case "${ROUTING:-}" in
+    hibernate-wake-error)
+      echo "  → Render CANNOT WAKE the hibernated instance."
+      echo "    This is a Render-side fault, not your code and not Supabase."
+      echo "    Free-tier wakes go through Render's build/deploy path, so a"
+      echo "    deploy incident takes the live app down. In the UI this shows"
+      echo "    up as 'Failed to fetch' on login (the CORS preflight 503s)."
+      echo "    Check: https://status.render.com/api/v2/status.json"
+      ;;
+    hibernate*)
+      echo "  → instance hibernating; a wake is in progress. Retry in ~60s." ;;
+    *)
+      if [[ "$CODE" == "429" ]]; then
+        echo "  → rate-limited (429) by Cloudflare, not a backend fault."
+        echo "    Repeated scripted probes trip this. Wait a few minutes."
+      elif [[ "${SERVER:-}" == "cloudflare" && "$CODE" == "403" ]]; then
+        echo "  → Cloudflare managed challenge (bot check) — script traffic is"
+        echo "    being challenged. Browser traffic is fine. Add a WAF bypass"
+        echo "    rule for /health if you want this check to be reliable."
+      else
+        echo "  → backend DOWN or unreachable (server: ${SERVER:-unknown})"
+      fi
+      ;;
+  esac
+fi
 
 echo
 echo "=== Local vs remote commit ==="
