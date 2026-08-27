@@ -40,10 +40,10 @@ Primary user (prod): username=`demo_user`, user_id=2.
 | Service | URL | Notes |
 |---------|-----|-------|
 | Frontend | https://adh-tea.fun | Vercel, auto-deploys on push to master |
-| Backend | https://api.adh-tea.fun | Render free tier, sleeps after 15 min idle |
+| Backend | https://api.adh-tea.fun | Render **Starter ($7/mo) since 2026-08-27** — no hibernation. On trial for a few months; see "Render paid-tier trial" below |
 | Database | Supabase PostgreSQL | Pooler connection, project ref `yyolrtwpsbtamncihmls` |
 
-**Render sleeps at 15 min idle** — the app now handles cold starts + sleep/wake in-UI with an opaque loading cover (see below). UptimeRobot ping to `/health` still recommended to reduce cold hits.
+**Render hibernation — removed 2026-08-27** by moving to the Starter plan. The cold-start / sleep-wake machinery below is now dormant but deliberately retained; see the trial note. A keep-alive pinger is no longer needed, which also retires the Cloudflare-WAF-bypass item that only existed to make one possible.
 
 **Render DATABASE_URL** — password must be URL-encoded (`&`→`%26`, `@`→`%40`).
 
@@ -196,7 +196,7 @@ frontend/src/
 2. **Orphan score columns** — `Task.score`, `score_components`, `score_updated_at`, `pinned_for` remain on the model + are exposed in `TaskResponse`, but nothing writes them now that the scoring engine is gone (they read back null). Left in place to avoid a destructive prod migration; drop them in a deliberate migration if you want them gone. Same for the never-read `max_tasks_per_day`/`max_total_per_day` DB columns (model + validation removed; columns left orphaned in prod).
 3. **Settings visual pass** — pending since May.
 4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
-5. **Render cold starts** — mitigated in-UI; paid tier or keep-alive still the real fix. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
+5. **Render cold starts** — **resolved 2026-08-27** by the Starter plan (see trial note); the history below is kept because it explains the still-present wake machinery, and applies again if the plan is reverted. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
 6. **Cloudflare challenge on `api.adh-tea.fun`** — the API host now sometimes serves a Cloudflare managed-challenge interstitial ("Just a moment…") to non-browser clients. `scripts/deploy-check.sh` and `scripts/aria-api.sh` hit it intermittently, and any uptime pinger (the UptimeRobot keep-alive above) will fail it too. Browser traffic solves the challenge transparently. Add a WAF bypass rule for `/health` before relying on a pinger.
 7. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
 8. **No data retention** — nothing purges generated rows. `generate_routine_instances` writes one Task per active routine per day and `sync_today_events` one per calendar occurrence, forever; soft-deleted rows are never reaped. ~2,200 rows/year at six routines. Not urgent (single user, small for Postgres) but it already forced the 4.13.1 export filters, and `project_stall_map` does an N+1 over the growing table. Analysis + proposed design in **`docs/retention.md`** — read the `project_stall_map` trap there before writing any DELETE.
@@ -205,3 +205,31 @@ Deferred indefinitely per user (2026-05-17). Do not start without explicit green
 
 ## Further roadmap
 - **Play Store** — PWA ready; wrap with Bubblewrap for Android TWA ($25). iOS via Capacitor ($99/yr).
+
+
+## Render paid-tier trial (started 2026-08-27, ~11:20 PT)
+
+Moved the backend web service from Free to **Starter ($7/mo)** to remove
+hibernation. Being run as a **time-boxed trial of a few months** — revisit
+whether the improvement justifies the cost.
+
+Baseline immediately before the switch: `/health` 200 `{"status":"ok","version":"2.0.0"}`,
+frontend serving `index-Kh8D0CHI.js`, local HEAD `5ab035a`.
+
+**Should disappear.** The 30–45s wait on first open of the day; the
+"Server napping — waking it up…" message; "Failed to fetch" on login caused by
+a hibernate-wake 503 on the `OPTIONS` preflight.
+
+**Should persist, and is not evidence the upgrade failed.** A ~20s window of
+failed requests after every push (auto-deploy restarts the service — the plan
+removes hibernation, not restarts). And any sync stumble following an idle
+stretch, which is a client bug, not a hosting one: `likelySleeping()` measures
+*user* idle time, not server state, so it still returns true after 10 idle
+minutes against a perfectly healthy backend.
+
+**Do not delete the wake machinery during the trial** — `WakeScreen.jsx`, the
+cover logic in `App.jsx`, `warmUp`, the `aria:server-waking` plumbing. It all
+goes quiet on its own and will look like dead code. If the plan is reverted and
+it's gone, the raw cold-start jank of `7901d87` comes straight back.
+
+To revert: Render dashboard → backend service → Settings → Instance Type → Free.

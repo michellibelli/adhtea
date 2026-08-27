@@ -23,6 +23,29 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
+
+class _SuppressHealthAccessLog(logging.Filter):
+    """Drop *successful* /health access lines from uvicorn's access log.
+
+    Render polls /health roughly every 5s and the interval is not configurable,
+    so left alone the access log is ~20k identical "GET /health 200 OK" lines a
+    day and a real error is unfindable underneath them. Filtering here rather
+    than passing --no-access-log keeps every other request logged.
+
+    Non-200 health responses are deliberately kept — a failing health check is
+    exactly the line worth seeing.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if not isinstance(args, tuple) or len(args) < 5:
+            return True
+        path, status = args[2], args[4]
+        return not (path == "/health" and str(status) == "200")
+
+
+logging.getLogger("uvicorn.access").addFilter(_SuppressHealthAccessLog())
+
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
 

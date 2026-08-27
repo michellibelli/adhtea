@@ -214,13 +214,28 @@ async function rawDownload(path, fallbackName) {
 
 const PENDING_KEY = 'aria_pending_completes'
 
+// Queue writes can throw — quota exhausted, Safari private mode, storage
+// disabled. The reads have always been guarded; the writes were not, so a
+// failed write silently dropped an item the caller believed was queued. Return
+// success so callers can tell the difference between "queued" and "lost".
+function _writeQueue(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+    return true
+  } catch (err) {
+    console.error(`[aria] queue write failed for ${key}`, err)
+    window.dispatchEvent(new CustomEvent('aria:queue-write-failed', { detail: { key } }))
+    return false
+  }
+}
+
 export function getPendingCompletes() {
   try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]') }
   catch { return [] }
 }
 
 function setPendingCompletes(ids) {
-  localStorage.setItem(PENDING_KEY, JSON.stringify(ids))
+  return _writeQueue(PENDING_KEY, ids)
 }
 
 export function queueComplete(taskId) {
@@ -247,7 +262,7 @@ export function getPendingSnoozes() {
 }
 
 function setPendingSnoozes(items) {
-  localStorage.setItem(PENDING_SNOOZE_KEY, JSON.stringify(items))
+  return _writeQueue(PENDING_SNOOZE_KEY, items)
 }
 
 export function queueSnooze(taskId, snoozeUntil) {
@@ -279,7 +294,7 @@ export function getPendingReviews() {
 }
 
 function setPendingReviews(items) {
-  localStorage.setItem(PENDING_REVIEW_KEY, JSON.stringify(items))
+  return _writeQueue(PENDING_REVIEW_KEY, items)
 }
 
 export function queueReviewCommit(payload) {
@@ -294,6 +309,56 @@ export function removeReviewCommit(date) {
 
 let _flushing = false
 
+// Backoff for the periodic flush. Without it, a genuinely unreachable backend
+// gets probed every 30s forever; with it, the gap widens to a 5-minute ceiling
+// and snaps back to normal the moment anything succeeds.
+const FLUSH_INTERVAL_MS = 30000
+const FLUSH_BACKOFF_MAX_MS = 5 * 60 * 1000
+let _flushFailures = 0
+let _nextFlushAt = 0
+
+function _noteFlushFailure() {
+  _flushFailures += 1
+  const delay = Math.min(FLUSH_INTERVAL_MS * 2 ** _flushFailures, FLUSH_BACKOFF_MAX_MS)
+  _nextFlushAt = Date.now() + delay
+}
+
+function _noteFlushSuccess() {
+  _flushFailures = 0
+  _nextFlushAt = 0
+}
+
+function _hasPending() {
+  return !!(getPendingCompletes().length || getPendingSnoozes().length ||
+            getPendingReviews().length)
+}
+
+// Total items waiting to sync, for a UI indicator. The queue used to be
+// completely invisible: the dangerous state is not a failed write, it's the
+// user believing something saved when it didn't.
+export function pendingCount() {
+  return getPendingCompletes().length + getPendingSnoozes().length +
+         getPendingReviews().length
+}
+
+// A single silent /health probe. Deliberately NOT warmUp(): warmUp dispatches
+// `aria:server-waking`, which raises the app's full-screen loading cover — fine
+// when the user is waiting on a page, wrong for a background flush that would
+// then throw a cover over whatever she's doing.
+async function _probeHealth() {
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch(`${BASE_URL}/health`, { signal: controller.signal })
+    clearTimeout(timer)
+    if (res.ok) {
+      markSuccess()
+      return true
+    }
+  } catch (_) { /* unreachable */ }
+  return false
+}
+
 // A 4xx (except timeout/rate-limit) means the request will never succeed —
 // e.g. the task was deleted server-side, so /complete 404s forever. Drop it so
 // it can't wedge the head of the queue. 5xx / network / 429 are transient → retry.
@@ -302,57 +367,83 @@ function _isPermanentFailure(err) {
   return typeof s === 'number' && s >= 400 && s < 500 && s !== 408 && s !== 429
 }
 
-async function flushQueues() {
-  if (_flushing || likelySleeping()) return
-  if (!getPendingCompletes().length && !getPendingSnoozes().length &&
-      !getPendingReviews().length) return
-  _flushing = true
-
-  // Re-read queue before each item and remove individually after success.
-  // Prevents overwriting items added concurrently by completeTask/snoozeTask.
-  let completes = getPendingCompletes()
-  while (completes.length) {
-    const id = completes[0]
+// Drain one queue. Returns false if it stopped on a transient failure, so the
+// caller knows to back off rather than treat the pass as clean.
+async function _drain(read, send, drop) {
+  let items = read()
+  while (items.length) {
+    const item = items[0]
     try {
-      await request('POST', `/tasks/${id}/complete`)
-      removeComplete(id)
+      await send(item)
+      drop(item)
     } catch (err) {
-      if (_isPermanentFailure(err)) removeComplete(id)  // drop; don't jam the queue
-      else break                                         // transient; retry next flush
+      if (_isPermanentFailure(err)) drop(item)  // drop; don't jam the queue
+      else return false                         // transient; retry next flush
     }
-    completes = getPendingCompletes()
+    items = read()
   }
-
-  let snoozes = getPendingSnoozes()
-  while (snoozes.length) {
-    const s = snoozes[0]
-    try {
-      await request('POST', `/tasks/${s.id}/snooze`, { snooze_until: s.snooze_until })
-      removeSnooze(s.id)
-    } catch (err) {
-      if (_isPermanentFailure(err)) removeSnooze(s.id)
-      else break
-    }
-    snoozes = getPendingSnoozes()
-  }
-
-  let reviews = getPendingReviews()
-  while (reviews.length) {
-    const r = reviews[0]
-    try {
-      await request('POST', '/review/commit', r)
-      removeReviewCommit(r.date)
-    } catch (err) {
-      if (_isPermanentFailure(err)) removeReviewCommit(r.date)
-      else break
-    }
-    reviews = getPendingReviews()
-  }
-
-  _flushing = false
+  return true
 }
 
-setInterval(flushQueues, 30000)
+async function flushQueues({ force = false } = {}) {
+  if (_flushing) return
+  if (!_hasPending()) return
+  if (!force && Date.now() < _nextFlushAt) return
+
+  _flushing = true
+  try {
+    // The old guard here was `if (likelySleeping()) return`, which meant the
+    // flush refused to run in precisely the condition the queue exists for:
+    // likelySleeping() is true whenever nothing has succeeded in 10 minutes,
+    // which is exactly when items are sitting in the queue. Nothing else calls
+    // flushQueues, so the queue could not self-heal — it drained only when the
+    // user happened to make a request that succeeded. Probe instead of bail.
+    if (likelySleeping() && !(await _probeHealth())) {
+      _noteFlushFailure()
+      return
+    }
+
+    let clean = await _drain(
+      getPendingCompletes,
+      (id) => request('POST', `/tasks/${id}/complete`),
+      removeComplete,
+    )
+    clean = await _drain(
+      getPendingSnoozes,
+      (s) => request('POST', `/tasks/${s.id}/snooze`, { snooze_until: s.snooze_until }),
+      (s) => removeSnooze(s.id),
+    ) && clean
+    clean = await _drain(
+      getPendingReviews,
+      (r) => request('POST', '/review/commit', r),
+      (r) => removeReviewCommit(r.date),
+    ) && clean
+
+    if (clean) _noteFlushSuccess()
+    else _noteFlushFailure()
+  } catch (err) {
+    // Nothing should reach here — the per-item handlers catch send failures —
+    // but an unexpected throw used to leave _flushing stuck true, killing the
+    // queue for the life of the page with no symptom.
+    console.error('[aria] flushQueues failed', err)
+    _noteFlushFailure()
+  } finally {
+    _flushing = false
+  }
+}
+
+export { flushQueues }
+
+setInterval(flushQueues, FLUSH_INTERVAL_MS)
+
+// The interval alone leaves up to 30s of exposure and can't react to the app
+// coming back to life. Flush on any successful request, and whenever the tab
+// regains focus.
+window.addEventListener('aria:server-awake', () => { flushQueues({ force: true }) })
+window.addEventListener('focus', () => { flushQueues({ force: true }) })
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') flushQueues({ force: true })
+})
 
 export const api = {
   get:      (path)       => request('GET',    path),
