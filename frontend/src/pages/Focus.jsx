@@ -361,12 +361,13 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
 
   // index.css reserves 200px at the bottom of every Linen page so a scrolling
   // list's last row clears the fixed flower banner. Focus does not scroll, and
-  // the banner is 140px tall with its flowers in the bottom ~90 — at 200 the
-  // column was left with less height than its own content needs, which is why
-  // the bag sat pinned at its minimum with dead space below the tea box. 120
-  // still cannot reach the flowers.
+  // the banner is 140px tall with its flowers massed in the bottom ~90 — at 200
+  // the column had less height than its own content needs, which pinned the bag
+  // at its minimum and left dead space below the tea box. 80 puts the box where
+  // it was asked to sit; it overlaps the banner's box but not its flowers, and
+  // the banner is a z-0 decoration that content already paints over.
   const linenBottomReserve = isLinen
-    ? { paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))' }
+    ? { paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }
     : undefined
 
   return (
