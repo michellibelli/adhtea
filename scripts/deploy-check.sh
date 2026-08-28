@@ -66,8 +66,12 @@ else
         echo "    Repeated scripted probes trip this. Wait a few minutes."
       elif [[ "${SERVER:-}" == "cloudflare" && "$CODE" == "403" ]]; then
         echo "  → Cloudflare managed challenge (bot check) — script traffic is"
-        echo "    being challenged. Browser traffic is fine. Add a WAF bypass"
-        echo "    rule for /health if you want this check to be reliable."
+        echo "    being challenged. Browser traffic passes transparently, so the"
+        echo "    app is almost certainly fine; retry in a minute."
+        echo "    Nothing to configure: that Cloudflare is RENDER's, in front of"
+        echo "    every custom domain (api.adh-tea.fun -> onrender.com ->"
+        echo "    cdn.cloudflare.net). Our DNS is at whois.com, so there is no"
+        echo "    Cloudflare dashboard of ours to add a bypass rule to."
       else
         echo "  → backend DOWN or unreachable (server: ${SERVER:-unknown})"
       fi

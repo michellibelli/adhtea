@@ -207,12 +207,7 @@ class TaskResponse(BaseModel):
     scheduled_date: Optional[datetime]
     snooze_until: Optional[datetime]
     sort_order: Optional[float]
-    # Triage scoring (R1) — cached priority signal + explainable breakdown
-    score: Optional[float] = None
-    score_components: Optional[str] = None       # JSON string; UI parses for "Why this?"
-    score_updated_at: Optional[datetime] = None
     push_count: int = 0
-    pinned_for: Optional[date] = None
     completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

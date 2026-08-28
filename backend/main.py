@@ -85,16 +85,14 @@ def _migrate(target_engine=None):
                     conn.execute(text("ALTER TABLE tasks DROP COLUMN domain_id"))
                 except Exception:
                     pass
-            if "score" not in tasks_cols:
-                conn.execute(text("ALTER TABLE tasks ADD COLUMN score FLOAT"))
-            if "score_components" not in tasks_cols:
-                conn.execute(text("ALTER TABLE tasks ADD COLUMN score_components TEXT"))
-            if "score_updated_at" not in tasks_cols:
-                conn.execute(text("ALTER TABLE tasks ADD COLUMN score_updated_at DATETIME"))
+            # score/score_components/score_updated_at/pinned_for are NOT added
+            # here any more. The scoring engine went with routes/triage.py in
+            # 4.4.0; adding them to a fresh DB just recreated the orphans. The
+            # columns stay declared in models.py (so create_all still makes them,
+            # and prod's existing ones keep matching) but nothing reads or
+            # writes them. See HANDOFF "Known issues".
             if "push_count" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN push_count INTEGER NOT NULL DEFAULT 0"))
-            if "pinned_for" not in tasks_cols:
-                conn.execute(text("ALTER TABLE tasks ADD COLUMN pinned_for DATE"))
             if "email" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
             if "is_owner" not in users_cols:
@@ -163,11 +161,8 @@ def _migrate(target_engine=None):
             conn.execute(text("ALTER TABLE projects DROP COLUMN IF EXISTS domain_id"))
             conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS domain_id"))
             conn.execute(text("DROP TABLE IF EXISTS domains CASCADE"))
-            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score FLOAT"))
-            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_components TEXT"))
-            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS score_updated_at TIMESTAMP"))
+            # score/pinned_for deliberately not added — see the SQLite branch.
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS push_count INTEGER NOT NULL DEFAULT 0"))
-            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS pinned_for DATE"))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
             ))

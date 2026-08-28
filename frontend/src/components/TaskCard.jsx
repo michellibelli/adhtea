@@ -178,56 +178,6 @@ function EditForm({ task, onSave, onCancel }) {
 
 // ── Task card ────────────────────────────────────────────────────────────────
 
-function ScoreChip({ score, onClick }) {
-  if (score == null) return null
-  return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); onClick?.() }}
-      title="Why this score?"
-      className="flex-shrink-0 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-ui-border/40 text-ui-text hover:bg-ui-accent/20 hover:text-ui-accent transition-colors"
-    >
-      {Math.round(score)}
-    </button>
-  )
-}
-
-const LEVER_LABELS = {
-  priority:        'Priority',
-  critical_bonus:  'Critical',
-  overdue_boost:   'Overdue',
-  due_today:       'Due today',
-  due_soon:        'Due soon',
-  same_day_create: 'Same-day deadline',
-  project_stall:   'Stalling project',
-  age_boost:       'Inbox age',
-  push_penalty:    'Pushed before',
-}
-
-function WhyTooltip({ components, total }) {
-  if (!components) return null
-  let parsed = components
-  if (typeof parsed === 'string') {
-    try { parsed = JSON.parse(parsed) } catch { return null }
-  }
-  const entries = Object.entries(parsed).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-  return (
-    <div className="mt-2 pt-2 border-t border-ui-border/50 space-y-0.5">
-      <p className="text-[10px] font-semibold text-ui-text mb-1">
-        Total score: {Math.round(total)}
-      </p>
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-center justify-between text-[10px]">
-          <span className="text-ui-subtext">{LEVER_LABELS[k] || k}</span>
-          <span className={`font-mono ${v >= 0 ? 'text-ui-accent' : 'text-red-400'}`}>
-            {v >= 0 ? '+' : ''}{v}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export default function TaskCard({
   task: initialTask,
   variant = 'today',
@@ -237,9 +187,6 @@ export default function TaskCard({
   onDefer,
   onDelete,
   onScheduleToday,
-  showScore = false,
-  showWhy = false,
-  onWhy,
 }) {
   const [task,        setTask]        = useState(initialTask)
   const [showSnooze,  setShowSnooze]  = useState(false)
@@ -344,8 +291,6 @@ export default function TaskCard({
                 </div>
               </div>
 
-              {showScore && <ScoreChip score={task.score} onClick={onWhy} />}
-
               {/* Right-side action column: snooze + edit + delete, always visible.
                   Stops click propagation so tapping an icon doesn't also
                   toggle the expanded-actions panel on the card body. */}
@@ -418,7 +363,6 @@ export default function TaskCard({
                 )}
               </div>
             )}
-            {showWhy && <WhyTooltip components={task.score_components} total={task.score} />}
           </>
         )}
       </Card>

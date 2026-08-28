@@ -6,6 +6,17 @@ function readShowBuildChip() {
   return v === null ? true : v === 'true'
 }
 
+// Loading covers are OFF by default during the Render Starter trial, so the real
+// time-to-content is visible instead of hidden behind a full-screen "brewing…".
+// `?covers=on` restores the old behavior for a side-by-side comparison.
+//
+// Deliberately NOT localStorage-backed: main.jsx wipes localStorage on every
+// BUILD change, which is the same trap that forced box_manual server-side.
+//
+// The wake machinery itself (WakeScreen, warmUp, aria:server-waking) is
+// untouched — HANDOFF is explicit that it must survive the trial.
+const COVERS_ON = new URLSearchParams(window.location.search).get('covers') === 'on'
+
 import { ThemeProvider } from './context/ThemeContext'
 import { isLoggedIn, loginExpired, likelySleeping, warmUp, getPendingReviews } from './api/client'
 import { getMe, logout } from './api/auth'
@@ -13,6 +24,7 @@ import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { getReviewPending } from './api/review'
 import { createTask } from './api/tasks'
 import { prefetchFirstScreenAssets } from './utils/prefetch'
+import { markLoad, getLoadMarks } from './utils/loadTimer'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Signup from './pages/Signup'
@@ -184,11 +196,20 @@ function AppShell() {
       .catch(() => setReady(true))
   }, [])
 
+  useEffect(() => { if (ready) markLoad('ready') }, [ready])
+
+  useEffect(() => {
+    const onLoaded = () => markLoad('page')
+    window.addEventListener('aria:page-loaded', onLoaded)
+    return () => window.removeEventListener('aria:page-loaded', onLoaded)
+  }, [])
+
   // Raise the full-screen loading cover for the page we're about to show. The
   // page mounts and fetches *underneath* the cover; it lifts only once that
   // page's data has loaded (aria:page-loaded), so the user never sees the bare
   // "…" skeleton while a cold Render server spins up.
   const raiseCover = () => {
+    if (!COVERS_ON) return
     setWakeDiary('')
     wakeDiaryRef.current = ''
     setWakeReady(false)
@@ -213,6 +234,7 @@ function AppShell() {
     // Instant/form pages (capture, settings) have no data fetch and emit no
     // page-loaded — covering them just flashes the loader. Skip.
     if (!COVER_SCREENS.has(screen)) return
+    if (!COVERS_ON) return
     pageLoadedRef.current = false
 
     const onLoad = () => { pageLoadedRef.current = true }
@@ -294,7 +316,7 @@ function AppShell() {
   // action that triggered the wake is already queued in localStorage, so
   // nothing is lost; this just gives the wake a loading screen and fresh data.
   useEffect(() => {
-    if (!ready) return
+    if (!ready || !COVERS_ON) return
     const onWaking = () => {
       raiseCover()
       setRefreshKey(k => k + 1)
@@ -329,6 +351,10 @@ function AppShell() {
   // handleTriageDone + openTriage removed — triage merged into Today
 
   if (!ready) {
+    // Covers off: show the themed background (rendered by App(), outside this
+    // component) and let the app appear when its data actually lands. The blank
+    // stretch IS the load time being measured.
+    if (!COVERS_ON) return null
     return (
       <div className="aria-page flex flex-col items-center justify-center px-6 pb-12">
         <div className="flex flex-col items-center w-full max-w-xs">
@@ -580,12 +606,19 @@ export default function App() {
     () => window.location.pathname === '/signup' ? 'signup' : 'login'
   )
   const [showChip, setShowChip] = useState(readShowBuildChip)
+  const [timing, setTiming] = useState(getLoadMarks)
   const inviteToken = new URLSearchParams(window.location.search).get('invite')
 
   useEffect(() => {
     const handler = () => setShowChip(readShowBuildChip())
     window.addEventListener('aria:build-chip-changed', handler)
     return () => window.removeEventListener('aria:build-chip-changed', handler)
+  }, [])
+
+  useEffect(() => {
+    const onTiming = (e) => setTiming(e.detail)
+    window.addEventListener('aria:load-timing', onTiming)
+    return () => window.removeEventListener('aria:load-timing', onTiming)
   }, [])
 
   // Wake the (free-tier, likely-sleeping) server in parallel while the user is
@@ -647,6 +680,9 @@ export default function App() {
           pointerEvents: 'none', textAlign: 'right', lineHeight: '1.3', opacity: 0.55,
         }}>
           <div>{typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev'}</div>
+          {timing.ready != null && (
+            <div>{timing.ready}ms{timing.page != null ? ` · +${timing.page - timing.ready}ms` : ''}</div>
+          )}
           <a href="https://www.vecteezy.com" target="_blank" rel="noopener noreferrer" style={{ pointerEvents: 'auto', color: 'inherit', textDecoration: 'none' }}>Vecteezy.com</a>
         </div>
       )}

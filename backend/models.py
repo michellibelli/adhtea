@@ -231,22 +231,21 @@ class Task(Base):
     # Notes tags (free-form, comma-separated)
     tags = Column(String(500), nullable=True)
 
-    # Triage scoring (R1 — see routes/triage.py for compute logic)
-    # `score` is the cached priority signal used for bin-pack + Focus surfacing.
-    # `score_components` is JSON breaking down the score by lever so the UI can
-    # show "Why this?" — confidence comes from explaining the math, not hiding it.
+    # ORPHANED. These backed the triage scoring engine, which was deleted with
+    # routes/triage.py in 4.4.0. Nothing reads or writes them; they read back
+    # null. Kept declared only so the ORM keeps matching the live Postgres
+    # table — dropping indexed columns from a single-user prod DB with no
+    # staging buys nothing. Removed everywhere else in 4.14.0: the _migrate
+    # ADD COLUMNs, the TaskResponse fields, and the TaskCard score UI.
     score = Column(Float, nullable=True)
     score_components = Column(Text, nullable=True)            # JSON dict
     score_updated_at = Column(DateTime, nullable=True)
-    # Incremented each time the user snoozes / defers this task. Feeds into the
-    # score as a penalty so chronically pushed items eventually flag for
-    # archive-or-delete prompts (R5).
+    # Live. Incremented each time the user snoozes / defers this task; exported
+    # in the CSV. (Its old job — feeding a score penalty — went with the engine.)
     push_count = Column(Integer, default=0, nullable=False)
 
-    # User-pinned "must do on this day." Bin-pack places pinned items first,
-    # before score-driven placement. Max 3 pins per day is enforced at the
-    # route layer (see routes/triage.py::pin_task). Capped at three so the
-    # user is forced to actually choose — pinning everything = pinning nothing.
+    # ORPHANED — see the score columns above. Was the user-pinned "must do on
+    # this day" flag the bin-packer placed first.
     pinned_for = Column(Date, nullable=True, index=True)
 
     # Lifecycle

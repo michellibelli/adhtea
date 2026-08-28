@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-08-20 (BUILD 4.13.1)*
+*Last updated: 2026-08-28 (BUILD 4.14.0)*
 
 > This file is the source of truth for architecture and operations.
 > Design philosophy + the design system live in `PROJECT.md`.
@@ -59,13 +59,21 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.13.1 (2026-08-17)
+## Current status — BUILD 4.14.0 (2026-08-28)
 
 `master` clean, synced with origin. Backend suite **188 passed**. `npm run build` clean. Live.
 
-The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side.
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stops hiding the load time and clears the dead scoring code.
 
 ### Big shifts since BUILD 4.9.1
+
+**Loading covers off by default (4.14.0, 2026-08-28).** Starter removed hibernation, but the cold-start covers kept firing — `likelySleeping()` measures *user* idle time, not server state, so ten idle minutes threw a full-screen cover over a backend answering in ~200ms. On top of that the boot screen held the whole app behind `getMe` + `getTodayLog` + `getReviewPending`. With both in the way there was no way to see what the app's real load time had become, which is the question the trial exists to answer.
+
+One module-level constant in `App.jsx` — `COVERS_ON`, read from `?covers=on` — now gates `raiseCover()`, the nav-cover effect, the reactive wake effect, and the boot screen. Default is off. **Nothing was deleted**: `WakeScreen.jsx`, `warmUp`, the `aria:server-waking` plumbing, and the label/dismiss logic are all intact, and `https://adh-tea.fun/?covers=on` restores today's behavior exactly, for a side-by-side. The gate is a URL param rather than a localStorage flag on purpose — `main.jsx` wipes localStorage on every BUILD change, the same trap that forced `box_manual` server-side.
+
+Two things go quiet while covers are off, both accepted: the "while you wait" diary capture (its textarea lives inside the hidden screens) and the remount-and-refetch on return from sleep (`refreshKey`). Both come back with `?covers=on`.
+
+Measuring instead of eyeballing: `frontend/src/utils/loadTimer.js` marks `ready` (app revealed) and `page` (first `aria:page-loaded`) as ms since **navigation start** — `performance.now()` is relative to `timeOrigin`, so the figure includes HTML/JS download and parse, not just React's work. Both marks are `console.log`ged as `[load] …` and rendered as a third line on the existing build chip (`1842ms · +310ms`), under the same `show_build_chip` toggle. Record a baseline in `SESSION.md` while the Render trial runs.
 
 **CSV export (4.13.0–4.13.1, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 21 columns (id, title, type, status, priority, effort, critical, dates, project/routine titles, tags, location, push_count, timestamps, notes). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
 
@@ -183,6 +191,7 @@ frontend/src/
   utils/
     ordering.js        THE today-order rule — shared by TeaBox + Focus; computed tiers vs. manual
     prefetch.js        theme-aware off-DOM image warm-up during login
+    loadTimer.js       ms-since-navigation marks for the build chip (see 4.14.0)
     dnd.js             SmartPointerSensor (blocks drag on inputs/buttons)
     medicationStore.js localStorage med-name pseudonymization (server stores placeholders)
     snooze.js          weekend-aware snooze date math
@@ -193,11 +202,20 @@ frontend/src/
 ## Known issues / next
 
 1. **~~Docs cleanup~~ — done 2026-08-20.** `PROJECT.md` was rewritten as a design-only doc (philosophy + design system); every operational section it duplicated from this file was deleted rather than refreshed, so there is now exactly one home for each fact. Don't re-add an architecture section there.
-2. **Orphan score columns** — `Task.score`, `score_components`, `score_updated_at`, `pinned_for` remain on the model + are exposed in `TaskResponse`, but nothing writes them now that the scoring engine is gone (they read back null). Left in place to avoid a destructive prod migration; drop them in a deliberate migration if you want them gone. Same for the never-read `max_tasks_per_day`/`max_total_per_day` DB columns (model + validation removed; columns left orphaned in prod).
+2. **Orphan score columns — code side cleared 2026-08-28 (4.14.0).** `Task.score`, `score_components`, `score_updated_at`, `pinned_for` no longer ship in `TaskResponse`, `_migrate` no longer `ADD COLUMN`s them (both branches), and the unreachable `ScoreChip`/`WhyTooltip` UI is out of `TaskCard.jsx` — it had defaulted `showScore`/`showWhy` to false with no caller ever setting them. What remains, deliberately: the four `models.py` declarations (so the ORM keeps matching prod, and `create_all` keeps building a matching fresh DB) plus the orphaned prod columns themselves, including the never-read `max_tasks_per_day`/`max_total_per_day`. Dropping indexed columns from a live single-user Postgres with no staging buys nothing; if you ever do it, do it as one deliberate migration alongside the retention sweep.
 3. **Settings visual pass** — pending since May.
 4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
 5. **Render cold starts** — **resolved 2026-08-27** by the Starter plan (see trial note); the history below is kept because it explains the still-present wake machinery, and applies again if the plan is reverted. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
-6. **Cloudflare challenge on `api.adh-tea.fun`** — the API host now sometimes serves a Cloudflare managed-challenge interstitial ("Just a moment…") to non-browser clients. `scripts/deploy-check.sh` and `scripts/aria-api.sh` hit it intermittently, and any uptime pinger (the UptimeRobot keep-alive above) will fail it too. Browser traffic solves the challenge transparently. Add a WAF bypass rule for `/health` before relying on a pinger.
+6. **Cloudflare challenge on `api.adh-tea.fun`** — **closed 2026-08-28, won't fix.** The API host intermittently serves a managed-challenge interstitial ("Just a moment…") to non-browser clients, so `scripts/deploy-check.sh` and `scripts/aria-api.sh` fail every so often. Browser traffic passes transparently. The old advice here — "add a WAF bypass rule for `/health`" — is not actionable, because that Cloudflare is **Render's**, not ours:
+
+    ```
+    adh-tea.fun NS   → ns1-4.whois.com                    (registrar DNS, not Cloudflare)
+    api.adh-tea.fun  → aria-jfdj.onrender.com
+                     → gcp-us-west1-1.origin.onrender.com
+                     → ...cdn.cloudflare.net              ← Render's, no dashboard of ours
+    ```
+
+    Render fronts every custom domain this way. There is no zone we control and no skip rule to add. The motivation is gone regardless: the rule only ever existed so an UptimeRobot keep-alive could pass, Starter needs no keep-alive, and Render already polls `/health` itself every ~5s (see the access-log filter in 4.13.2). If a script needs to be reliable, retry it.
 7. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
 8. **No data retention** — nothing purges generated rows. `generate_routine_instances` writes one Task per active routine per day and `sync_today_events` one per calendar occurrence, forever; soft-deleted rows are never reaped. ~2,200 rows/year at six routines. Not urgent (single user, small for Postgres) but it already forced the 4.13.1 export filters, and `project_stall_map` does an N+1 over the growing table. Analysis + proposed design in **`docs/retention.md`** — read the `project_stall_map` trap there before writing any DELETE.
 
