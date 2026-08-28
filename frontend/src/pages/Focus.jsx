@@ -473,17 +473,22 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                   of the budget on a short phone. */}
               <div className="teabag-string shrink-0" style={{ height: 'clamp(14px, 2.4dvh, 38px)' }} />
 
+              {/* max-h caps the whole subtree, not just the Card: the clip-path
+                  is resolved against its container's box, so capping only the
+                  card would leave the notched corners cut at the taller
+                  wrapper's geometry and deform the bag. */}
               <div
-                className="w-full min-w-[180px] max-w-[180px] mx-auto flex flex-col flex-1 min-h-0"
+                className="w-full min-w-[180px] max-w-[180px] mx-auto flex flex-col flex-1 min-h-0 max-h-[260px]"
                 style={{
                   filter: 'drop-shadow(3px 5px 6px rgba(60,40,20,0.32)) drop-shadow(0 1px 0 rgba(60,40,20,0.20))',
                 }}
               >
                 <div className="flex flex-col flex-1 min-h-0" style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%)' }}>
-                {/* h-full so the bag fills whatever the column has left; the
-                    clamp is the floor/ceiling, not the size. 260 stays the
-                    ceiling (the old fixed height) for tall screens and desktop,
-                    where h-full has no definite parent height to resolve. */}
+                {/* h-full so the bag fills whatever the column has left,
+                    between the 110px floor below and the wrapper's 260px cap
+                    above — 260 being the fixed height it used to have. Without
+                    the cap, `grow` on the teabag zone hands the bag every spare
+                    pixel and it balloons on a tall window. */}
                 <Card className="teabag-card relative px-7 py-5 h-full min-h-[clamp(110px,20dvh,260px)] flex flex-col items-center justify-center text-center overflow-hidden" style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span
