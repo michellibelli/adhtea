@@ -36,7 +36,10 @@ export default function WeeklyInsightCard() {
   }
 
   return (
-    <Card className="px-4 py-3 mb-3 relative">
+    // Compact on phones — on Focus this card sits in a fixed-height column
+    // between the teabag and the tea box, so every pixel it takes is a pixel
+    // off the bag. Full size returns at md, where height isn't contested.
+    <Card className="px-3.5 py-2 mb-2.5 relative md:px-4 md:py-3 md:mb-3">
       <button
         className="absolute top-1 right-2 text-ui-subtext text-xs opacity-60 hover:opacity-100"
         onClick={dismiss}
@@ -44,7 +47,7 @@ export default function WeeklyInsightCard() {
       >
         ✕
       </button>
-      <p className="text-sm text-ui-text leading-relaxed pr-4">
+      <p className="text-[13px] leading-snug text-ui-text pr-4 md:text-sm md:leading-relaxed">
         {insight.insight_copy}
       </p>
     </Card>
