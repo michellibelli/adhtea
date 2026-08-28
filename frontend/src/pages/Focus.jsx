@@ -359,8 +359,21 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     )
   }
 
+  // index.css reserves 200px at the bottom of every Linen page so a scrolling
+  // list's last row clears the fixed flower banner. Focus does not scroll, and
+  // the banner is 140px tall with its flowers in the bottom ~90 — at 200 the
+  // column was left with less height than its own content needs, which is why
+  // the bag sat pinned at its minimum with dead space below the tea box. 120
+  // still cannot reach the flowers.
+  const linenBottomReserve = isLinen
+    ? { paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))' }
+    : undefined
+
   return (
-    <div className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
+    <div
+      className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible"
+      style={linenBottomReserve}
+    >
       <div className="flex-1 flex flex-col px-4 max-w-sm mx-auto w-full" style={{ gap: 16, minHeight: 0, paddingTop: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* Teabag zone */}
