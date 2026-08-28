@@ -364,9 +364,9 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       <div className="flex-1 flex flex-col px-4 max-w-sm mx-auto w-full" style={{ gap: 16, minHeight: 0, paddingTop: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* Teabag zone */}
-        <div className="flex justify-center min-h-0">
+        <div className="flex justify-center min-h-0 grow">
           {/* Relative wrapper — teabag + cup/pun */}
-          <div className={`relative w-full flex justify-center ${
+          <div className={`relative w-full flex justify-center min-h-0 ${
             celebrate ? ''
             : leaving ? 'opacity-0'
             : 'transition-opacity duration-500 opacity-100'
@@ -375,7 +375,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
             {/* Teabag unit — tag (fixed) above, then sway-wrap (string + bag) below.
                 During dunk the whole unit descends; the sway animation continues
                 inside the descending wrapper. */}
-            <div style={celebrate === 'dunk' ? { animation: 'teabag-descend 3610ms linear 255ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
+            <div className="flex flex-col items-center min-h-0 w-full" style={celebrate === 'dunk' ? { animation: 'teabag-descend 3610ms linear 255ms both', position: 'relative', zIndex: 1, transformOrigin: 'calc(50% - 10px) 50%' } : celebrate === 'wipe' ? { opacity: 0 } : undefined}>
 
             {/* Bonus ribbon — above tag, persists during animation */}
             {isBonusMode && celebrate !== 'wipe' && (
@@ -450,21 +450,27 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                 hangs still. The wrapper is kept so the descent during
                 dunk still drives off the same node. */}
             <div
-              className="flex flex-col items-center"
+              className="flex flex-col items-center flex-1 min-h-0 w-full"
               style={{
                 marginTop: -1, position: 'relative', zIndex: 1,
               }}
             >
-              <div className="teabag-string" />
+              {/* The string scales with the viewport too — 38px of it is a lot
+                  of the budget on a short phone. */}
+              <div className="teabag-string shrink-0" style={{ height: 'clamp(14px, 2.4dvh, 38px)' }} />
 
               <div
-                className="w-full min-w-[180px] max-w-[180px] mx-auto"
+                className="w-full min-w-[180px] max-w-[180px] mx-auto flex flex-col flex-1 min-h-0"
                 style={{
                   filter: 'drop-shadow(3px 5px 6px rgba(60,40,20,0.32)) drop-shadow(0 1px 0 rgba(60,40,20,0.20))',
                 }}
               >
-                <div style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%)' }}>
-                <Card className="teabag-card relative px-7 py-5 min-h-[260px] flex flex-col items-center justify-center text-center overflow-hidden" style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <div className="flex flex-col flex-1 min-h-0" style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%)' }}>
+                {/* h-full so the bag fills whatever the column has left; the
+                    clamp is the floor/ceiling, not the size. 260 stays the
+                    ceiling (the old fixed height) for tall screens and desktop,
+                    where h-full has no definite parent height to resolve. */}
+                <Card className="teabag-card relative px-7 py-5 h-full min-h-[clamp(110px,20dvh,260px)] flex flex-col items-center justify-center text-center overflow-hidden" style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2"

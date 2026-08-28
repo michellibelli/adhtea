@@ -1,5 +1,5 @@
 # Session bookmark
-*Last wrap: 2026-08-28 — BUILD 4.14.0*
+*Last wrap: 2026-08-28 — BUILD 4.14.1*
 
 ## State
 
@@ -18,6 +18,8 @@ HANDOFF.md is the real source of truth for architecture — this file is just th
 - **Orphan score columns — code side cleared.** The 2026-08-20 call was "leave them," but that call was really about refusing a destructive migration, and three of the four problems were code. Gone: the four fields from `TaskResponse`, the eight `ADD COLUMN` statements in `_migrate` (both branches — a fresh DB was recreating the orphans), and `ScoreChip` + `LEVER_LABELS` + `WhyTooltip` in `TaskCard.jsx` (~56 lines, unreachable — `showScore`/`showWhy` defaulted false and no caller ever set them). `models.py` declarations and the prod columns stay; their comments now say ORPHANED instead of describing a bin-packer that no longer exists.
 
 - **Cloudflare item closed, won't fix.** "Add a WAF bypass rule for `/health`" was never actionable: `adh-tea.fun` NS is whois.com, and `api.adh-tea.fun` → `onrender.com` → `cdn.cloudflare.net`, i.e. **Render's** Cloudflare in front of its custom domains. No zone of ours, no rule to add. Motivation was gone anyway — Starter needs no keep-alive and Render polls `/health` every ~5s. `deploy-check.sh` now says that instead of giving advice you can't follow.
+
+- **Focus layout: bag sizes to the space left (4.14.1).** Reported as "smooshed" on the phone — teabag, weekly-insight note and tea box overlapping, with an empty band under the box. The band is the deliberate 200px Linen banner reserve (`index.css`); the overlap was the bag card's hard `min-h-[260px]` in a column that only had ~421px for ~544px of content. The teabag zone has `min-h-0`, so it shrank below its content and the card spilled downward under the note and the box, which both paint above it. Fix: a flex chain from the zone down to the card (`min-h-0` on every link, `h-full` on the card) so the bag takes whatever is left; `min-h-[clamp(110px,20dvh,260px)]` is floor/ceiling, not size, keeping 260 for tall screens and desktop where the page goes `h-auto`. The string scales the same way. The reserve is untouched — the box must not reach the flowers.
 
 ## Open / next session
 
