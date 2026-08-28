@@ -369,7 +369,13 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       <div className="flex-1 flex flex-col px-4 max-w-sm mx-auto w-full" style={{ gap: 16, minHeight: 0, paddingTop: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* Teabag zone */}
-        <div className="flex justify-center min-h-0 grow md:grow-0">
+        {/* max-h caps the growth, not just the bag. `grow` hands the zone every
+            spare pixel; once the bag hits its 260 cap the surplus pooled inside
+            the zone below it and kept pushing the note and tea box down, which
+            put the box in the flowers on a narrow-but-tall window. 384 is the
+            zone at full size — tag 86 + string 38 + bag 260 — so past that the
+            slack falls below the box instead, where it belongs. */}
+        <div className="flex justify-center min-h-0 grow max-h-[384px] md:grow-0 md:max-h-none">
           {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center min-h-0 ${
             celebrate ? ''
