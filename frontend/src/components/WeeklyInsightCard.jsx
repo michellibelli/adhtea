@@ -39,7 +39,13 @@ export default function WeeklyInsightCard() {
     // Compact on phones — on Focus this card sits in a fixed-height column
     // between the teabag and the tea box, so every pixel it takes is a pixel
     // off the bag. Full size returns at md, where height isn't contested.
-    <Card className="px-3.5 py-2 mb-2.5 relative md:px-4 md:py-3 md:mb-3">
+    //
+    // Capped at 320px and centred because it was the only full-width element on
+    // Focus: the teabag is 180 and the tea box row 220, so at the column's full
+    // width this card alone reached the fixed leaf decorations at the screen
+    // edges and painted over them. 320 clears the vines (they occupy roughly
+    // the outer 45px each side).
+    <Card className="px-3.5 py-2 mb-2.5 relative w-full max-w-[320px] mx-auto md:max-w-none md:px-4 md:py-3 md:mb-3">
       <button
         className="absolute top-1 right-2 text-ui-subtext text-xs opacity-60 hover:opacity-100"
         onClick={dismiss}
@@ -47,7 +53,7 @@ export default function WeeklyInsightCard() {
       >
         ✕
       </button>
-      <p className="text-[13px] leading-snug text-ui-text pr-4 md:text-sm md:leading-relaxed">
+      <p className="text-[13px] leading-snug text-ui-text text-center px-3 md:text-sm md:leading-relaxed md:px-0 md:pr-4 md:text-left">
         {insight.insight_copy}
       </p>
     </Card>
