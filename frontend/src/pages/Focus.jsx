@@ -359,26 +359,17 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     )
   }
 
-  // index.css reserves 200px at the bottom of every Linen page so a scrolling
-  // list's last row clears the fixed flower banner. Focus does not scroll, and
-  // the banner is 140px tall with its flowers massed in the bottom ~90 — at 200
-  // the column had less height than its own content needs, which pinned the bag
-  // at its minimum and left dead space below the tea box. 80 puts the box where
-  // it was asked to sit; it overlaps the banner's box but not its flowers, and
-  // the banner is a z-0 decoration that content already paints over.
-  const linenBottomReserve = isLinen
-    ? { paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }
-    : undefined
-
   return (
-    <div
-      className="aria-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible"
-      style={linenBottomReserve}
-    >
+    // focus-page trims the Linen bottom reserve from 200px to 80 — see the rule
+    // in index.css. It is a class rather than an inline style because it must be
+    // gated on BOTH the theme and the viewport: desktop is h-auto with room to
+    // spare and still wants the full 200, and an inline style cannot carry a
+    // media query.
+    <div className="aria-page focus-page flex flex-col !h-[calc(100dvh_-_64px)] !max-h-[calc(100dvh_-_64px)] !min-h-[calc(100dvh_-_64px)] md:!h-auto md:!max-h-none md:!min-h-[100dvh] overflow-hidden md:overflow-visible">
       <div className="flex-1 flex flex-col px-4 max-w-sm mx-auto w-full" style={{ gap: 16, minHeight: 0, paddingTop: 16, paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* Teabag zone */}
-        <div className="flex justify-center min-h-0 grow">
+        <div className="flex justify-center min-h-0 grow md:grow-0">
           {/* Relative wrapper — teabag + cup/pun */}
           <div className={`relative w-full flex justify-center min-h-0 ${
             celebrate ? ''
@@ -489,7 +480,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                     above — 260 being the fixed height it used to have. Without
                     the cap, `grow` on the teabag zone hands the bag every spare
                     pixel and it balloons on a tall window. */}
-                <Card className="teabag-card relative px-7 py-5 h-full min-h-[clamp(110px,20dvh,260px)] flex flex-col items-center justify-center text-center overflow-hidden" style={{ borderRadius: 0, boxShadow: 'none' }}>
+                <Card className="teabag-card relative px-7 py-5 h-full min-h-[clamp(110px,20dvh,260px)] md:min-h-[260px] flex flex-col items-center justify-center text-center overflow-hidden" style={{ borderRadius: 0, boxShadow: 'none' }}>
                   {task.priority && PRIORITY_BADGE[task.priority] && (
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2"

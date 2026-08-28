@@ -387,6 +387,18 @@ body {
   padding-bottom: calc(200px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Focus is the exception: it does not scroll, it is sized to the viewport, and
+   that 200px comes straight out of its column height — enough to leave the
+   teabag pinned at its minimum with dead space under the tea box. The banner is
+   140px tall with its flowers massed in the bottom ~90, so 80 still cannot reach
+   them. Phone widths only: at md the page is h-auto with room to spare and the
+   full reserve keeps the box out of the flowers. */
+@media (max-width: 767px) {
+  [data-theme="aria-linen"] main > .aria-page.focus-page {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Paper grain over watercolor — simulates pigment sitting in paper fibers */
 [data-theme="aria-linen"] .aria-page-bg::after {
   content: '';
