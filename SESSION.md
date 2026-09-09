@@ -1,42 +1,95 @@
 # Session bookmark
-*Last wrap: 2026-08-28 — BUILD 4.14.9*
+*Last wrap: 2026-09-09 — BUILD 4.15.0*
 
 ## State
 
-Live build: **4.14.0**. Vercel + Render auto-deploy from `master`. Backend suite 188 passed; `npm run build` clean.
+Live build: **4.15.0**. Vercel + Render auto-deploy from `master`. Backend suite 188 passed;
+`npm run build` clean; ESLint 14 problems (all pre-existing — hold this number, any increase is a
+regression).
 
-Backend has been on **Render Starter** since 2026-08-27 — no hibernation. Verified healthy at the start of this session: `/health` 200 `{"status":"ok","version":"2.0.0"}` with no `x-render-routing` header and no wait, frontend serving `index-Kh8D0CHI.js` → `index-B_FiSyrv.js` after 4.13.2. The 2026-08-20 outage was a Render platform incident and is over.
+Backend on **Render Starter** since 2026-08-27 — no hibernation. Verified healthy this session:
+`/health` 200 `{"status":"ok","version":"2.0.0"}`, TTFB 154ms, no `x-render-routing` header.
 
 HANDOFF.md is the real source of truth for architecture — this file is just the bookmark.
+**An approved multi-stage plan for the next work is in
+`~/.claude/plans/i-think-in-this-glimmering-kettle.md`. Read it before starting.**
 
-## What shipped this session
+## Render Starter trial — load baseline (recorded 2026-09-09)
 
-- **Loading covers off by default (`?covers=on` restores them).** The covers were still firing on a server that no longer sleeps, so there was no way to see the app's real load time — the exact thing the Starter trial is meant to judge. `COVERS_ON` in `App.jsx` now gates `raiseCover()`, the nav-cover effect, the reactive wake effect, and the boot screen. Nothing deleted; the whole wake machinery is intact per HANDOFF's trial note. URL param, not localStorage — `main.jsx` wipes localStorage on every BUILD change.
+**Verdict: the plan did its job. Keep it.** Perceived load went from **30–60s** (free-tier
+hibernation wake) to **1–2s**, reported from the phone. Trial question answered.
 
-- **Load-time readout.** New `frontend/src/utils/loadTimer.js`: `ready` and `page` marks, ms since navigation start (so download + parse are included), console-logged and shown as a third line on the build chip.
+The residual 1–2s was **the app, not the server** — backend `/health` TTFB 154ms, JS bundle 121KB
+gzipped / 193ms off Vercel. Neither is a second. The cost was the boot waterfall, now fixed (below).
 
-- **Orphan score columns — code side cleared.** The 2026-08-20 call was "leave them," but that call was really about refusing a destructive migration, and three of the four problems were code. Gone: the four fields from `TaskResponse`, the eight `ADD COLUMN` statements in `_migrate` (both branches — a fresh DB was recreating the orphans), and `ScoreChip` + `LEVER_LABELS` + `WhyTooltip` in `TaskCard.jsx` (~56 lines, unreachable — `showScore`/`showWhy` defaulted false and no caller ever set them). `models.py` declarations and the prod columns stay; their comments now say ORPHANED instead of describing a bin-packer that no longer exists.
+Chip split for future readings: `ready` = bundle + the boot fetches; `+page` = the first page's own
+fetch.
 
-- **Cloudflare item closed, won't fix.** "Add a WAF bypass rule for `/health`" was never actionable: `adh-tea.fun` NS is whois.com, and `api.adh-tea.fun` → `onrender.com` → `cdn.cloudflare.net`, i.e. **Render's** Cloudflare in front of its custom domains. No zone of ours, no rule to add. Motivation was gone anyway — Starter needs no keep-alive and Render polls `/health` every ~5s. `deploy-check.sh` now says that instead of giving advice you can't follow.
+## What shipped this session (4.15.0)
 
-- **Focus layout (4.14.1 + 4.14.2).** 4.14.2/4.14.3 cut the Linen banner reserve to 80px *on Focus only*: TeaBox is ~140px tall (62px bag row + 72px drawers), not 72, so at a 200px reserve the column had less height than its content needs and the bag sat pinned at its `min-h` floor with ~136px of dead space below the box. The banner is 140px tall with its flowers in the bottom ~90, so 120 still cannot collide. 4.14.1: Reported as "smooshed" on the phone — teabag, weekly-insight note and tea box overlapping, with an empty band under the box. The band is the deliberate 200px Linen banner reserve (`index.css`); the overlap was the bag card's hard `min-h-[260px]` in a column that only had ~421px for ~544px of content. The teabag zone has `min-h-0`, so it shrank below its content and the card spilled downward under the note and the box, which both paint above it. Fix: a flex chain from the zone down to the card (`min-h-0` on every link, `h-full` on the card) so the bag takes whatever is left; `min-h-[clamp(110px,20dvh,260px)]` is floor/ceiling, not size, keeping 260 for tall screens and desktop where the page goes `h-auto`. The string scales the same way. The reserve is untouched — the box must not reach the flowers.
+- **Boot fetches parallelised.** `getMe` used to gate `getTodayLog`/`getReviewPending`/
+  `getTodayCapacity`, so every open paid two serial round trips before anything painted. All four
+  now fire together; `getMe` still orders the branching, but the others are already in flight.
+  Each promise carries its own `.catch` **at creation, not at the await** — the alpha-challenge and
+  onboarding paths return without awaiting them, and an uncaught rejection would surface in the
+  console. Safe to fire ahead of the onboarding check because all three are read-only GETs:
+  `/capacity/today` returns None rather than lazily creating a snapshot, and `/review/pending` only
+  reads (the commit lives in `POST /review/commit`).
+
+- **PWA deploy breakage fixed** — this was the reason the home-screen icon was unusable. The SW is
+  built with `skipWaiting` + `clientsClaim` + `cleanupOutdatedCaches` (what `registerType:
+  'autoUpdate'` generates). On deploy the new worker activates instantly, claims the page, and
+  **deletes the old precache while the page is still running the old build off it**; anything it
+  then requests 404s. The old code deferred the reload to the next `visibilitychange` — but the
+  cache deletion was never deferred, so a standalone PWA that had just been opened sat in that
+  broken window with no next foreground coming. Now reloads on `controllerchange`, guarded by
+  `hadController` (a first-ever install claims the page too — reloading on that is a pointless
+  extra load) and a `reloading` flag against double-fire.
+
+- **Loading covers, wake screens and the while-you-wait diary removed entirely** — ~600 deletions.
+  The covers existed for hibernation that no longer happens; the diary was dropped by explicit
+  decision (no wait to fill, and the daily log already captures it). Gone: `WakeScreen.jsx`,
+  `COVERS_ON`, `raiseCover`, `COVER_SCREENS`, `DIARY_PROMPTS`/`getDiaryConfig`, all four cover
+  effects, both diary textareas, the orphaned `steam-wisp` CSS.
+  **`warmUp`/`likelySleeping` deliberately KEPT in `client.js`** — they drive request retry
+  (`:149,458`) and the offline-queue flush (`:395-401,442`), not the cover UI. Removing them would
+  regress the durable queue on a flaky mobile network.
+
+## Behaviour change to know about
+
+Return-from-sleep no longer force-refetches. The old reactive wake bumped `refreshKey` to remount
+and refetch the current page; that went with the wake machinery. Harmless while the server doesn't
+hibernate, but a tab left open for hours now shows cached data until you navigate.
 
 ## Open / next session
 
-1. **Record the load-time baseline.** Open the app on the phone and read the chip, then `?covers=on` for the side-by-side. Put both numbers here — that's the Render-trial evidence.
-2. **Decide the covers' fate** at the end of the trial: keep them off, restore them, or make the gate smarter (fix `likelySleeping()` to measure the server rather than the user, which is the actual bug underneath).
-3. **Retention Tier 1** — implement the sweep in `docs/retention.md` if wanted. Get a real prod row count first (`SELECT task_type, status, count(*) FROM tasks GROUP BY 1,2`). **Read the `project_stall_map` trap in that doc before writing any DELETE.**
-4. **Time tracking** — `docs/time-tracking.md`, design only, nothing implemented.
-5. **Settings visual pass** — functional but cluttered, pending since May. Design work, best done against a live backend.
-6. **Logo/branding** — new adhTea logo, deferred cosmetic list.
+Working from the approved plan (`~/.claude/plans/i-think-in-this-glimmering-kettle.md`):
 
-Full known-issues + roadmap list lives in HANDOFF.md.
+1. **Remove Projects, code and schema** — decided, full destructive removal. **Three separate
+   pushes**, not one: frontend (4.16.0) → backend without DDL (4.16.1) → the migration alone
+   (4.16.2). Two lines will crash-loop prod if missed: `main.py:207` still lists `"projects"` in
+   the RLS loop, and `main.py:150` re-adds `project_id` on the next boot. Stage 0 runs prod counts
+   and a CSV export first; Stage 0b retires the project/training backlog — **completed rows kept as
+   data, uncompleted rows hard-deleted after a human look at the match list.**
+2. **Fix the morning review** (4.17.0) — add "not done" to the commit contract and an X control per
+   row. Note the query is NOT the bug: `review.py:49-61` already filters strictly on
+   `completed_at IS NOT NULL`. Wrong rows get there via an unguarded `complete_task` re-stamping on
+   offline-queue replay, and un-completes that never clear `completed_at`.
+3. **Re-measure the snooze pile after Projects is gone** — the read is that project/training tasks
+   were most of it. If it's still long, the mechanic is `carry_forward` returning tasks to inbox
+   without clearing `due_date` plus `promote_due_tasks` having **no `ORDER BY` at all**.
+4. **Retention Tier 1** — `docs/retention.md`. Gets materially simpler once projects are gone (the
+   `project_stall_map` trap it warns about ceases to exist). Needs a real prod row count first.
+5. Parked by explicit decision: Settings visual pass, logo/branding.
 
 ## Lingering style/correctness items NOT fixed
 (carried from prior sessions)
 - `auth.py:46` `_make_session` no commit — caller-commits pattern.
 - `auth.py:72` token expiry `>` vs `>=` — 1-second edge case.
 - `main.py:41` `is_owner` migration `MIN(id)` — one-time existing-DB.
-- `tasks.py:194` snooze `<=` race — sub-second window.
+- `task_lifecycle.py:300` `resolve_snoozes` `<=` race — sub-second window. (Was cited as
+  `tasks.py:194` in older notes; that reference is stale since the 4.6.4 lifecycle extraction.)
 - `tasks.py:517` `== True/None` — `noqa`'d, SQLA translates to SQL `IS NULL`.
 - `client.js` empty `catch (_) {}` blocks — eslint `no-empty`; CI runs pytest only.
+- `tasks.py:549-570` sibling due-date cascade has **no `owner_id` filter** — latent cross-tenant
+  bug, dies with the Projects removal.

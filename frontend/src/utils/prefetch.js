@@ -1,6 +1,6 @@
 // Warm the HTTP cache with the heavy images the first post-login screen (Focus)
 // paints, while the user is still typing credentials. The backend is woken in
-// parallel (App.jsx warmUp); this covers the *asset* half so the app doesn't
+// parallel; this covers the *asset* half so the app doesn't
 // pop in image-by-image right after login. Best-effort and idempotent — a
 // prefetch that fails or 404s just doesn't warm that entry; nothing blocks.
 //

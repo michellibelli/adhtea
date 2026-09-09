@@ -1169,26 +1169,6 @@ body {
   user-select: none;
 }
 
-/* =============================================================================
-   WakeScreen animations
-   ============================================================================= */
-
-@keyframes steam-rise {
-  0%   { opacity: 0;    transform: translateY(0)    scaleX(1); }
-  20%  { opacity: 0.55; transform: translateY(-8px)  scaleX(1.05); }
-  60%  { opacity: 0.35; transform: translateY(-22px) scaleX(1.12); }
-  100% { opacity: 0;    transform: translateY(-38px) scaleX(0.9); }
-}
-.steam-wisp {
-  position: absolute;
-  width: 6px;
-  border-radius: 50%;
-  background: rgba(180, 168, 224, 0.55);
-  filter: blur(3px);
-  animation: steam-rise var(--steam-dur, 2.2s) ease-out infinite var(--steam-delay, 0s);
-  pointer-events: none;
-}
-
 @keyframes float-bob {
   0%, 100% { transform: translateY(0)   rotate(var(--bob-rot-a, -4deg)); }
   50%       { transform: translateY(-14px) rotate(var(--bob-rot-b,  4deg)); }

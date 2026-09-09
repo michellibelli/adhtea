@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 const BUILD_CHIP_KEY = 'show_build_chip'
 function readShowBuildChip() {
@@ -6,23 +6,11 @@ function readShowBuildChip() {
   return v === null ? true : v === 'true'
 }
 
-// Loading covers are OFF by default during the Render Starter trial, so the real
-// time-to-content is visible instead of hidden behind a full-screen "brewing…".
-// `?covers=on` restores the old behavior for a side-by-side comparison.
-//
-// Deliberately NOT localStorage-backed: main.jsx wipes localStorage on every
-// BUILD change, which is the same trap that forced box_manual server-side.
-//
-// The wake machinery itself (WakeScreen, warmUp, aria:server-waking) is
-// untouched — HANDOFF is explicit that it must survive the trial.
-const COVERS_ON = new URLSearchParams(window.location.search).get('covers') === 'on'
-
 import { ThemeProvider } from './context/ThemeContext'
-import { isLoggedIn, loginExpired, likelySleeping, warmUp, getPendingReviews } from './api/client'
+import { isLoggedIn, loginExpired, getPendingReviews } from './api/client'
 import { getMe, logout } from './api/auth'
 import { getTodayLog, getTodayCapacity } from './api/selfcare'
 import { getReviewPending } from './api/review'
-import { createTask } from './api/tasks'
 import { prefetchFirstScreenAssets } from './utils/prefetch'
 import { markLoad, getLoadMarks } from './utils/loadTimer'
 import Login from './pages/Login'
@@ -59,50 +47,6 @@ async function getOpeningScreen() {
   return 'focus'
 }
 
-// Screens that fetch data on mount and emit aria:page-loaded when it lands.
-// Only these get a loading cover on navigation — instant/form pages (capture,
-// settings, etc.) would just flash it, so they're excluded.
-const COVER_SCREENS = new Set(['focus', 'today', 'selfcare'])
-
-const DIARY_PROMPTS = [
-  'How are you feeling right now?',
-  "What's on your mind?",
-  'Any dreams, thoughts, or feelings to get out?',
-  'What does your body need today?',
-  'What are you carrying into today?',
-]
-
-function getDiaryConfig() {
-  const lastLog   = localStorage.getItem('aria_last_log_date')
-  const today     = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-  const hour      = new Date().getHours()
-  const isMorning = hour >= 5 && hour < 12
-
-  if (lastLog === today) {
-    return {
-      heading:     "You've already logged today.",
-      prompt:      DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)],
-      placeholder: 'thoughts, feelings, anything...',
-      noteTitle:   'Diary entry',
-    }
-  }
-  if (isMorning && lastLog !== yesterday) {
-    return {
-      heading:     'No log from yesterday.',
-      prompt:      'What did you do? Any wins, struggles, or moments worth remembering?',
-      placeholder: 'yesterday was...',
-      noteTitle:   'Yesterday recap',
-    }
-  }
-  return {
-    heading:     'While you wait —',
-    prompt:      'What have you done so far today?',
-    placeholder: 'or just wait, no pressure',
-    noteTitle:   'Morning check-in',
-  }
-}
-
 function AppShell() {
   const [screen, setScreen]                   = useState('focus')
   // triageReturnTo removed — triage merged into Today
@@ -117,36 +61,32 @@ function AppShell() {
   const [checkInLog, setCheckInLog]           = useState(undefined)
   const [needsAlphaChallenge, setNeedsAlphaChallenge] = useState(false)
   const [showOnboarding, setShowOnboarding]   = useState(false)
-  const [diaryEntry, setDiaryEntry]           = useState('')
-  const [diaryConfig]                         = useState(getDiaryConfig)
-  const [serverUp, setServerUp]               = useState(false)
-  const [showWake, setShowWake]               = useState(false)
-  const [coverPageReady, setCoverPageReady]   = useState(false)
-  const [wakeReady, setWakeReady]             = useState(false)
-  const [wakeDiary, setWakeDiary]             = useState('')
-  const wakePromptRef = useRef('')
-  const wakeDiaryRef = useRef('')
-  const diaryRef = useRef('')
-  const prevScreenRef = useRef('focus')
-  const pageLoadedRef = useRef(false)
-  const coverInitDoneRef = useRef(false)
-  const [refreshKey, setRefreshKey]           = useState(0)
 
   useEffect(() => {
-    getMe()
+    // Boot fetches go out in parallel, not as a waterfall. getMe still gates the
+    // branching below — the alpha-challenge and onboarding paths return before
+    // any other result is read — but all four requests are already in flight by
+    // then, so the common (onboarded) path pays one round trip here instead of
+    // two. This was the measured cost of the 1-2s open after Render Starter
+    // removed hibernation; see the trial baseline in SESSION.md.
+    //
+    // Each promise carries its own .catch AT CREATION, not at the await: on an
+    // early return nobody awaits them, and an un-caught rejection would surface
+    // as an unhandled promise rejection in the console.
+    //
+    // Firing these ahead of the onboarding check is safe because all three are
+    // read-only GETs — /capacity/today returns None when no snapshot exists
+    // rather than lazily creating one, and /review/pending only reads (the
+    // commit lives in POST /review/commit). No row can be created for a user
+    // who never gets past the gate.
+    const mePromise      = getMe()
+    const logPromise     = getTodayLog().catch(() => undefined)
+    const pendingPromise = getReviewPending().catch(() => null)
+    const capacityPromise = getTodayCapacity().catch(() => null)
+
+    mePromise
       .then(async (u) => {
         setUser(u)
-        setServerUp(true)
-
-        if (diaryRef.current.trim()) {
-          createTask({
-            title:     diaryConfig.noteTitle,
-            task_type: 'note',
-            notes:     diaryRef.current.trim(),
-          }).then(() => {
-            localStorage.setItem('aria_last_log_date', new Date().toISOString().split('T')[0])
-          }).catch(() => {})
-        }
 
         if (u.needs_alpha_challenge) {
           setNeedsAlphaChallenge(true)
@@ -160,20 +100,17 @@ function AppShell() {
         }
         const opening = await getOpeningScreen()
         setScreen(opening)
-        getTodayCapacity().then(setCapacity).catch(() => {})
+        capacityPromise.then(setCapacity)
 
         // Decide the morning self-care gate / EOD BEFORE revealing the app so
         // the user lands on the right screen (never flashes Focus then yanks to
-        // the gate). getMe has already warmed the server, so getTodayLog is
-        // fast — await it directly. A timeout here would risk skipping the gate
-        // on a cold morning, which is exactly the bug we're avoiding.
+        // the gate). A timeout here would risk skipping the gate on a cold
+        // morning, which is exactly the bug we're avoiding.
         try {
-          // Fetch the self-care log and any pending morning review together —
-          // getMe already warmed the server, so both land fast.
-          const [log, pending] = await Promise.all([
-            getTodayLog().catch(() => undefined),
-            getReviewPending().catch(() => null),
-          ])
+          // Both went out alongside getMe above, so by now they are usually
+          // already settled — this await is what orders the gate decision, not
+          // what pays for the fetch.
+          const [log, pending] = await Promise.all([logPromise, pendingPromise])
           setCheckInLog(log)   // hand to the gate so it paints without a 2nd fetch
           // A commit for this day may already be sitting in the local queue —
           // durable-committed on a cold backend that never advanced
@@ -204,138 +141,6 @@ function AppShell() {
     return () => window.removeEventListener('aria:page-loaded', onLoaded)
   }, [])
 
-  // Raise the full-screen loading cover for the page we're about to show. The
-  // page mounts and fetches *underneath* the cover; it lifts only once that
-  // page's data has loaded (aria:page-loaded), so the user never sees the bare
-  // "…" skeleton while a cold Render server spins up.
-  const raiseCover = () => {
-    if (!COVERS_ON) return
-    setWakeDiary('')
-    wakeDiaryRef.current = ''
-    setWakeReady(false)
-    setCoverPageReady(false)
-    wakePromptRef.current = DIARY_PROMPTS[Math.floor(Math.random() * DIARY_PROMPTS.length)]
-    setShowWake(true)
-  }
-
-  // Cover the destination on every in-session screen change. NOT on the first
-  // reveal: the full-screen `!ready` loading screen already covered the cold
-  // wait, so raising a second (differently-styled) cover on top of it just
-  // reads as "two loading screens." Let the freshly-revealed page show its own
-  // quick skeleton on the now-warm server instead.
-  useEffect(() => {
-    if (!ready) return
-    const changed = screen !== prevScreenRef.current
-    const initial = !coverInitDoneRef.current
-    if (!changed && !initial) return
-    prevScreenRef.current = screen
-    coverInitDoneRef.current = true
-    if (initial) return
-    // Instant/form pages (capture, settings) have no data fetch and emit no
-    // page-loaded — covering them just flashes the loader. Skip.
-    if (!COVER_SCREENS.has(screen)) return
-    if (!COVERS_ON) return
-    pageLoadedRef.current = false
-
-    const onLoad = () => { pageLoadedRef.current = true }
-    window.addEventListener('aria:page-loaded', onLoad)
-
-    if (likelySleeping()) {
-      raiseCover()
-      return () => window.removeEventListener('aria:page-loaded', onLoad)
-    }
-    // Warm server: only cover if the page is actually slow, to avoid a flash on
-    // fast navigations (fast pages emit aria:page-loaded well under this delay).
-    const timer = setTimeout(() => { if (!pageLoadedRef.current) raiseCover() }, 1200)
-    return () => { clearTimeout(timer); window.removeEventListener('aria:page-loaded', onLoad) }
-  }, [screen, ready])
-
-  // While the cover is up: update the "brewing/almost there" label as the server
-  // responds, and auto-lift only once the page's DATA has actually loaded
-  // (coverPageReady) — never merely because the server socket answered, which
-  // would reveal the "…" skeleton. Manual Continue also gates on coverPageReady,
-  // so pressing it can never drop the user onto a still-loading page.
-  useEffect(() => {
-    if (!showWake) return
-    const markReady = () => { if (!likelySleeping()) setWakeReady(true) }
-    markReady()
-    const interval = setInterval(markReady, 500)
-
-    let settle
-    const pageReady = (delay) => {
-      setCoverPageReady(true)
-      if (wakeDiaryRef.current.trim()) return   // respect an in-progress journal entry
-      clearTimeout(settle)
-      settle = setTimeout(() => dismissWake(), delay)
-    }
-    // Preferred: the page's own data landed (instrumented pages: Focus/Today/SelfCare).
-    const onPageLoaded = () => pageReady(500)
-    // Fallback for pages that emit no page-loaded: a beat after the server
-    // answers, give the quick warm refetch time to paint (page-loaded wins if both).
-    const onAwake = () => pageReady(1500)
-    window.addEventListener('aria:page-loaded', onPageLoaded)
-    window.addEventListener('aria:server-awake', onAwake)
-
-    const hard = setTimeout(() => dismissWake(), 60000)   // safety: never trap the user (cold Render wake ~30-45s)
-
-    return () => {
-      clearInterval(interval)
-      clearTimeout(settle)
-      clearTimeout(hard)
-      window.removeEventListener('aria:server-awake', onAwake)
-      window.removeEventListener('aria:page-loaded', onPageLoaded)
-    }
-  }, [showWake])
-
-  // Returning to an already-open tab after the server has likely slept (e.g.
-  // away 2h). Raise the loading cover, wake the server, and remount the current
-  // screen (bump refreshKey) so it refetches — the cover lifts on the fresh
-  // page's aria:page-loaded. Without this, the user would click through a stale
-  // cached list while the server silently warms in the background.
-  useEffect(() => {
-    if (!ready) return
-    const onReturn = () => {
-      if (document.visibilityState !== 'visible') return
-      if (!likelySleeping()) return
-      // warmUp fires aria:server-waking, which raises the cover and refetches
-      // (see the aria:server-waking effect below) — single source of truth.
-      warmUp(() => {}).catch(() => {})
-    }
-    document.addEventListener('visibilitychange', onReturn)
-    window.addEventListener('focus', onReturn)
-    return () => {
-      document.removeEventListener('visibilitychange', onReturn)
-      window.removeEventListener('focus', onReturn)
-    }
-  }, [ready])
-
-  // Reactive: any request that hits a sleeping server (client.js fires
-  // aria:server-waking once per wake cycle) raises the cover and refetches the
-  // current page. Covers the visible-tab case — e.g. app left open on a second
-  // monitor while the server naps — where visibilitychange never fires. The
-  // action that triggered the wake is already queued in localStorage, so
-  // nothing is lost; this just gives the wake a loading screen and fresh data.
-  useEffect(() => {
-    if (!ready || !COVERS_ON) return
-    const onWaking = () => {
-      raiseCover()
-      setRefreshKey(k => k + 1)
-    }
-    window.addEventListener('aria:server-waking', onWaking)
-    return () => window.removeEventListener('aria:server-waking', onWaking)
-  }, [ready])
-
-  function dismissWake() {
-    if (wakeDiaryRef.current.trim()) {
-      createTask({
-        title: 'Diary entry',
-        task_type: 'note',
-        notes: wakeDiaryRef.current.trim(),
-      }).catch(() => {})
-    }
-    setShowWake(false)
-  }
-
   function handleLogout() { logout().then(() => window.location.reload()) }
 
   // The morning self-care / EOD gate decision. Faithful to the original inline
@@ -350,51 +155,10 @@ function AppShell() {
 
   // handleTriageDone + openTriage removed — triage merged into Today
 
-  if (!ready) {
-    // Covers off: show the themed background (rendered by App(), outside this
-    // component) and let the app appear when its data actually lands. The blank
-    // stretch IS the load time being measured.
-    if (!COVERS_ON) return null
-    return (
-      <div className="aria-page flex flex-col items-center justify-center px-6 pb-12">
-        <div className="flex flex-col items-center w-full max-w-xs">
-
-          <div className="relative mb-4">
-            <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.9s', '--steam-delay': '0s' }} />
-            <span className="steam-wisp" style={{ left: 26, bottom: '92%', height: 22, background: 'rgba(120,110,90,0.40)', '--steam-dur': '3.4s', '--steam-delay': '0.7s' }} />
-            <span className="steam-wisp" style={{ left: 17, bottom: '90%', height: 20, background: 'rgba(120,110,90,0.42)', '--steam-dur': '3.1s', '--steam-delay': '1.4s' }} />
-            <Logo size={56} />
-          </div>
-
-          <p
-            className="text-sm text-ui-subtext mb-6"
-            style={{ fontFamily: 'Caveat, cursive', fontSize: 18, letterSpacing: '0.02em' }}
-          >{serverUp ? 'almost there…' : 'brewing…'}</p>
-
-          <div className="w-full">
-            <div className="rounded-xl border border-ui-border/60 bg-ui-card/80 px-4 py-4 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold text-ui-accent uppercase tracking-widest mb-1">
-                {diaryConfig.heading}
-              </p>
-              <p className="text-sm text-ui-subtext mb-3">{diaryConfig.prompt}</p>
-              <textarea
-                value={diaryEntry}
-                onChange={(e) => { setDiaryEntry(e.target.value); diaryRef.current = e.target.value }}
-                placeholder={diaryConfig.placeholder}
-                rows={4}
-                className="w-full rounded-lg border border-ui-border/60 bg-ui-bg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors"
-              />
-              {diaryEntry.trim() && !serverUp && (
-                <p className="text-[10px] text-ui-accent mt-1.5">
-                  will be saved when server wakes
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // The themed background is rendered by App(), outside this component, so the
+  // pre-reveal window shows that rather than nothing. The app appears when its
+  // data lands — measured by loadTimer's `ready` mark.
+  if (!ready) return null
 
   if (needsAlphaChallenge) {
     return (
@@ -506,9 +270,7 @@ function AppShell() {
         </div>
       </header>
 
-      {/* key includes refreshKey so a return-from-sleep remounts the current
-          page and it refetches fresh data instead of showing the stale cache. */}
-      <main className="pt-[64px] relative z-10" key={refreshKey}>
+      <main className="pt-[64px] relative z-10">
         {screen === 'capture'  && <Capture onNavigate={setScreen} />}
         {screen === 'focus'    && (
           <Focus
@@ -534,66 +296,6 @@ function AppShell() {
         {screen === 'tasks'     && <AllTasks />}
         {screen === 'projects'  && <Projects onNavigate={setScreen} />}
       </main>
-
-      {showWake && (
-        <div className="aria-page fixed inset-0 z-50 flex flex-col items-center justify-center px-6 pb-12" style={{ background: 'var(--aria-surface)' }}>
-          <div className="flex flex-col items-center w-full max-w-xs">
-            <div className="relative mb-4">
-              <span className="steam-wisp" style={{ left: 8,  bottom: '88%', height: 18, background: 'rgba(120,110,90,0.45)', '--steam-dur': '2.9s', '--steam-delay': '0s' }} />
-              <span className="steam-wisp" style={{ left: 26, bottom: '92%', height: 22, background: 'rgba(120,110,90,0.40)', '--steam-dur': '3.4s', '--steam-delay': '0.7s' }} />
-              <span className="steam-wisp" style={{ left: 17, bottom: '90%', height: 20, background: 'rgba(120,110,90,0.42)', '--steam-dur': '3.1s', '--steam-delay': '1.4s' }} />
-              <Logo size={56} />
-            </div>
-
-            <p
-              className="text-sm text-ui-subtext mb-6"
-              style={{ fontFamily: 'Caveat, cursive', fontSize: 18, letterSpacing: '0.02em' }}
-            >{wakeReady ? 'ready when you are' : 'brewing…'}</p>
-
-            <div className="w-full">
-              <div className="rounded-xl px-4 py-4" style={{ border: '1.5px solid var(--aria-border)', background: 'var(--aria-card, var(--aria-surface))', boxShadow: '0 2px 16px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-                <p className="text-[10px] font-semibold text-ui-accent uppercase tracking-widest mb-1">
-                  While you wait —
-                </p>
-                <p className="text-sm text-ui-subtext mb-3">
-                  {wakePromptRef.current}
-                </p>
-                <textarea
-                  value={wakeDiary}
-                  onChange={(e) => { setWakeDiary(e.target.value); wakeDiaryRef.current = e.target.value }}
-                  placeholder="or just wait, no pressure"
-                  rows={4}
-                  className="w-full rounded-lg px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none transition-colors"
-                  style={{ border: '1.5px solid var(--aria-border)', background: 'var(--aria-surface)' }}
-                />
-                {wakeDiary.trim() && !wakeReady && (
-                  <p className="text-[10px] text-ui-accent mt-1.5">
-                    will be saved when server wakes
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Continue only appears once the page's data is actually loaded, so
-                it can never drop the user onto a still-loading "…" screen. Non-
-                journaling users are auto-dismissed; this is mainly for someone
-                mid-diary who wants to finish and proceed. */}
-            {coverPageReady && (
-              <button
-                onClick={dismissWake}
-                className="mt-4 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300"
-                style={{
-                  background: 'var(--aria-accent)',
-                  color: 'var(--aria-bg)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                }}
-              >
-                {wakeDiary.trim() ? 'Save & continue' : 'Continue'}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
     </div>
   )
@@ -621,15 +323,10 @@ export default function App() {
     return () => window.removeEventListener('aria:load-timing', onTiming)
   }, [])
 
-  // Wake the (free-tier, likely-sleeping) server in parallel while the user is
-  // on the login screen, so submitting credentials doesn't then wait ~40s for
-  // the cold start. No-op if already warm. Also warm the first-screen image
-  // cache so the post-login Focus paint doesn't pop in asset-by-asset.
+  // Warm the first-screen image cache while the user is on the login screen, so
+  // the post-login Focus paint doesn't pop in asset-by-asset.
   useEffect(() => {
-    if (!authed) {
-      if (likelySleeping()) warmUp(() => {}).catch(() => {})
-      prefetchFirstScreenAssets()
-    }
+    if (!authed) prefetchFirstScreenAssets()
   }, [authed])
 
   function handleAuthed() {

@@ -342,7 +342,7 @@ export function pendingCount() {
 }
 
 // A single silent /health probe. Deliberately NOT warmUp(): warmUp dispatches
-// `aria:server-waking`, which raises the app's full-screen loading cover — fine
+// `aria:server-waking` and takes the shared wake lock — fine
 // when the user is waiting on a page, wrong for a background flush that would
 // then throw a cover over whatever she's doing.
 async function _probeHealth() {

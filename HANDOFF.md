@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-08-28 (BUILD 4.14.0)*
+*Last updated: 2026-09-09 (BUILD 4.15.0)*
 
 > This file is the source of truth for architecture and operations.
 > Design philosophy + the design system live in `PROJECT.md`.
@@ -43,7 +43,7 @@ Primary user (prod): username=`demo_user`, user_id=2.
 | Backend | https://api.adh-tea.fun | Render **Starter ($7/mo) since 2026-08-27** — no hibernation. On trial for a few months; see "Render paid-tier trial" below |
 | Database | Supabase PostgreSQL | Pooler connection, project ref `yyolrtwpsbtamncihmls` |
 
-**Render hibernation — removed 2026-08-27** by moving to the Starter plan. The cold-start / sleep-wake machinery below is now dormant but deliberately retained; see the trial note. A keep-alive pinger is no longer needed, which also retires the Cloudflare-WAF-bypass item that only existed to make one possible.
+**Render hibernation — removed 2026-08-27** by moving to the Starter plan, and the trial concluded 2026-09-09 in its favour: **keep Starter.** The cold-start / sleep-wake *UI* was deleted in 4.15.0 (see below); the request-retry half survives in `client.js`. A keep-alive pinger is no longer needed, which also retires the Cloudflare-WAF-bypass item that only existed to make one possible.
 
 **Render DATABASE_URL** — password must be URL-encoded (`&`→`%26`, `@`→`%40`).
 
@@ -59,21 +59,50 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.14.0 (2026-08-28)
+## Current status — BUILD 4.15.0 (2026-09-09)
 
 `master` clean, synced with origin. Backend suite **188 passed**. `npm run build` clean. Live.
 
-The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stops hiding the load time and clears the dead scoring code.
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stopped hiding the load time and cleared the dead scoring code. **4.15.0 ends the Render trial in the affirmative and deletes the machinery it made obsolete.**
 
 ### Big shifts since BUILD 4.9.1
 
-**Loading covers off by default (4.14.0, 2026-08-28).** Starter removed hibernation, but the cold-start covers kept firing — `likelySleeping()` measures *user* idle time, not server state, so ten idle minutes threw a full-screen cover over a backend answering in ~200ms. On top of that the boot screen held the whole app behind `getMe` + `getTodayLog` + `getReviewPending`. With both in the way there was no way to see what the app's real load time had become, which is the question the trial exists to answer.
+**Covers, wake screens and the boot waterfall — removed (4.15.0, 2026-09-09).** The Render Starter
+trial is over and the answer is keep it: perceived load went 30–60s → 1–2s. With hibernation gone,
+the cold-start UI was machinery guarding against a condition that no longer occurs, so it is
+deleted rather than dormant. Gone: `WakeScreen.jsx`, `COVERS_ON`/`?covers=on`, `raiseCover`,
+`COVER_SCREENS`, the nav-cover / label / return-from-sleep / reactive-wake effects, the
+`DIARY_PROMPTS` + `getDiaryConfig` "while you wait" capture (dropped by explicit decision — there
+is no wait to fill, and the daily log already captures it), and the orphaned `steam-wisp` CSS.
+~600 lines.
 
-One module-level constant in `App.jsx` — `COVERS_ON`, read from `?covers=on` — now gates `raiseCover()`, the nav-cover effect, the reactive wake effect, and the boot screen. Default is off. **Nothing was deleted**: `WakeScreen.jsx`, `warmUp`, the `aria:server-waking` plumbing, and the label/dismiss logic are all intact, and `https://adh-tea.fun/?covers=on` restores today's behavior exactly, for a side-by-side. The gate is a URL param rather than a localStorage flag on purpose — `main.jsx` wipes localStorage on every BUILD change, the same trap that forced `box_manual` server-side.
+**What deliberately survives: `warmUp` and `likelySleeping` in `client.js`.** They read as cover
+machinery but are not — they drive the request retry at `client.js:149,458` and the offline-queue
+flush at `:395-401,442`. Deleting them would regress the durable queue on a flaky mobile network,
+which is a live condition regardless of hosting plan.
 
-Two things go quiet while covers are off, both accepted: the "while you wait" diary capture (its textarea lives inside the hidden screens) and the remount-and-refetch on return from sleep (`refreshKey`). Both come back with `?covers=on`.
+**The residual second was the app, not the server.** Measured 2026-09-09: `/health` TTFB 154ms, JS
+bundle 121KB gzipped / 193ms off Vercel. Neither is a second. The cost was a boot waterfall —
+`getMe()` gating `getTodayLog` + `getReviewPending` + `getTodayCapacity`, two serial round trips
+before anything painted. All four now fire in parallel. `getMe` still orders the branching, but
+each of the others carries its own `.catch` **at creation, not at the await**: the alpha-challenge
+and onboarding paths return without awaiting them and an uncaught rejection would hit the console.
+Safe to fire ahead of the onboarding check because all three are read-only GETs — `/capacity/today`
+returns None rather than lazily writing a snapshot, and `/review/pending` only reads.
 
-Measuring instead of eyeballing: `frontend/src/utils/loadTimer.js` marks `ready` (app revealed) and `page` (first `aria:page-loaded`) as ms since **navigation start** — `performance.now()` is relative to `timeOrigin`, so the figure includes HTML/JS download and parse, not just React's work. Both marks are `console.log`ged as `[load] …` and rendered as a third line on the existing build chip (`1842ms · +310ms`), under the same `show_build_chip` toggle. Record a baseline in `SESSION.md` while the Render trial runs.
+**PWA auto-update was broken on every deploy (fixed 4.15.0).** This is why the home-screen icon was
+unusable. The SW ships `skipWaiting` + `clientsClaim` + `cleanupOutdatedCaches` — what
+`registerType: 'autoUpdate'` generates. On deploy the new worker activates immediately, claims the
+open page, and **deletes the old precache while that page is still running the old build off it**;
+anything it requests afterwards 404s. `main.jsx` deferred the reload to the next
+`visibilitychange`, but the cache deletion was never deferred — so a standalone PWA that had just
+been opened sat in the broken window with no next foreground coming. It now reloads on
+`controllerchange`, guarded by `hadController` (a first-ever install claims the page too, and
+reloading on that is a pointless extra load) and a `reloading` flag.
+
+**Behaviour change, accepted:** return-from-sleep no longer force-refetches. The reactive wake used
+to bump `refreshKey` to remount and refetch; that went with the machinery. A tab left open for
+hours shows cached data until you navigate.
 
 **CSV export (4.13.0–4.13.1, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 21 columns (id, title, type, status, priority, effort, critical, dates, project/routine titles, tags, location, push_count, timestamps, notes). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
 
@@ -121,7 +150,7 @@ Two trigger bugs were fixed in 4.11.3/4.11.6, both worth knowing since the patte
 
 **Security hardening (4.6.0–4.6.3, 2026-07-06).** Privilege separation, auth rate limits, hashed session tokens, OAuth pending-state persisted in DB, `delete_user` Postgres crash fix (explicit owned-row purge), onboarding visibility. Earlier (4.0.1): RLS enabled on all tables in the Postgres branch of `_migrate`.
 
-**Cold-start / sleep-wake loading covers (4.8.0–4.9.1).** Render free-tier cold starts and mid-session sleeps used to show loading→"…" skeleton jank. Now: pages (`Focus`, `Today`, `SelfCare`) dispatch `aria:page-loaded` when their primary fetch settles; App raises an opaque z-50 cover on nav + reactive wakes and lifts it only on `aria:page-loaded` (data renders underneath). Sleep-on-return funnels through a single `aria:server-waking` event (visibilitychange/focus + reactive on any request to a sleeping server). Completions/snoozes are queued to localStorage before the request, so the triggering action is never lost. 4.9.1 fixed the cold first-open specifically: removed a 2.5s `Promise.race` on `getTodayLog` that was losing the race on cold starts and skipping the self-care gate; killed the double-loader; added parallel login-screen warm-up. Correct morning flow now: (login → parallel wake) → single loading screen → self-care gate → Today → Start my day.
+**Cold-start / sleep-wake loading covers (4.8.0–4.9.1) — REMOVED in 4.15.0; kept here as history.** Render free-tier cold starts and mid-session sleeps used to show loading→"…" skeleton jank. Now: pages (`Focus`, `Today`, `SelfCare`) dispatch `aria:page-loaded` when their primary fetch settles; App raises an opaque z-50 cover on nav + reactive wakes and lifts it only on `aria:page-loaded` (data renders underneath). Sleep-on-return funnels through a single `aria:server-waking` event (visibilitychange/focus + reactive on any request to a sleeping server). Completions/snoozes are queued to localStorage before the request, so the triggering action is never lost. 4.9.1 fixed the cold first-open specifically: removed a 2.5s `Promise.race` on `getTodayLog` that was losing the race on cold starts and skipping the self-care gate; killed the double-loader; added parallel login-screen warm-up. Correct morning flow now: (login → parallel wake) → single loading screen → self-care gate → Today → Start my day.
 
 **Visual direction: Cafe + Linen themes only** (Americano/Berries/Chai removed 4.2.19). Cafe = warm amber, Lora serif, wood shadows, CafeShelf idle animations. Linen = soft plum/lavender paper, botanical header pill, pressed-flower SVG, paper-grain Focus card. Watercolor tea assets throughout. Tea-box metaphor on Focus (bags = tasks, ordered morning→evening — see `utils/ordering.js`, and 4.10.0 above for hand-ordering). Capture has a two-button submit (tea-cup = save+return, `+` = save+add-another).
 
@@ -163,7 +192,7 @@ Test files: auth, box_order, export_csv, gcal, import_csv, insights, med_capacit
 
 ```
 frontend/src/
-  App.jsx              routing, nav state, loading-cover orchestration, plan-day wiring
+  App.jsx              routing, nav state, boot fetches, plan-day wiring
   api/client.js        singleton, warmUp(), likelySleeping(), offline queue, smart retry
   pages/
     Focus.jsx          home — pickNext(), bonus mode, watercolor dunk celebration, tap-bag-to-focus
@@ -183,7 +212,6 @@ frontend/src/
     EditTaskSheet.jsx  shared edit modal (Focus + others)
     CapacityBar.jsx    compact + full
     NudgeModal.jsx / WeeklyInsightCard.jsx   Phase 6 nudge UI
-    WakeScreen.jsx     cold-start splash + diary prompt
     CafeShelf.jsx      Cafe-theme animated shelf
     Card / Button / Input / Logo / ConfirmModal / HamburgerMenu / PageState / PageProgress / SnoozeSheet / ProjectBadge
   context/
@@ -205,7 +233,7 @@ frontend/src/
 2. **Orphan score columns — code side cleared 2026-08-28 (4.14.0).** `Task.score`, `score_components`, `score_updated_at`, `pinned_for` no longer ship in `TaskResponse`, `_migrate` no longer `ADD COLUMN`s them (both branches), and the unreachable `ScoreChip`/`WhyTooltip` UI is out of `TaskCard.jsx` — it had defaulted `showScore`/`showWhy` to false with no caller ever setting them. What remains, deliberately: the four `models.py` declarations (so the ORM keeps matching prod, and `create_all` keeps building a matching fresh DB) plus the orphaned prod columns themselves, including the never-read `max_tasks_per_day`/`max_total_per_day`. Dropping indexed columns from a live single-user Postgres with no staging buys nothing; if you ever do it, do it as one deliberate migration alongside the retention sweep.
 3. **Settings visual pass** — pending since May.
 4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
-5. **Render cold starts** — **resolved 2026-08-27** by the Starter plan (see trial note); the history below is kept because it explains the still-present wake machinery, and applies again if the plan is reverted. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
+5. **Render cold starts** — **resolved 2026-08-27** by the Starter plan; trial concluded 2026-09-09, keep Starter, and the wake *UI* was deleted in 4.15.0. The history below is kept because it applies again if the plan is ever reverted — in which case the covers would have to be rebuilt, deliberately. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
 6. **Cloudflare challenge on `api.adh-tea.fun`** — **closed 2026-08-28, won't fix.** The API host intermittently serves a managed-challenge interstitial ("Just a moment…") to non-browser clients, so `scripts/deploy-check.sh` and `scripts/aria-api.sh` fail every so often. Browser traffic passes transparently. The old advice here — "add a WAF bypass rule for `/health`" — is not actionable, because that Cloudflare is **Render's**, not ours:
 
     ```
@@ -225,29 +253,31 @@ Deferred indefinitely per user (2026-05-17). Do not start without explicit green
 - **Play Store** — PWA ready; wrap with Bubblewrap for Android TWA ($25). iOS via Capacitor ($99/yr).
 
 
-## Render paid-tier trial (started 2026-08-27, ~11:20 PT)
+## Render paid-tier trial — CONCLUDED 2026-09-09: keep Starter
 
-Moved the backend web service from Free to **Starter ($7/mo)** to remove
-hibernation. Being run as a **time-boxed trial of a few months** — revisit
-whether the improvement justifies the cost.
+Ran 2026-08-27 → 2026-09-09. Moved the backend web service from Free to
+**Starter ($7/mo)** to remove hibernation.
 
-Baseline immediately before the switch: `/health` 200 `{"status":"ok","version":"2.0.0"}`,
-frontend serving `index-Kh8D0CHI.js`, local HEAD `5ab035a`.
+**Verdict: the upgrade did what it was bought to do.** Perceived load on the
+phone went from **30–60s** to **1–2s**. Everything under "should disappear"
+disappeared: the 30–45s wait on first open of the day, the "Server napping"
+message, and the "Failed to fetch" login failure caused by a hibernate-wake 503
+on the `OPTIONS` preflight.
 
-**Should disappear.** The 30–45s wait on first open of the day; the
-"Server napping — waking it up…" message; "Failed to fetch" on login caused by
-a hibernate-wake 503 on the `OPTIONS` preflight.
+Measured at the close: `/health` 200, **TTFB 154ms**; JS bundle **121KB gzipped,
+193ms** off Vercel. The 1–2s residual was the app's own boot waterfall, fixed in
+4.15.0 — see "Covers, wake screens and the boot waterfall" above.
 
-**Should persist, and is not evidence the upgrade failed.** A ~20s window of
-failed requests after every push (auto-deploy restarts the service — the plan
-removes hibernation, not restarts). And any sync stumble following an idle
-stretch, which is a client bug, not a hosting one: `likelySleeping()` measures
-*user* idle time, not server state, so it still returns true after 10 idle
-minutes against a perfectly healthy backend.
+**Still true and still not a hosting fault.** A ~20s window of failed requests
+after every push (auto-deploy restarts the service — the plan removes
+hibernation, not restarts).
 
-**Do not delete the wake machinery during the trial** — `WakeScreen.jsx`, the
-cover logic in `App.jsx`, `warmUp`, the `aria:server-waking` plumbing. It all
-goes quiet on its own and will look like dead code. If the plan is reverted and
-it's gone, the raw cold-start jank of `7901d87` comes straight back.
+**The wake machinery is now deleted** (4.15.0), which supersedes the earlier
+"do not delete during the trial" instruction. The `likelySleeping()` design flaw
+that made the covers misfire — it measures *user* idle time, not server state —
+went with them. `warmUp`/`likelySleeping` themselves survive in `client.js` for
+request retry and queue flush; see the 4.15.0 note. If the plan is ever reverted
+to Free, the cold-start UI has to be rebuilt from git history (`7901d87` era),
+not un-commented.
 
 To revert: Render dashboard → backend service → Settings → Instance Type → Free.
