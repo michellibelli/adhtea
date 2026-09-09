@@ -7,5 +7,4 @@ export const TAG_COLORS = {
   appointment: { bg: '#94BEDF', border: '#4E7A9E', shadow: 'rgba(60,40,20,0.18)', text: '#102A40' },  // soft sky (was blue)
   routine:     { bg: '#98C9C0', border: '#5D8782', shadow: 'rgba(60,40,20,0.18)', text: '#163530' },  // seafoam (was teal)
   note:        { bg: '#B4B5D6', border: '#6E709A', shadow: 'rgba(60,40,20,0.18)', text: '#1E2050' },  // lavender mist (was violet)
-  project:     { bg: '#DBC587', border: '#8B7440', shadow: 'rgba(60,40,20,0.18)', text: '#3A2E0A' },  // wheat (was amber)
 }

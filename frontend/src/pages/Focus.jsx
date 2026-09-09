@@ -45,7 +45,7 @@ const PRIORITY_BADGE = {
   high:   { background: 'rgba(181,137,0,0.22)', color: '#7A5C00' },
 }
 const TAG_NAMES = {
-  task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note', project: 'Project',
+  task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note',
 }
 
 function seededRandom(seed) {
@@ -404,9 +404,8 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
               style={{ marginBottom: 0, zIndex: 2, position: 'relative' }}
             >
               {(() => {
-                const isProject = !!task?.project_name
-                const wcType = isProject ? 'project' : (task?.task_type || 'task')
-                const name = isProject ? 'Project' : (TAG_NAMES[task?.task_type] || 'Task')
+                const wcType = task?.task_type || 'task'
+                const name = TAG_NAMES[task?.task_type] || 'Task'
                 const fs = name.length <= 4 ? 20 : name.length <= 5 ? 18 : 16
                 return (
                   <div className={`tag-wc wc-${wcType}`}>
@@ -414,12 +413,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                     <div className="tag-wc-inner">
                       <div className="tag-wc-speckles" style={{ backgroundImage: makeSpeckles(task?.id) }} />
                       <span className="tag-type" style={{ fontSize: fs }}>{name}</span>
-                      {isProject && (
-                        <span className="tag-date" style={{ fontWeight: 600, fontSize: 14, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {task.project_name}
-                        </span>
-                      )}
-                      {!isProject && tagDateLabel(task) && <span className="tag-date">{tagDateLabel(task)}</span>}
+                      {tagDateLabel(task) && <span className="tag-date">{tagDateLabel(task)}</span>}
                     </div>
 
                     {/* Corner actions. The whole tag used to be one big edit

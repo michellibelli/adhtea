@@ -29,7 +29,6 @@ import SelfCare from './pages/SelfCare'
 import EODGate from './pages/EODGate'
 import Settings from './pages/Settings'
 import AllTasks from './pages/AllTasks'
-import Projects from './pages/Projects'
 import OnboardingWelcome from './pages/OnboardingWelcome'
 import Logo from './components/Logo'
 import PageProgress from './components/PageProgress'
@@ -294,7 +293,6 @@ function AppShell() {
         {screen === 'selfcare'  && <SelfCare userId={user?.id} />}
         {screen === 'settings'  && <Settings onNavigate={setScreen} user={user} />}
         {screen === 'tasks'     && <AllTasks />}
-        {screen === 'projects'  && <Projects onNavigate={setScreen} />}
       </main>
 
     </div>

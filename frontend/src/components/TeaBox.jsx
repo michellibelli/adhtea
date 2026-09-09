@@ -199,10 +199,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
           >
             <SortableContext items={colored.map(t => t.id)} strategy={horizontalListSortingStrategy}>
               {colored.map(t => {
-                const isProject = !!t.project_name
-                const colors = isProject
-                  ? TAG_COLORS.project
-                  : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
+                const colors = TAG_COLORS[t.task_type] || TAG_COLORS.task
                 const active = activeTaskId != null && t.id === activeTaskId
                 return (
                   <SortableBag
@@ -238,7 +235,6 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
       {onNavigate && (
         <div className="tea-box-drawers">
           {[
-            { id: 'projects', label: 'Projects', path: 'M12 22v-9 M12 13C12 13 7 10 7 5c0 0 3.5 0 5 3.5C13.5 5 17 5 17 5c0 5-5 8-5 8z' },
             { id: 'routines', label: 'Routines', path: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' },
             { id: 'selfcare', label: 'Log', path: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z' },
           ].map(({ id, label, path }) => (

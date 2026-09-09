@@ -400,7 +400,7 @@ export default function Settings({ onNavigate, user }) {
           <Card className="px-5 py-4">
             <p className="text-sm font-medium text-ui-text mb-1">Export to CSV</p>
             <p className="text-xs text-ui-subtext mb-4 leading-relaxed">
-              Download every task — dates, status, project, notes — as a spreadsheet.
+              Download every task — dates, status, tags, notes — as a spreadsheet.
               Routine check-offs are one row per day and synced appointments one row
               per occurrence, so leave those out for just the tasks you wrote.
             </p>

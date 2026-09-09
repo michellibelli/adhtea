@@ -70,7 +70,7 @@ const STEPS = [
     body: "We've set up a few starter tasks to help you explore. You can tick off 'Log in ✓' right away, and work through the rest at your own pace.",
     bullets: [
       'A daily 15-min self-care routine to schedule',
-      '"Spill the tea babe 🍵" — a project with two starter prompts',
+      'Two starter prompts to try out capture and routines',
       'A first morning check-in to log',
     ],
   },

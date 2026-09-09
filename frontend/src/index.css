@@ -946,7 +946,6 @@ body {
 .tag-wc.wc-appointment { --wash-color: #94BEDF; --wash-dark: #102A40; }
 .tag-wc.wc-routine     { --wash-color: #98C9C0; --wash-dark: #163530; }
 .tag-wc.wc-note        { --wash-color: #B4B5D6; --wash-dark: #1E2050; }
-.tag-wc.wc-project     { --wash-color: #DBC587; --wash-dark: #3A2E0A; }
 
 /* Teabag string — hangs from tag to bag body */
 .teabag-string {

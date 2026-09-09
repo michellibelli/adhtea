@@ -5,7 +5,6 @@ import SnoozeSheet from './SnoozeSheet'
 import Button from './Button'
 import Card from './Card'
 import { Input, Textarea } from './Input'
-import ProjectBadge from './ProjectBadge'
 
 const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
 
@@ -252,7 +251,6 @@ export default function TaskCard({
 
                 {/* Meta row */}
                 <div className="flex items-center gap-2 mt-1.5 ml-4 flex-wrap">
-                  <ProjectBadge name={task.project_name} size="xs" />
 
                   {(() => {
                     const dd = formatDueDate(task.due_date)

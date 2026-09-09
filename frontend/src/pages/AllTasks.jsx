@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getBacklog, updateTask, snoozeTask, unsnoozeTask, deleteTask } from '../api/tasks'
-import { listProjects, addTaskToProject } from '../api/projects'
 import Card from '../components/Card'
 import { Input } from '../components/Input'
-import ProjectBadge from '../components/ProjectBadge'
 import ConfirmModal from '../components/ConfirmModal'
 import { InlineSkeletonCards, PageError } from '../components/PageState'
 
@@ -44,7 +42,7 @@ function SnoozeIcon({ active }) {
 
 // ── Task row ─────────────────────────────────────────────────────────────────
 
-function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditing, onStartEdit, onCancelEdit, projects, isProjectPicking, onStartProjectPick, onCancelProjectPick, onProjectPick, onDelete }) {
+function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditing, onStartEdit, onCancelEdit, onDelete }) {
   const [localDate, setLocalDate] = useState(task.due_date || '')
   const isSnoozed = !!task.snooze_until
   const badge = STATUS_STYLE[task.status]
@@ -76,7 +74,6 @@ function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditi
                 {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
               </span>
             )}
-            <ProjectBadge name={task.project_name} size="xs" />
           </div>
         </div>
 
@@ -91,21 +88,6 @@ function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditi
         >
           {task.due_date ? fmtDate(task.due_date) : '—'}
         </button>
-
-        {/* Project button */}
-        {projects.length > 0 && (
-          <button
-            onClick={() => isProjectPicking ? onCancelProjectPick() : onStartProjectPick(task.id)}
-            title="Add to project"
-            className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-              isProjectPicking ? 'ring-2 ring-ui-accent text-ui-accent' : 'text-ui-subtext/40 hover:text-ui-subtext'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
-            </svg>
-          </button>
-        )}
 
         {/* Snooze toggle */}
         <button onClick={() => onSnoozeToggle(task)} title={isSnoozed ? 'Remove snooze' : 'Snooze 1 month'}>
@@ -152,21 +134,6 @@ function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditi
         </div>
       )}
 
-      {/* Inline project picker */}
-      {isProjectPicking && (
-        <div className="flex items-center gap-2 pb-3 pl-7 flex-wrap">
-          {projects.map(p => (
-            <button
-              key={p.id}
-              onClick={() => onProjectPick(task.id, p.id)}
-              className="text-[11px] px-2.5 py-1 rounded-full border border-ui-accent/40 text-ui-accent hover:bg-ui-accent/10 transition-colors"
-            >
-              {p.title}
-            </button>
-          ))}
-          <button onClick={onCancelProjectPick} className="text-xs text-ui-subtext/50 hover:opacity-70 transition-opacity">✕</button>
-        </div>
-      )}
     </div>
   )
 }
@@ -175,13 +142,11 @@ function TaskRow({ task, selected, onToggle, onDateSave, onSnoozeToggle, isEditi
 
 export default function AllTasks() {
   const [tasks,            setTasks]            = useState([])
-  const [projects,         setProjects]         = useState([])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState(null)
   const [query,            setQuery]            = useState('')
   const [selected,         setSelected]         = useState(new Set())
   const [editingId,        setEditingId]        = useState(null)
-  const [projectPickerId,  setProjectPickerId]  = useState(null)
   const [batchDateMode,    setBatchDateMode]    = useState(false)
   const [batchDate,        setBatchDate]        = useState('')
   const [askDelete,        setAskDelete]        = useState(null)  // task object or null
@@ -189,8 +154,8 @@ export default function AllTasks() {
   function fetchAll() {
     setLoading(true)
     setError(null)
-    Promise.all([getBacklog(), listProjects()])
-      .then(([t, p]) => { setTasks(t); setProjects(p.filter(p => p.status === 'active')) })
+    getBacklog()
+      .then(setTasks)
       .catch(err => { console.error(err); setError(true) })
       .finally(() => setLoading(false))
   }
@@ -257,13 +222,6 @@ export default function AllTasks() {
         setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, snooze_until, status: 'snoozed' } : t))
       }
     } catch (err) { console.error(err) }
-  }
-
-  async function handleProjectPick(taskId, projectId) {
-    try {
-      await addTaskToProject(projectId, taskId)
-    } catch (err) { console.error(err) }
-    setProjectPickerId(null)
   }
 
   // ── Batch actions ──
@@ -409,13 +367,8 @@ export default function AllTasks() {
                 onDateSave={handleDateSave}
                 onSnoozeToggle={handleSnoozeToggle}
                 isEditing={editingId === task.id}
-                onStartEdit={(id) => { setEditingId(id); setProjectPickerId(null) }}
+                onStartEdit={(id) => setEditingId(id)}
                 onCancelEdit={() => setEditingId(null)}
-                projects={projects}
-                isProjectPicking={projectPickerId === task.id}
-                onStartProjectPick={(id) => { setProjectPickerId(id); setEditingId(null) }}
-                onCancelProjectPick={() => setProjectPickerId(null)}
-                onProjectPick={handleProjectPick}
                 onDelete={(t) => setAskDelete(t)}
               />
             ))}
