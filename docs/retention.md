@@ -1,5 +1,14 @@
 # Data retention — analysis and proposed design
-*Written 2026-08-20 (BUILD 4.13.1). **Design only — nothing here is implemented.***
+*Written 2026-08-20 (BUILD 4.13.1). Revised 2026-09-09 (4.16.1) after the Projects removal.*
+***Design only — nothing here is implemented.***
+
+> **2026-09-09 — this design got simpler.** Projects were removed entirely, so
+> `project_stall_map` and the `project_id` column no longer exist. The
+> "unbounded lookback" trap that dominated the original analysis is **gone**, and
+> the `AND project_id IS NULL` clause in the proposed DELETE would now be a
+> syntax error. Both have been struck from the text below. What survives
+> unchanged: the 21-day review floor, the weekly-snapshot requirement, and the
+> rule that user-authored rows are never touched.
 
 ## The problem
 
@@ -35,9 +44,11 @@ degrade before storage does:
    back mostly machine-generated history, which is why 4.13.1 added `?types=`
    and `?since=`/`?until=`. That was a *presentation* fix layered over the
    growth; the underlying table keeps filling.
-2. **Unindexed history scans.** `project_stall_map` (`scoring.py:60`) runs one
-   `ORDER BY completed_at DESC LIMIT 1` **per project** on every capacity
-   computation. That is an N+1 over a table that only grows.
+2. ~~**Unindexed history scans.**~~ **Resolved 2026-09-09** — this was
+   `project_stall_map` running one `ORDER BY completed_at DESC LIMIT 1` per
+   project on every capacity computation, an N+1 over a growing table. It was
+   deleted with the Projects feature. No remaining consumer scans unbounded
+   history.
 
 So this is worth designing now and shipping when convenient — not an emergency.
 
@@ -51,18 +62,16 @@ A purge must not starve any of these. Windows found by audit:
 |---|---|---|
 | Morning review | `routes/review.py:30` `_LOOKBACK_DAYS = 21` | **21 days** of `completed_at` |
 | Weekly snapshots / PID I-term | `routes/insights.py:108` | per-day bounded, but **I-term escalation needs 3+ weekly snapshots** (HANDOFF, Phase 6 Week 2/3) |
-| Project stall detection | `scoring.py:60`, `PROJECT_STALL_DAYS_THRESHOLD` | last completion per project — **unbounded lookback**, needs the most recent row to survive |
 | Capacity / today counts | `selfcare.py:236`, `tasks.py:372` | today only |
 | CSV export | `routes/export_csv.py` | **user expects everything** |
 
 Two of these set hard floors.
 
-**`project_stall_map` is the trap.** It asks "when did this project last see a
-completion?" with no lower bound. Purge the last completed task of a dormant
-project and the project silently flips to "no completions ever," falling through
-to the `created_at` branch. A long-dormant project would keep reporting stalled —
-same answer by luck — but a project completed once, long ago, then purged, would
-be misclassified. **Any purge must exclude tasks with a `project_id`.**
+~~**`project_stall_map` is the trap.**~~ **Gone 2026-09-09.** This was the one
+hard constraint in the original design: a query asking "when did this project
+last see a completion?" with no lower bound, which a purge could silently
+falsify. It died with the Projects removal, and with it the
+`project_id IS NULL` exclusion every query below used to need.
 
 **Export is a product question, not a technical one.** If she exports in
 January expecting last year's data and a sweep ate it, the sweep was wrong
@@ -76,8 +85,8 @@ either genuinely worthless or preserved in aggregate.
 Not all history is equal. Ranked:
 
 **Tier 1 — safe to delete, near-zero information.**
-Soft-deleted routine instances (`task_type=routine`, `status=deleted`,
-`project_id IS NULL`). These are the "generated, never touched, swept at 4am"
+Soft-deleted routine instances (`task_type=routine`, `status=deleted`).
+These are the "generated, never touched, swept at 4am"
 rows. They record only that a routine existed and she didn't do it that day —
 and even that is recoverable in aggregate. This is likely **the majority of the
 bloat.**
@@ -88,8 +97,8 @@ over time — but the signal is a count per routine per day, not 21 columns of r
 A rollup table would preserve everything anyone actually asks of them.
 
 **Tier 3 — do not touch.**
-Anything with a `project_id`, anything `task_type=task` or `note` (she typed
-those — they are hers), and anything inside the review/snapshot windows.
+Anything `task_type=task` or `note` (she typed those — they are hers), and
+anything inside the review/snapshot windows.
 Auto-completed appointments sit at the boundary: machine-generated, but they are
 a real record of where she was, and people do ask "when was that appointment?"
 Treat as Tier 3 until she says otherwise.
@@ -132,7 +141,6 @@ DELETE FROM tasks
 WHERE owner_id = :uid
   AND task_type = 'routine'
   AND status   = 'deleted'
-  AND project_id IS NULL
   AND scheduled_date < :cutoff
 ```
 
@@ -166,22 +174,19 @@ New `backend/tests/test_retention.py`:
 - purges Tier-1 rows older than the window
 - **leaves rows inside the window** (regression guard on the 21-day review floor)
 - never touches `task_type` in (`task`, `note`, `appointment`)
-- never touches a row with a `project_id` — *the `project_stall_map` guard*
 - never touches `status=done`
 - respects the monthly gate: two rollovers in one month sweep once
 - tz correctness: a user at UTC-8 does not lose the boundary day
-- `project_stall_map` returns the same answer before and after a sweep
 
-That last one is the test that matters. It is the assertion that the sweep did
-not change an answer the app gives.
+The window guard is the test that matters now that the stall-map trap is gone:
+it is the assertion that the sweep did not change an answer the app gives.
 
 ---
 
 ## Recommendation
 
-Ship **Tier 1 only**, at a 90-day window, behind the monthly gate, with the
-`project_id IS NULL` exclusion and the full test list above. That removes the
-majority of the accumulated rows, changes no answer the app currently gives,
+Ship **Tier 1 only**, at a 90-day window, behind the monthly gate, with the full
+test list above. That removes the majority of the accumulated rows, changes no answer the app currently gives,
 requires no schema beyond one `Date` column, and leaves every user-authored row
 untouched.
 

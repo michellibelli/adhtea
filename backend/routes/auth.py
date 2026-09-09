@@ -12,7 +12,7 @@ from rate_limit import limiter
 from routes.task_lifecycle import _app_today
 from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
-    Task, Routine, Project, TaskType, TaskStatus, RoutineFrequency, TimeOfDay,
+    Task, Routine, TaskType, TaskStatus, RoutineFrequency, TimeOfDay,
     SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
     CapacitySnapshot, WeeklySnapshot, NudgeLog, OAuthState,
 )
@@ -337,7 +337,7 @@ def _purge_user_data(user_id: int, db: Session):
     db.query(User).filter(User.parent_id == user_id).update(
         {"parent_id": None}, synchronize_session=False)
 
-    # 2. Tasks first — they reference this user's projects/routines/actuators.
+    # 2. Tasks first — they reference this user's routines/actuators.
     db.query(Task).filter(Task.owner_id == user_id).delete(synchronize_session=False)
 
     # 3. Medication logs before their schedules.
@@ -346,7 +346,7 @@ def _purge_user_data(user_id: int, db: Session):
 
     # 4. Everything else the user owns (no remaining inbound FKs at this point).
     for model in (
-        Project, Routine, ActuatorCategory, SelfCareLog,
+        Routine, ActuatorCategory, SelfCareLog,
         CapacitySnapshot, WeeklySnapshot, NudgeLog, GoogleCalendarToken, SessionToken,
         OAuthState,
     ):
@@ -587,31 +587,19 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         notes="Go to Routines (moon icon) to set a time for your 15-min self-care. Even a small daily ritual makes a big difference.",
     ))
 
-    # Project: Spill the tea babe
-    project = Project(
-        user_id=current_user.id,
-        title="Spill the tea babe 🍵",
-        description="Your getting-started adventure. Work through these to explore how adhTea works.",
-        status="active",
-    )
-    db.add(project)
-    db.flush()
-
-    # Subtask 1: What do you want to get done tomorrow?
+    # Starter prompt 1: What do you want to get done tomorrow?
     db.add(Task(
         owner_id=current_user.id,
-        project_id=project.id,
         title="What do you want to get done tomorrow?",
         task_type=TaskType.task,
         status=TaskStatus.today,
         scheduled_date=sched,
-        notes="Tap '+ Task 🛠️' on the Projects page to add tasks here. One thing you want to tackle tomorrow is enough.",
+        notes="Tap the teacup to capture a task. One thing you want to tackle tomorrow is enough.",
     ))
 
-    # Subtask 2: What's your morning routine?
+    # Starter prompt 2: What's your morning routine?
     db.add(Task(
         owner_id=current_user.id,
-        project_id=project.id,
         title="What's your morning routine?",
         task_type=TaskType.task,
         status=TaskStatus.today,

@@ -12,7 +12,6 @@ from models import (
 )
 from schemas import WeeklySnapshotResponse, NudgeResponse, NudgeRespondRequest
 from routes.auth import get_current_user
-from scoring import project_stall_map
 from pid_engine import (
     compute_pid_state, rank_nudges, generate_weekly_insight, satisfied_recently,
     RECENCY_DAYS,
@@ -65,7 +64,6 @@ def _serialize_snapshot(snap: WeeklySnapshot, insight_copy: str | None = None) -
         "weekdays_in_period": snap.weekdays_in_period,
         "tasks_completed": snap.tasks_completed,
         "tasks_pushed": snap.tasks_pushed,
-        "stalled_projects": json.loads(snap.stalled_projects) if snap.stalled_projects else None,
         "overall_capacity_avg": snap.overall_capacity_avg,
         "pid_state": json.loads(snap.pid_state) if snap.pid_state else None,
         "computed_at": snap.computed_at,
@@ -121,9 +119,6 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
         .scalar()
     ) or 0
 
-    stall_map = project_stall_map(db, user.id, today)
-    stalled_ids = [pid for pid, stalled in stall_map.items() if stalled]
-
     caps = (
         db.query(CapacitySnapshot)
         .filter(
@@ -175,7 +170,6 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
         snap.weekdays_in_period = weekdays
         snap.tasks_completed = tasks_completed
         snap.tasks_pushed = tasks_pushed
-        snap.stalled_projects = json.dumps(stalled_ids)
         snap.overall_capacity_avg = cap_avg
         snap.pid_state = json.dumps(pid_state)
         snap.computed_at = utcnow()
@@ -190,7 +184,6 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
             weekdays_in_period=weekdays,
             tasks_completed=tasks_completed,
             tasks_pushed=tasks_pushed,
-            stalled_projects=json.dumps(stalled_ids),
             overall_capacity_avg=cap_avg,
             pid_state=json.dumps(pid_state),
         )

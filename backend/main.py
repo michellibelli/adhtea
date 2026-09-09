@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from rate_limit import limiter
 from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
-from routes import projects, insights, review, export_csv
+from routes import insights, review, export_csv
 
 load_dotenv()
 
@@ -74,8 +74,6 @@ def _migrate(target_engine=None):
                 # ("10 mg", etc.) which are identifying. SQLite supports DROP COLUMN
                 # since 3.35.0 (2021); Render/Supabase Postgres handles it too.
                 conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN dose"))
-            if "project_id" not in tasks_cols:
-                conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
             # Domains removed — drop the FK column if a pre-removal DB still has it.
             # SQLite can't DROP a column that's part of a foreign key, so this is
             # best-effort on stale local dev DBs (production is Postgres). A
@@ -103,12 +101,6 @@ def _migrate(target_engine=None):
             if "is_onboarded" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_onboarded BOOLEAN NOT NULL DEFAULT 0"))
                 conn.execute(text("UPDATE users SET is_onboarded=1"))  # existing users skip onboarding
-            projects_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(projects)")).fetchall()}
-            if "domain_id" in projects_cols:
-                try:
-                    conn.execute(text("ALTER TABLE projects DROP COLUMN domain_id"))
-                except Exception:
-                    pass
             try:
                 conn.execute(text("DROP TABLE IF EXISTS domains"))
             except Exception:
@@ -146,9 +138,6 @@ def _migrate(target_engine=None):
             # used, so this runs (and commits) ahead of the demote UPDATE below.
             conn.execute(text("ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'member'"))
             conn.commit()
-            conn.execute(text(
-                "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL"
-            ))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS alpha_code_version INTEGER NOT NULL DEFAULT 0"))
@@ -158,7 +147,6 @@ def _migrate(target_engine=None):
                 "UPDATE users SET is_owner=TRUE WHERE id=(SELECT MIN(id) FROM users) AND is_owner=FALSE"
             ))
             # Domains removed — drop the FK columns then the table (irreversible).
-            conn.execute(text("ALTER TABLE projects DROP COLUMN IF EXISTS domain_id"))
             conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS domain_id"))
             conn.execute(text("DROP TABLE IF EXISTS domains CASCADE"))
             # score/pinned_for deliberately not added — see the SQLite branch.
@@ -204,7 +192,7 @@ def _migrate(target_engine=None):
             # See Supabase advisor: rls_disabled_in_public.
             for _table in (
                 "site_config", "users", "session_tokens", "actuator_categories",
-                "projects", "tasks", "routines", "self_care_logs",
+                "tasks", "routines", "self_care_logs",
                 "medication_schedules", "medication_logs", "invite_tokens",
                 "google_calendar_tokens", "capacity_snapshots",
                 "weekly_snapshots", "nudge_logs", "oauth_states",
@@ -247,7 +235,6 @@ app.include_router(medication.router,  tags=["medication"])
 app.include_router(import_csv.router,  tags=["import"])
 app.include_router(export_csv.router,  tags=["export"])
 app.include_router(gcal.router,        tags=["google-calendar"])
-app.include_router(projects.router,    tags=["projects"])
 app.include_router(insights.router)
 app.include_router(review.router,      tags=["review"])
 

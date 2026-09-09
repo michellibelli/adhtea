@@ -2,14 +2,13 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from sqlalchemy import or_, and_, case
 from database import get_db
 from models import (
     Task, TaskStatus, TaskType, Priority, ActuatorCategory,
     GoogleCalendarToken, utcnow, User,
-    Project,
 )
 from schemas import (
     TaskCreate, TaskUpdate, TaskResponse,
@@ -117,7 +116,6 @@ def create_task(
         scheduled_date=_day_start(current_user) if place_today else None,
         sort_order=float(today_count) if place_today else None,
         actuator_category_id=body.actuator_category_id,
-        project_id=body.project_id,
         is_critical=body.is_critical,
         due_date=due_date,
         due_time=body.due_time,
@@ -174,7 +172,6 @@ def get_bonus_tasks(
     today = _app_today(current_user)
     tasks = (
         db.query(Task)
-        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == current_user.id,
             Task.status.in_([TaskStatus.inbox, TaskStatus.snoozed]),
@@ -305,7 +302,6 @@ def get_today(
 
     tasks = (
         db.query(Task)
-        .options(joinedload(Task.project))
         .filter(
             Task.owner_id == current_user.id,
             Task.status == TaskStatus.today,
@@ -527,7 +523,6 @@ def update_task(
 ):
     task = own_task(task_id, current_user, db)
     patch = body.model_dump(exclude_unset=True)
-    old_due = task.due_date
 
     for field, value in patch.items():
         setattr(task, field, value)
@@ -545,30 +540,6 @@ def update_task(
         task.status = TaskStatus.inbox
         task.scheduled_date = None
         task.sort_order = None
-
-    # Cascade: if a project sub-task's due_date moves, shift later sibling tasks by same delta
-    if (
-        "due_date" in patch
-        and task.project_id is not None
-        and old_due is not None
-        and task.due_date is not None
-        and task.due_date != old_due
-    ):
-        delta = (task.due_date - old_due).days
-        if delta != 0:
-            siblings = (
-                db.query(Task)
-                .filter(
-                    Task.project_id == task.project_id,
-                    Task.id != task.id,
-                    Task.due_date != None,  # noqa: E711
-                    Task.due_date >= old_due,
-                    Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
-                )
-                .all()
-            )
-            for s in siblings:
-                s.due_date = s.due_date + timedelta(days=delta)
 
     db.commit()
     db.refresh(task)

@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-09-09 (BUILD 4.15.0)*
+*Last updated: 2026-09-09 (BUILD 4.16.1)*
 
 > This file is the source of truth for architecture and operations.
 > Design philosophy + the design system live in `PROJECT.md`.
@@ -59,11 +59,11 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.15.0 (2026-09-09)
+## Current status — BUILD 4.16.1 (2026-09-09)
 
-`master` clean, synced with origin. Backend suite **188 passed**. `npm run build` clean. Live.
+`master` clean, synced with origin. Backend suite **179 passed** (was 188 — the Projects tests went with the feature). `npm run build` clean. Live.
 
-The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stopped hiding the load time and cleared the dead scoring code. **4.15.0 ends the Render trial in the affirmative and deletes the machinery it made obsolete.**
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stopped hiding the load time and cleared the dead scoring code. **4.15.0 ends the Render trial in the affirmative and deletes the machinery it made obsolete. 4.16.x removes Projects entirely.**
 
 ### Big shifts since BUILD 4.9.1
 
@@ -104,7 +104,7 @@ reloading on that is a pointless extra load) and a `reloading` flag.
 to bump `refreshKey` to remount and refetch; that went with the machinery. A tab left open for
 hours shows cached data until you navigate.
 
-**CSV export (4.13.0–4.13.1, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 21 columns (id, title, type, status, priority, effort, critical, dates, project/routine titles, tags, location, push_count, timestamps, notes). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
+**CSV export (4.13.0–4.13.1, 2026-08-17).** `GET /export/tasks.csv` — every task the user owns, one row each, 20 columns (id, title, type, status, priority, effort, critical, dates, routine title, tags, location, push_count, timestamps, notes — the `project` column was dropped in 4.16.1). Soft-deleted rows are excluded unless `?include_deleted=true`. Settings gained an **Export** section beside Import.
 
 4.13.1 added filters, because the first real export was mostly machine-generated history: `generate_routine_instances` writes one Task row per active routine per day (completed ones persist; skipped ones are soft-deleted at the 4am carry-forward), and `sync_today_events` writes one appointment row per occurrence, auto-completed by `archive_past_appointments` once its day passes. Nothing purges either — there is no retention sweep anywhere in the codebase. So: `?types=task,note` (validated against `TaskType`, 400 on an unknown one) plus `?since=`/`?until=`. The window is measured against the day a row *belongs to* — `completed_at` for finished work, else `due_date`, else `scheduled_date`, else `created_at` — computed in Python rather than SQL, since a COALESCE would compare the naive-UTC and local-midnight columns as if they shared a convention.
 
@@ -138,7 +138,19 @@ Two trigger bugs were fixed in 4.11.3/4.11.6, both worth knowing since the patte
 
 ### Big shifts since BUILD 4.0.x
 
-**Triage merged into Today (4.4.0, 2026-06-30).** The separate Tournament/Triage page is gone. Today is now the sole planning + execution surface: a **Today** section (status=today, sortable, complete/snooze/defer/delete) and an **Up Next** section (inbox, ordered by due_date → priority → created_at, `+` promotes). Slot count shown as `(X/N)` where N = capacity-driven `max_slots` from `/capacity/today`. Morning flow: self-care gate → Today (plan inline) → Start my day. Cleanup on 2026-07-10: the orphan frontend files (`pages/Tournament.jsx`, `api/triage.js`, `utils/triage.js`) and the entire `routes/triage.py` scoring/bin-pack backend + `test_triage.py` were removed. Its two still-needed helpers (`capacity_tier`, `project_stall_map`) were extracted to `backend/scoring.py` (imported by `selfcare.py` + `insights.py`). The functionally-dead daily-caps sliders (`max_tasks_per_day`/`max_total_per_day`) were also removed from Settings + backend.
+**Triage merged into Today (4.4.0, 2026-06-30).** The separate Tournament/Triage page is gone. Today is now the sole planning + execution surface: a **Today** section (status=today, sortable, complete/snooze/defer/delete) and an **Up Next** section (inbox, ordered by due_date → priority → created_at, `+` promotes). Slot count shown as `(X/N)` where N = capacity-driven `max_slots` from `/capacity/today`. Morning flow: self-care gate → Today (plan inline) → Start my day. Cleanup on 2026-07-10: the orphan frontend files (`pages/Tournament.jsx`, `api/triage.js`, `utils/triage.js`) and the entire `routes/triage.py` scoring/bin-pack backend + `test_triage.py` were removed. Its still-needed helpers were extracted to `backend/scoring.py` (`capacity_tier`, `max_slots_for`, `effort_points`). `project_stall_map` went there too and was deleted in 4.16.1 with the Projects removal — nothing ever read its output. The functionally-dead daily-caps sliders (`max_tasks_per_day`/`max_total_per_day`) were also removed from Settings + backend.
+
+**Projects removed entirely (4.16.0–4.16.2, 2026-09-09).** Unused: projects are run from Claude + a calendar, and two systems tracking the same work is worse than one. The uncompleted project/training backlog was also the bulk of the ~20 items being snoozed one at a time every morning.
+
+Shipped as **three separate pushes**, because Vercel and Render deploy independently off one push and `_migrate` runs inside `lifespan` — a bad DDL line crash-loops the backend rather than failing a test. 4.16.0 frontend only (revertable), 4.16.1 backend code with no DDL (revertable), 4.16.2 the migration alone against a backend already watched booting.
+
+Gone: `Project` model + `Task.project_id` + the `project_name` property, `routes/projects.py` (8 endpoints incl. the Claude Haiku breakdown), all Project schemas, `pages/Projects.jsx`, `api/projects.js`, `ProjectBadge.jsx`, the AllTasks project picker, the Capture "Project" type, and `WeeklySnapshot.stalled_projects`. `components/CafeShelf.jsx` went too — already dead code, nothing had imported it.
+
+`project_stall_map` was deleted from `scoring.py`: it ran one query per project on every weekly compute, serialized to a DB column, shipped over the API — and **nothing read it**. The docstring claiming insights.py boosted stalled-project nudges was stale; that boost died with `routes/triage.py` in 4.4.0. `scoring.py` itself survives (`capacity_tier`, `max_slots_for`, `effort_points` are live).
+
+Two lines would have crash-looped prod and both were handled in the same commit as their DDL: `main.py`'s RLS loop listed `"projects"` (ENABLE on a dropped table raises inside `lifespan`, so uvicorn never serves), and the `ADD COLUMN project_id` statements run *earlier* in `_migrate` than any appended drop, so leaving them re-creates the column against a missing table on the next boot.
+
+Also lost, deliberately: the sibling due-date cascade (moving a project sub-task's due date shifted later siblings). It had **no `owner_id` filter** — a latent cross-tenant bug that went with it. The CSV `project` column was removed from the header and the row *in the same edit*; the writer does not check row length, so a mismatch would silently shift every column right of index 11.
 
 **Domains removed entirely (4.9.0, 2026-07-08).** The whole project/task time-of-day + date-rule scheduling constraint system was ripped out per user. Gone: `Domain` model, `domain_id` FKs (destructive migration — `DROP TABLE domains CASCADE` on Postgres, best-effort DROP COLUMN on SQLite), `routes/domains.py`, `domain_utils.py`, `next_allowed_date` due-date snapping, `in_context` field + its Focus/triage sorting, and all frontend domain UI (`DomainPicker`, `DomainDateWarning`, `utils/domain.js`, `api/domains.js`). Tasks now schedule purely on due_date + daily cap.
 
@@ -166,7 +178,7 @@ backend/
   schemas.py          Pydantic schemas
   rate_limit.py       shared slowapi Limiter (keyed on client IP)
   pid_engine.py       pure PID math for nudges (no DB imports)
-  scoring.py          shared capacity_tier + project_stall_map + EFFORT_POINTS
+  scoring.py          shared capacity_tier + max_slots_for + EFFORT_POINTS
   review_engine.py    morning-review effort classification (Haiku + learned corrections + keyword fallback)
   routes/
     auth.py           login (rate-limited), session tokens (hashed), settings, invite codes
@@ -176,7 +188,6 @@ backend/
     selfcare.py       SelfCareLog + CapacitySnapshot + /capacity/today (user-tz dates)
     medication.py     MedicationSchedule + MedicationLog (names pseudonymized client-side)
     gcal.py           Google Calendar OAuth 2.0 + lazy sync (OAuth state persisted in DB)
-    projects.py       Project CRUD + Claude Haiku AI breakdown + sub-task date cascade
     insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
     review.py         morning review — /review/pending + /review/commit
     import_csv.py     Notion CSV import
@@ -186,7 +197,7 @@ backend/
 ```
 
 Run tests: `cd backend && python -m pip install -r requirements-dev.txt && python -m pytest tests/ -v`
-Test files: auth, box_order, export_csv, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, projects, promotion_gate, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
+Test files: auth, box_order, export_csv, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, promotion_gate, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
 
 ## Frontend file map
 
@@ -203,7 +214,6 @@ frontend/src/
     SelfCare.jsx       foundation log + capacity bar
     EODGate.jsx        evening mood gate + summary
     AllTasks / Inbox / Waiting / Search   list surfaces, batch ops
-    Projects.jsx       list + detail + AI generation + manual add
     Settings.jsx       integrations, CSV import + export, display/theme
     Login / Signup / Register / AlphaChallenge / OnboardingWelcome   auth + onboarding
   components/
@@ -213,7 +223,7 @@ frontend/src/
     CapacityBar.jsx    compact + full
     NudgeModal.jsx / WeeklyInsightCard.jsx   Phase 6 nudge UI
     CafeShelf.jsx      Cafe-theme animated shelf
-    Card / Button / Input / Logo / ConfirmModal / HamburgerMenu / PageState / PageProgress / SnoozeSheet / ProjectBadge
+    Card / Button / Input / Logo / ConfirmModal / HamburgerMenu / PageState / PageProgress / SnoozeSheet
   context/
     ThemeContext.jsx   two themes — Cafe (default) + Linen — reads aria_theme localStorage
   utils/
@@ -245,7 +255,7 @@ frontend/src/
 
     Render fronts every custom domain this way. There is no zone we control and no skip rule to add. The motivation is gone regardless: the rule only ever existed so an UptimeRobot keep-alive could pass, Starter needs no keep-alive, and Render already polls `/health` itself every ~5s (see the access-log filter in 4.13.2). If a script needs to be reliable, retry it.
 7. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
-8. **No data retention** — nothing purges generated rows. `generate_routine_instances` writes one Task per active routine per day and `sync_today_events` one per calendar occurrence, forever; soft-deleted rows are never reaped. ~2,200 rows/year at six routines. Not urgent (single user, small for Postgres) but it already forced the 4.13.1 export filters, and `project_stall_map` does an N+1 over the growing table. Analysis + proposed design in **`docs/retention.md`** — read the `project_stall_map` trap there before writing any DELETE.
+8. **No data retention** — nothing purges generated rows. `generate_routine_instances` writes one Task per active routine per day and `sync_today_events` one per calendar occurrence, forever; soft-deleted rows are never reaped. ~2,200 rows/year at six routines. Not urgent (single user, small for Postgres) but it already forced the 4.13.1 export filters. Analysis + proposed design in **`docs/retention.md`**, which got materially simpler in 4.16.1 — the `project_stall_map` N+1 and the unbounded-lookback trap it warned about no longer exist.
 
 Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
 

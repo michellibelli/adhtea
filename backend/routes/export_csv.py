@@ -2,7 +2,7 @@
 
 Every task the user owns, one row each, as a plain CSV download. Deliberately
 flat and self-describing: this is the "get my data out" surface, so it favors
-readable labels (project title, routine title, effort tag) over the raw FK ids
+readable labels (routine title, effort tag) over the raw FK ids
 the API returns.
 
 Timestamps are stored naive-UTC (`models.utcnow`); dates like `due_date` and
@@ -39,7 +39,6 @@ COLUMNS = [
     "due_time",
     "scheduled_date",
     "snooze_until",
-    "project",
     "routine",
     "tags",
     "location_type",
@@ -91,7 +90,6 @@ def _row(task: Task, routine_titles: dict[int, str], tz) -> list[str]:
         task.due_time or "",
         _date(task.scheduled_date),
         _local(task.snooze_until, tz),
-        task.project.title if task.project else "",
         routine_titles.get(task.routine_id, ""),
         task.tags or "",
         _enum(task.location_type),
@@ -163,7 +161,6 @@ def export_tasks_csv(
 
     q = (
         db.query(Task)
-        .options(joinedload(Task.project))
         .filter(Task.owner_id == current_user.id)
     )
     if not include_deleted:

@@ -5,7 +5,7 @@ import io
 from datetime import date, datetime, timedelta
 
 from models import (
-    Effort, Priority, Project, Routine, Task, TaskStatus, TaskType, User,
+    Effort, Priority, Routine, Task, TaskStatus, TaskType, User,
 )
 
 
@@ -52,14 +52,9 @@ def test_export_returns_csv_attachment(client, auth_headers, db_session):
 
 def test_export_writes_one_row_per_task_with_fields(client, auth_headers, db_session):
     user = _mk_user(db_session)
-    project = Project(user_id=user.id, title="Move house", status="active")
-    db_session.add(project)
-    db_session.commit()
-
     _mk_task(
         db_session, user.id,
         title="Call landlord",
-        project_id=project.id,
         status=TaskStatus.today,
         priority=Priority.high,
         effort=Effort.big,
@@ -81,7 +76,6 @@ def test_export_writes_one_row_per_task_with_fields(client, auth_headers, db_ses
     assert row["critical"] == "yes"
     assert row["due_date"] == "2026-08-20"
     assert row["due_time"] == "09:30"
-    assert row["project"] == "Move house"
     assert row["tags"] == "home,phone"
     assert row["notes"] == "Ask about the deposit"
 
