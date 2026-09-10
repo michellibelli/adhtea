@@ -1,11 +1,46 @@
 # Session bookmark
-*Last wrap: 2026-09-09 — BUILD 4.15.0*
+*Last wrap: 2026-09-09 — BUILD 4.16.1*
+
+## START HERE TOMORROW
+
+**`backend/main.py` and `backend/tests/test_migrate.py` are modified and UNCOMMITTED ON PURPOSE.**
+That is Stage 3 — the irreversible Projects migration (`DROP COLUMN project_id`,
+`DROP TABLE projects CASCADE`). It is written and its tests pass, but it MUST NOT ship until
+items 1-3 below are done: it destroys the task-to-project mapping that the export records and
+that the purge predicate needs. **Do not `git add -A` without reading this.**
+
+Everything else is committed, pushed and live at 4.16.1. `master` is 0 ahead / 0 behind.
+
+### Tomorrow's checklist, in order
+
+1. **Get a fresh API token.** The stored one is expired (401 — sessions are day-scoped since
+   4.9.8). On adh-tea.fun open DevTools console, run `localStorage.getItem('aria_token')`, paste
+   the value (no quotes) into `C:\Users\Chris\.aria-token`. Verify with `bash scripts/aria-api.sh /me`.
+   **Blocks 2, 3 and Stage 3.**
+
+2. **Have the Supabase SQL editor ready.** The purge cannot go through the API —
+   `DELETE /tasks/{id}` is a *soft* delete, and the decision was that uncompleted rows actually
+   go. Hard DELETE needs the SQL editor. Take a backup there before running it.
+
+3. **Review the training match list before deleting anything.** `title ILIKE '%training%'` is a
+   fuzzy match against a live single-user prod DB with no staging, and it has not been run yet —
+   nobody knows what it catches. Print both lists (the `status='done'` keep set and the delete
+   set), eyeball them, THEN delete. Queries are in the plan file, Stage 0b.
+
+Then, in order: Stage 0 CSV export → Stage 0b purge → Stage 3 migration (bump BUILD to 4.16.2,
+push alone, watch Render boot logs). After that, Work item 2 — the morning review fix (4.17.0),
+which needs no prod data and is the cleanest thing to pick up cold.
+
+**Plan file with every file:line detail:**
+`~/.claude/plans/i-think-in-this-glimmering-kettle.md`
+
+---
 
 ## State
 
-Live build: **4.15.0**. Vercel + Render auto-deploy from `master`. Backend suite 188 passed;
-`npm run build` clean; ESLint 14 problems (all pre-existing — hold this number, any increase is a
-regression).
+Live build: **4.16.1**. Vercel + Render auto-deploy from `master`. Backend suite **181 passed**;
+`npm run build` clean; ESLint **13** problems (all pre-existing — hold this number, any increase is
+a regression).
 
 Backend on **Render Starter** since 2026-08-27 — no hibernation. Verified healthy this session:
 `/health` 200 `{"status":"ok","version":"2.0.0"}`, TTFB 154ms, no `x-render-routing` header.
@@ -25,7 +60,10 @@ gzipped / 193ms off Vercel. Neither is a second. The cost was the boot waterfall
 Chip split for future readings: `ready` = bundle + the boot fetches; `+page` = the first page's own
 fetch.
 
-## What shipped this session (4.15.0)
+## What shipped this session (4.15.0 → 4.16.1)
+
+Three deploys, all live and verified. 4.16.0 and 4.16.1 are covered under "Projects removed" below;
+4.15.0 detail follows.
 
 - **Boot fetches parallelised.** `getMe` used to gate `getTodayLog`/`getReviewPending`/
   `getTodayCapacity`, so every open paid two serial round trips before anything painted. All four
@@ -65,12 +103,15 @@ hibernate, but a tab left open for hours now shows cached data until you navigat
 
 Working from the approved plan (`~/.claude/plans/i-think-in-this-glimmering-kettle.md`):
 
-1. **Remove Projects, code and schema** — decided, full destructive removal. **Three separate
-   pushes**, not one: frontend (4.16.0) → backend without DDL (4.16.1) → the migration alone
-   (4.16.2). Two lines will crash-loop prod if missed: `main.py:207` still lists `"projects"` in
-   the RLS loop, and `main.py:150` re-adds `project_id` on the next boot. Stage 0 runs prod counts
-   and a CSV export first; Stage 0b retires the project/training backlog — **completed rows kept as
-   data, uncompleted rows hard-deleted after a human look at the match list.**
+1. **Remove Projects — Stages 1 and 2 DONE and live; Stage 3 remains.** 4.16.0 removed the
+   frontend, 4.16.1 the backend code with no DDL. Backend boot confirmed after 4.16.1
+   (`/projects` → 404, `/health` → 200), which proves the two prod-fatal lines were handled: the
+   RLS loop no longer lists `"projects"` (ENABLE on a dropped table raises inside `lifespan` and
+   crash-loops uvicorn) and the `ADD COLUMN project_id` statements are gone (they run *earlier* in
+   `_migrate` than any drop, so they would re-create the column against a missing table).
+   **What is left:** Stage 0 CSV export, Stage 0b purge (completed rows kept as data, uncompleted
+   hard-deleted after a human look at the match list), then Stage 3 — the uncommitted migration
+   described at the top of this file.
 2. **Fix the morning review** (4.17.0) — add "not done" to the commit contract and an X control per
    row. Note the query is NOT the bug: `review.py:49-61` already filters strictly on
    `completed_at IS NOT NULL`. Wrong rows get there via an unguarded `complete_task` re-stamping on
