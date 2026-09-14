@@ -117,6 +117,7 @@ def create_task(
         sort_order=float(today_count) if place_today else None,
         actuator_category_id=body.actuator_category_id,
         is_critical=body.is_critical,
+        is_work=body.is_work,
         due_date=due_date,
         due_time=body.due_time,
         location_type=body.location_type,

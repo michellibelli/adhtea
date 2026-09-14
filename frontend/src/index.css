@@ -1313,11 +1313,6 @@ body {
     inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
-.header-pill-flower { opacity: 0.4; }
-.header-flower-pressed { display: none; }
-[data-theme="aria-linen"] .header-pill-flower { opacity: 1; }
-[data-theme="aria-linen"] .header-flower-geo { display: none; }
-[data-theme="aria-linen"] .header-flower-pressed { display: block; }
 
 /* Header menu icon — hamburger with petal-curve bottom line */
 .header-menu-stroke { opacity: 0.45; }

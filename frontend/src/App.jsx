@@ -232,17 +232,22 @@ function AppShell() {
           className="header-pill flex items-center gap-3 px-5 w-full backdrop-blur-md transition-colors duration-300"
           style={{ pointerEvents: 'auto' }}
         >
-          {/* Left — flower accent (geometric on Cafe, pressed watercolor on Linen) */}
-          <div className="header-pill-flower flex items-center justify-start" style={{ width: 40 }}>
-            <svg className="header-flower-geo" viewBox="0 -8 24 40" fill="none" style={{ width: 28, height: 28 }}>
-              <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} />
-              <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(72 12 12)" />
-              <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(144 12 12)" />
-              <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(216 12 12)" />
-              <ellipse cx="12" cy="4.5" rx="3.5" ry="7.5" fill="var(--aria-text)" fillOpacity="0.08" stroke="var(--aria-text)" strokeWidth={0.7} transform="rotate(288 12 12)" />
-              <circle cx="12" cy="12" r="2.8" fill="var(--aria-text)" fillOpacity="0.2" stroke="var(--aria-text)" strokeWidth={0.6} />
-            </svg>
-            <img className="header-flower-pressed" src="/pressed-flower.svg" alt="" width={34} height={34} />
+          {/* Left — end of day, mirrors the Settings icon on the right */}
+          <div className="flex items-center justify-start" style={{ width: 40 }}>
+            <button
+              onClick={() => setShowEOD(true)}
+              className="p-1 rounded-md hover:opacity-70 transition-opacity"
+              aria-label="End of day"
+            >
+              <svg viewBox="0 0 24 24" fill="none" style={{ width: 26, height: 26 }}>
+                <path
+                  d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"
+                  stroke="var(--aria-text)"
+                  strokeWidth={1.6}
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
           {/* Center — logo */}
           <button

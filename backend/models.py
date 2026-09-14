@@ -201,6 +201,10 @@ class Task(Base):
     # Retrospective minutes spent, entered at end-of-day for the boss report.
     # Null until she types a number — silence must never read as zero minutes.
     minutes_spent = Column(Integer, nullable=True)
+    # Work vs personal, set by the post-completion prompt or dragged between
+    # lists at end-of-day. Null = not yet answered; treated as not-work for
+    # bucketing (fail-closed — nothing reaches the boss report by default).
+    is_work = Column(Boolean, nullable=True)
 
     # Deadline / scheduling
     due_date = Column(Date, nullable=True)              # hard deadline date (tasks, appointments)

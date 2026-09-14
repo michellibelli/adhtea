@@ -3,6 +3,8 @@ import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, update
 import SnoozeSheet from '../components/SnoozeSheet'
 import { resolveSnoozeDate } from '../utils/snooze'
 import EditTaskSheet from '../components/EditTaskSheet'
+import MinutesPrompt from '../components/MinutesPrompt'
+import WorkAsk from '../components/WorkAsk'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { isTimedVisible } from '../utils/timing'
@@ -133,7 +135,12 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
   const [showEdit,      setShowEdit]      = useState(false)
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [pendingNudge,  setPendingNudge]  = useState(null)
+  const [pendingMinutes, setPendingMinutes] = useState(null)  // { taskId, title, defaultMinutes }
+  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title } — kettle-created task awaiting classification
   const nudgeRef = useRef(null)
+  const newTaskIdRef = useRef(null)          // kettle-created task awaiting its title before the work-ask fires
+  const lastCompletionAtRef = useRef(null)   // anchor for the next completion's elapsed-time default
+  const minutesWaitRef = useRef(null)        // full { taskId, wasBonus } while the minutes prompt is up
   const { theme } = useContext(ThemeContext)
   const isLinen = theme === 'aria-linen'
   const [localDone,     setLocalDone]     = useState(0)
@@ -216,6 +223,37 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     if (pending && !pending.wasBonus) fetchAll()
   }
 
+  // Elapsed minutes since the last completion, for the minutes prompt's
+  // default. First completion of the day anchors off "Start my day" instead
+  // (stamped in Today.jsx) — null if neither exists, so the field starts blank
+  // rather than guessing.
+  function elapsedDefaultMinutes() {
+    let anchor = lastCompletionAtRef.current
+    if (anchor == null) {
+      try {
+        const key = `aria_day_started_at_${new Date().toLocaleDateString('en-CA')}`
+        const v = Number(localStorage.getItem(key))
+        anchor = Number.isFinite(v) && v > 0 ? v : null
+      } catch { anchor = null }
+    }
+    if (anchor == null) return null
+    // eslint-disable-next-line react-hooks/purity -- handler, not render
+    const mins = Math.round((Date.now() - anchor) / 60000)
+    return mins >= 0 ? mins : null
+  }
+
+  // Nudge check + advance to the next task — shared tail for a completion
+  // that needed no minutes prompt, and one that just resolved its prompt.
+  function proceedAfterCompletion(pending) {
+    const nudge = nudgeRef.current
+    nudgeRef.current = null
+    if (nudge && nudgeCooldownOk()) {
+      setPendingNudge({ ...nudge, _pending: pending })
+      return
+    }
+    finishTransition(pending)
+  }
+
   function skipCelebration() {
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = []
@@ -230,14 +268,37 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     }
     setCelebrate(false)
 
-    const nudge = nudgeRef.current
-    nudgeRef.current = null
-    if (nudge && nudgeCooldownOk()) {
-      setPendingNudge({ ...nudge, _pending: pending })
+    // Only a task the gate/capture/promote flow already marked as work gets
+    // asked for minutes — everything else (not-work, routines, appointments,
+    // anything never classified) goes straight through, unchanged.
+    if (pending && pending.isWork === true) {
+      minutesWaitRef.current = pending
+      setPendingMinutes({ taskId: pending.taskId, title: pending.title, defaultMinutes: pending.defaultMinutes })
       return
     }
 
-    finishTransition(pending)
+    proceedAfterCompletion(pending)
+  }
+
+  function handleMinutesSave(minutes) {
+    const taskInfo = pendingMinutes
+    const pending = minutesWaitRef.current
+    minutesWaitRef.current = null
+    setPendingMinutes(null)
+    if (!taskInfo) return
+    updateTask(taskInfo.taskId, { minutes_spent: minutes }).catch((err) => console.error(err))
+    // eslint-disable-next-line react-hooks/purity -- handler, not render
+    lastCompletionAtRef.current = Date.now()
+    proceedAfterCompletion(pending)
+  }
+
+  function handleMinutesSkip() {
+    const pending = minutesWaitRef.current
+    minutesWaitRef.current = null
+    setPendingMinutes(null)
+    // eslint-disable-next-line react-hooks/purity -- handler, not render
+    lastCompletionAtRef.current = Date.now()
+    proceedAfterCompletion(pending)
   }
 
   function handleNudgeDismiss() {
@@ -254,7 +315,12 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     punRef.current = TEA_PUNS[Math.floor(Math.random() * TEA_PUNS.length)]
     const taskId = task.id
     const wasBonus = isBonusMode
-    completedTaskRef.current = { taskId, wasBonus }
+    completedTaskRef.current = {
+      taskId, wasBonus,
+      title: task.title,
+      isWork: task.is_work,
+      defaultMinutes: elapsedDefaultMinutes(),
+    }
     // Each completed bonus task drops into the tea-box as a gold bag.
     if (wasBonus) {
       setBonusDone((n) => {
@@ -278,6 +344,8 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
 
   async function handleEditSave(patch) {
     if (!task) return
+    const wasNewFromKettle = newTaskIdRef.current === task.id
+    newTaskIdRef.current = null
     try {
       await updateTask(task.id, patch)
       // If due_date moved off today, refetch so the task drops out of view
@@ -292,7 +360,21 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
         if (isBonusMode) setBonusTasks(updater)
         else setTasks(updater)
       }
+      // Ask work/not-work exactly once, right as the kettle-created task gets
+      // its real title — not on every later edit of an already-classified task.
+      if (wasNewFromKettle && !movedOffToday) {
+        setPendingWorkAsk({ id: task.id, title: patch.title || task.title })
+      }
     } catch (err) { console.error(err) }
+  }
+
+  function handleWorkAnswer(isWork) {
+    const target = pendingWorkAsk
+    setPendingWorkAsk(null)
+    if (!target) return
+    updateTask(target.id, { is_work: isWork }).catch((err) => console.error(err))
+    // Kettle-created tasks always land in `tasks`, never the bonus pool.
+    setTasks((prev) => prev.map((t) => t.id === target.id ? { ...t, is_work: isWork } : t))
   }
 
 
@@ -322,6 +404,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
         await updateTask(created.id, { sort_order: topOrder })
         setTasks(prev => [{ ...created, sort_order: topOrder }, ...prev])
         setSelectedId(created.id)
+        newTaskIdRef.current = created.id
         setShowEdit(true)
       } else {
         // Today was full — backend snapped it to tomorrow. Refetch so bonus/
@@ -668,6 +751,15 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
       {pendingNudge && <NudgeModal nudge={pendingNudge} onDismiss={handleNudgeDismiss} />}
+      {pendingMinutes && (
+        <MinutesPrompt
+          title={pendingMinutes.title}
+          defaultMinutes={pendingMinutes.defaultMinutes}
+          onSave={handleMinutesSave}
+          onSkip={handleMinutesSkip}
+        />
+      )}
+      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
     </div>
   )
 }

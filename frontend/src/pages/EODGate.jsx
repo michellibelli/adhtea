@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { DndContext, closestCenter, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import { upsertLog, getDailySummary } from '../api/selfcare'
 import { getDoneToday, updateTask } from '../api/tasks'
+import { SmartPointerSensor } from '../utils/dnd'
 import Button from '../components/Button'
 
 function formatMinutes(total) {
@@ -12,33 +14,102 @@ function formatMinutes(total) {
 }
 
 // ─── Work log screen ─────────────────────────────────────────────────────────
-// Retrospective, not a live timer (see docs/time-tracking.md) — she types
-// minutes for what's already done, never guesses ahead of time.
+// Retrospective by default (docs/time-tracking.md) — most items arrive here
+// already classified by the post-completion prompt or capture-time ask. This
+// screen is the correction pass: drag to fix a wrong call, and the source for
+// the daily copy-paste to her boss (work list only).
+
+function MinutesInlineInput({ onCommit }) {
+  const [value, setValue] = useState('')
+  function commit() {
+    const n = parseInt(value, 10)
+    if (Number.isFinite(n) && n >= 0) onCommit(n)
+  }
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min="0"
+      placeholder="min"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') commit() }}
+      className="w-14 text-xs text-right bg-ui-input border border-ui-input-border rounded-lg px-1.5 py-1 text-ui-text outline-none focus:border-ui-accent transition-colors"
+    />
+  )
+}
+
+function DraggableTaskRow({ task, onMinutesCommit }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none',
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      className="flex items-center gap-2 bg-ui-surface border border-ui-border rounded-lg px-2.5 py-2 cursor-grab active:cursor-grabbing"
+    >
+      <span className="flex-1 text-xs text-ui-text truncate">{task.title}</span>
+      {task.minutes_spent != null
+        ? <span className="text-xs text-ui-subtext flex-shrink-0">{task.minutes_spent}m</span>
+        : onMinutesCommit && <MinutesInlineInput onCommit={onMinutesCommit} />}
+    </div>
+  )
+}
+
+function DropZone({ id, label, count, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 min-w-0 min-h-[100px] rounded-xl border-2 border-dashed p-2 space-y-1.5 transition-colors ${
+        isOver ? 'border-ui-accent bg-ui-accent/5' : 'border-ui-border'
+      }`}
+    >
+      <p className="text-[10px] font-semibold text-ui-subtext uppercase tracking-wide mb-1 px-0.5">
+        {label} ({count})
+      </p>
+      {children}
+    </div>
+  )
+}
 
 function LogScreen({ onContinue }) {
-  const [tasks,   setTasks]   = useState(null)   // null = loading
-  const [minutes, setMinutes] = useState({})     // id -> string (raw input)
-  const [copied,  setCopied]  = useState(false)
+  const [tasks,  setTasks]  = useState(null)   // null = loading; plain tasks only
+  const [copied, setCopied] = useState(false)
+  const sensors = useSensors(
+    useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
+  )
 
   useEffect(() => {
-    getDoneToday().then(done => {
-      setTasks(done)
-      const initial = {}
-      for (const t of done) if (t.minutes_spent != null) initial[t.id] = String(t.minutes_spent)
-      setMinutes(initial)
-    }).catch(() => setTasks([]))
+    getDoneToday()
+      .then((done) => setTasks(done.filter((t) => t.task_type === 'task')))
+      .catch(() => setTasks([]))
   }, [])
 
-  function saveMinutes(id, raw) {
-    const n = parseInt(raw, 10)
-    updateTask(id, { minutes_spent: Number.isFinite(n) && n >= 0 ? n : null }).catch(() => {})
+  function patchTask(id, patch) {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    updateTask(id, patch).catch(() => {})
+  }
+
+  function handleDragEnd({ active, over }) {
+    if (!over) return
+    const isWork = over.id === 'zone-work'
+    if (!isWork && over.id !== 'zone-notwork') return
+    patchTask(active.id, { is_work: isWork })
   }
 
   async function handleCopy() {
-    const lines = (tasks || [])
-      .filter(t => minutes[t.id])
-      .map(t => `${t.title} — ${formatMinutes(parseInt(minutes[t.id], 10))}`)
-    const total = Object.values(minutes).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0)
+    const lines = workItems
+      .filter((t) => t.minutes_spent != null)
+      .map((t) => `${t.title} — ${formatMinutes(t.minutes_spent)}`)
+    const total = workItems.reduce((sum, t) => sum + (t.minutes_spent || 0), 0)
     const text = [...lines, '', `Total: ${formatMinutes(total)}`].join('\n')
     try {
       await navigator.clipboard.writeText(text)
@@ -49,17 +120,23 @@ function LogScreen({ onContinue }) {
     }
   }
 
-  const anyMinutes = Object.values(minutes).some(v => v)
-  const total = Object.values(minutes).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0)
+  const list = tasks || []
+  // Unclassified (null) bucket with not-work — fail-closed, matches every
+  // other default in this feature: nothing reaches the boss unless it was
+  // actively marked work.
+  const workItems    = list.filter((t) => t.is_work === true)
+  const notWorkItems = list.filter((t) => t.is_work !== true)
+  const anyMinutes = workItems.some((t) => t.minutes_spent != null)
+  const total = workItems.reduce((sum, t) => sum + (t.minutes_spent || 0), 0)
 
   return (
     <div className="aria-page flex items-center justify-center">
-      <div className="px-6 pb-32 md:pb-8 max-w-sm w-full">
+      <div className="px-6 pb-32 md:pb-8 max-w-md w-full">
 
         <div className="text-4xl mb-3 text-center">🍵</div>
         <h2 className="text-xl font-semibold text-ui-text mb-1 text-center">Today's work</h2>
-        <p className="text-sm text-ui-subtext mb-6 text-center">
-          Minutes on what you finished today. Leave blank if it isn't billable.
+        <p className="text-sm text-ui-subtext mb-4 text-center">
+          Drag to fix a wrong call. Dropping into Work asks for minutes if it doesn't have any yet.
         </p>
 
         {tasks === null && <p className="text-sm text-ui-subtext text-center">Loading…</p>}
@@ -69,23 +146,20 @@ function LogScreen({ onContinue }) {
         )}
 
         {tasks && tasks.length > 0 && (
-          <div className="space-y-2 mb-6">
-            {tasks.map(t => (
-              <div key={t.id} className="flex items-center gap-2">
-                <span className="flex-1 text-sm text-ui-text truncate">{t.title}</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  placeholder="min"
-                  value={minutes[t.id] ?? ''}
-                  onChange={e => setMinutes(m => ({ ...m, [t.id]: e.target.value }))}
-                  onBlur={e => saveMinutes(t.id, e.target.value)}
-                  className="w-16 text-sm text-right bg-ui-input border border-ui-input-border rounded-lg px-2 py-1.5 text-ui-text outline-none focus:border-ui-accent transition-colors"
-                />
-              </div>
-            ))}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <div className="flex gap-2 mb-4">
+              <DropZone id="zone-work" label="Work" count={workItems.length}>
+                {workItems.map((t) => (
+                  <DraggableTaskRow key={t.id} task={t} onMinutesCommit={(m) => patchTask(t.id, { minutes_spent: m })} />
+                ))}
+              </DropZone>
+              <DropZone id="zone-notwork" label="Not work" count={notWorkItems.length}>
+                {notWorkItems.map((t) => (
+                  <DraggableTaskRow key={t.id} task={t} />
+                ))}
+              </DropZone>
+            </div>
+          </DndContext>
         )}
 
         {anyMinutes && (

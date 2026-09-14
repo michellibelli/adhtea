@@ -120,6 +120,7 @@ function FieldRow({ label, required, children }) {
 const BLANK = {
   title: '',
   notes: '',
+  is_work: '',
   due_date: '',
   due_time: '',
   location_type: '',
@@ -190,6 +191,9 @@ export default function Capture({ onNavigate }) {
           location_type: form.location_type || undefined,
           location_detail: form.location_detail.trim() || undefined,
           tags: form.tags.trim() || undefined,
+          is_work: taskType === 'task' && dueToday
+            ? (form.is_work === 'work' ? true : form.is_work === 'not_work' ? false : undefined)
+            : undefined,
         }
         const created = await createTask(payload)
         if (created.status === 'today') {
@@ -284,6 +288,26 @@ export default function Capture({ onNavigate }) {
               <FieldRow label="Due time (optional)">
                 <Input type="time" value={form.due_time} onChange={(e) => set('due_time', e.target.value)} />
               </FieldRow>
+              {form.due_date && form.due_date <= new Date().toISOString().split('T')[0] && (
+                <FieldRow label="Work, or not work?">
+                  <div className="flex gap-1.5">
+                    {[['not_work', 'Not work'], ['work', 'Work']].map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => set('is_work', form.is_work === val ? '' : val)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          form.is_work === val
+                            ? 'bg-ui-accent/20 border-ui-accent text-ui-accent'
+                            : 'border-ui-input-border text-ui-subtext hover:border-ui-accent/50'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </FieldRow>
+              )}
             </>
           )}
 

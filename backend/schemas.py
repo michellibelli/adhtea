@@ -149,6 +149,7 @@ class TaskCreate(BaseModel):
     location_type: Optional[LocationType] = None
     location_detail: Optional[str] = None
     tags: Optional[str] = None              # comma-separated
+    is_work: Optional[bool] = None
 
 
 class TaskUpdate(BaseModel):
@@ -170,6 +171,7 @@ class TaskUpdate(BaseModel):
     location_detail: Optional[str] = None
     tags: Optional[str] = None
     minutes_spent: Optional[int] = None
+    is_work: Optional[bool] = None
 
 
 class TaskSnoozeRequest(BaseModel):
@@ -207,6 +209,7 @@ class TaskResponse(BaseModel):
     sort_order: Optional[float]
     push_count: int = 0
     minutes_spent: Optional[int]
+    is_work: Optional[bool]
     completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

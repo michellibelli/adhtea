@@ -14,12 +14,13 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { getToday, getInbox, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, scheduleToday, reorderTasks, planDay, createTask } from '../api/tasks'
+import { getToday, getInbox, getDoneToday, completeTask, snoozeTask, deferTask, deleteTask, scheduleToday, reorderTasks, planDay, createTask, updateTask } from '../api/tasks'
 import { getTodayCapacity } from '../api/selfcare'
 import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import WorkAsk from '../components/WorkAsk'
 import { PageLoading, PageError } from '../components/PageState'
 import { isTimedVisible } from '../utils/timing'
 
@@ -98,10 +99,14 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   // Quick-add row (top of Today section)
   const [newTitle, setNewTitle]     = useState('')
   const [adding, setAdding]         = useState(false)
+  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title } — plain task just promoted to today
 
   async function handleStartDay() {
     setApplying(true)
     setPlanned(true)          // optimistic — flip to started immediately
+    // Anchor for the first post-completion minutes prompt's elapsed-time
+    // default (Focus.jsx). en-CA gives YYYY-MM-DD in local time, not UTC.
+    try { localStorage.setItem(`aria_day_started_at_${new Date().toLocaleDateString('en-CA')}`, String(Date.now())) } catch { /* ignore */ }
     try {
       await planDay()
       onDayPlanned?.()
@@ -239,8 +244,24 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   async function handlePromote(task) {
     setInboxTasks(prev => prev.filter(t => t.id !== task.id))
     setTodayTasks(prev => [...prev, task])
-    try { await scheduleToday(task.id) }
+    try {
+      await scheduleToday(task.id)
+      // Asked exactly once, right as a plain task joins today — routines and
+      // appointments are never classified (see TeaBox NOT_WORK / is_work scope).
+      if (task.task_type === 'task' && task.is_work == null) {
+        setPendingWorkAsk({ id: task.id, title: task.title })
+      }
+    }
     catch (err) { console.error(err); fetchAll() }
+  }
+
+  function handleWorkAnswer(isWork) {
+    const target = pendingWorkAsk
+    setPendingWorkAsk(null)
+    if (!target) return
+    updateTask(target.id, { is_work: isWork }).catch((err) => console.error(err))
+    const updater = (prev) => prev.map((t) => t.id === target.id ? { ...t, is_work: isWork } : t)
+    setTodayTasks(updater)
   }
 
   async function handleDragEnd(event) {
@@ -533,6 +554,8 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
           </button>
         </div>
       )}
+
+      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
     </div>
   )
 }

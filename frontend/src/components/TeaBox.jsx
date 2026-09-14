@@ -25,6 +25,14 @@ const GOLD = {
   shadow: '#7C5912',
 }
 
+// Not-work bags override task_type color entirely — the point is to spot
+// personal items in the box at a glance, regardless of what kind of task.
+const NOT_WORK = {
+  bg: 'linear-gradient(135deg, #EDE3F6 0%, #D9C3EE 38%, #E6D3F3 58%, #C4A3E0 100%)',
+  border: '#9B7BB8',
+  shadow: '#6E5486',
+}
+
 // Bags sit in the shared today-order (see utils/ordering.js) — the same order
 // Focus picks from, so the focused task is the first selectable bag.
 function orderedBags(tasks, manual) {
@@ -199,7 +207,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
           >
             <SortableContext items={colored.map(t => t.id)} strategy={horizontalListSortingStrategy}>
               {colored.map(t => {
-                const colors = TAG_COLORS[t.task_type] || TAG_COLORS.task
+                const colors = t.is_work === false ? NOT_WORK : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
                 const active = activeTaskId != null && t.id === activeTaskId
                 return (
                   <SortableBag
