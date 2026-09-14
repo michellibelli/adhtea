@@ -425,6 +425,14 @@ def complete_task(
     db: Session = Depends(get_db),
 ):
     task = own_task(task_id, current_user, db)
+    # Idempotent by design. The offline queue writes the id before the POST and
+    # replays it on the next successful request, so a client timeout can re-send
+    # a completion days later — re-stamping completed_at would drag the task into
+    # the wrong morning-review day. Guard on the stamp as well as the status: a
+    # done row with a null completed_at (the CSV-import shape) still needs one.
+    # Return 200 either way so the queue drain clears the duplicate.
+    if task.status == TaskStatus.done and task.completed_at is not None:
+        return task
     task.status = TaskStatus.done
     task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
@@ -484,6 +492,10 @@ def unsnooze_task(
     task = own_task(task_id, current_user, db)
     task.status = TaskStatus.inbox
     task.snooze_until = None
+    # Leaving a stale completed_at behind would keep the task in the morning
+    # review forever — it is filtered on completed_at, not on status alone.
+    task.completed_at = None
+    task.effort = None
     db.commit()
     db.refresh(task)
     return task
@@ -505,6 +517,9 @@ def defer_task(
     task.due_date = None
     task.sort_order = None
     task.push_count = (task.push_count or 0) + 1
+    # Same reason as unsnooze: status alone does not get it out of the review.
+    task.completed_at = None
+    task.effort = None
     db.commit()
     db.refresh(task)
     return task
@@ -527,6 +542,15 @@ def update_task(
     for field, value in patch.items():
         setattr(task, field, value)
     task.updated_at = utcnow()
+
+    # The loop above is a blind setattr, so a patch that moves status away from
+    # done leaves completed_at set and the task never leaves the morning review.
+    # Search.jsx:137 is a live caller of exactly this shape. An effort supplied
+    # in the same patch is honoured rather than clobbered.
+    if "status" in patch and task.status != TaskStatus.done:
+        task.completed_at = None
+        if "effort" not in patch:
+            task.effort = None
 
     today = _app_today(current_user)
     # If a Today-list task gets pushed to a future due_date, demote it back to inbox

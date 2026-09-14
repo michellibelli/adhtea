@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { commitReview } from '../api/review'
+import { removeComplete } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
 
@@ -32,12 +33,23 @@ export default function MorningReview({ data, onComplete }) {
   const [efforts, setEfforts] = useState(() =>
     Object.fromEntries((data.tasks || []).map(t => [t.id, t.effort_guess]))
   )
+  const [notDone, setNotDone] = useState(() => new Set())   // ids she says weren't done
   const [added, setAdded] = useState([])   // {key, title, effort}
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
 
   function setEffort(id, val) {
     setEfforts(prev => ({ ...prev, [id]: val }))
+  }
+
+  // A toggle, not a delete — a mis-tap has to be recoverable.
+  function toggleNotDone(id) {
+    setNotDone(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   function addItem() {
@@ -60,9 +72,17 @@ export default function MorningReview({ data, onComplete }) {
     // commitReview is durable — on a cold-backend failure it queues the commit
     // for background flush rather than throwing, so the morning is never blocked
     // and `reviewed_through` still lands once the backend wakes.
+    // Drop each un-flagged id from the offline completion queue first. If one is
+    // still queued, the next successful request flushes it and silently
+    // re-completes the task she just said she didn't do.
+    notDone.forEach(id => removeComplete(id))
     await commitReview({
       date: data.date,
-      tasks: (data.tasks || []).map(t => ({ id: t.id, effort: efforts[t.id] })),
+      tasks: (data.tasks || []).map(t => (
+        notDone.has(t.id)
+          ? { id: t.id, done: false }
+          : { id: t.id, effort: efforts[t.id], done: true }
+      )),
       added: added.map(x => ({ title: x.title, effort: x.effort })),
     })
     onComplete()
@@ -93,15 +113,33 @@ export default function MorningReview({ data, onComplete }) {
         </div>
         <p className="text-xs text-ui-subtext mb-4">
           A quick look back — tap to fix any that are off. Quick errand or a real effort?
+          Tap × if something on here wasn't actually done.
         </p>
 
         <div className="space-y-2.5">
-          {(data.tasks || []).map(t => (
-            <Card key={t.id} className="px-4 py-3 flex items-center gap-3">
-              <span className="flex-1 text-sm text-ui-text">{t.title}</span>
-              <EffortToggle value={efforts[t.id]} onChange={v => setEffort(t.id, v)} />
-            </Card>
-          ))}
+          {(data.tasks || []).map(t => {
+            const off = notDone.has(t.id)
+            return (
+              <Card
+                key={t.id}
+                className={`px-4 py-3 flex items-center gap-3 transition-opacity ${off ? 'opacity-50' : ''}`}
+              >
+                <button
+                  onClick={() => toggleNotDone(t.id)}
+                  className="text-ui-subtext hover:text-ui-accent text-lg leading-none shrink-0"
+                  aria-label={off ? 'Put it back as done' : "Mark as not done"}
+                >
+                  {off ? '↺' : '×'}
+                </button>
+                <span className={`flex-1 text-sm ${off ? 'text-ui-subtext line-through' : 'text-ui-text'}`}>
+                  {t.title}
+                </span>
+                {off
+                  ? <span className="text-xs text-ui-subtext shrink-0 pr-1">Not done</span>
+                  : <EffortToggle value={efforts[t.id]} onChange={v => setEffort(t.id, v)} />}
+              </Card>
+            )
+          })}
 
           {/* Things she did that weren't in the app */}
           {added.map(x => (

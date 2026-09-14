@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from typing import Optional, Annotated
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 Password = Annotated[str, Field(min_length=8, max_length=128)]
 from models import (
@@ -408,8 +408,24 @@ class ReviewPendingResponse(BaseModel):
 
 
 class ReviewCommitItem(BaseModel):
+    """One row of the morning review.
+
+    `done` defaults to True and that default is load-bearing: a pre-4.17.0
+    `{id, effort}` payload may already be sitting in
+    `localStorage.aria_pending_reviews`, and `commitReview` drops permanent 4xx
+    without retrying — so a 422 here would silently discard a queued morning.
+    `effort` is only meaningful for a row she confirms; an un-flagged row has
+    nothing to tag.
+    """
     id: int
-    effort: Effort
+    effort: Optional[Effort] = None
+    done: bool = True
+
+    @model_validator(mode="after")
+    def _effort_required_when_done(self):
+        if self.done and self.effort is None:
+            raise ValueError("effort is required unless done is false")
+        return self
 
 
 class ReviewAddedItem(BaseModel):

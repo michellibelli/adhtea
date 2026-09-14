@@ -154,6 +154,22 @@ def commit_review(
         task = owned.get(item.id)
         if task is None:
             continue
+        if not item.done:
+            # She's correcting a mis-record, not pushing work forward, so
+            # push_count is deliberately left alone. Target is `inbox`, not
+            # `today`: `today` is a tuple with scheduled_date/sort_order
+            # governed by DAILY_CAP, and writing it from here would bypass the
+            # cap and inject yesterday's work into an unplanned day.
+            # `promote_due_tasks` gets the placement decision back.
+            task.status = TaskStatus.inbox
+            task.completed_at = None
+            task.effort = None
+            task.scheduled_date = None
+            task.sort_order = None
+            # `continue` BEFORE corrections, deliberately: an un-flagged row must
+            # never reach record_corrections. Otherwise a wrong review list
+            # trains the effort guesser on work that never happened.
+            continue
         task.effort = item.effort
         corrections.append((task.title, item.effort.value))
 

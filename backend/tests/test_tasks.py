@@ -112,3 +112,121 @@ def test_promote_due_appointment_admitted_when_today_full(client, auth_headers, 
     promote_due_tasks(user, db_session)
     db_session.refresh(appt)
     assert appt.status == TaskStatus.today                 # appointment bypasses the cap
+
+
+# ---------------------------------------------------------------------------
+# completed_at hygiene — the morning review filters on the stamp, not on status
+# ---------------------------------------------------------------------------
+
+def test_complete_is_idempotent(client, auth_headers, db_session):
+    """A replayed offline-queue completion must not re-stamp completed_at, or
+    the task is dragged into the wrong review day."""
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id)
+
+    r1 = client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+    assert r1.status_code == 200
+    first = r1.json()["completed_at"]
+
+    r2 = client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+    assert r2.status_code == 200, "the queue drain needs a 200 to clear the duplicate"
+    assert r2.json()["completed_at"] == first
+
+
+def test_complete_heals_done_row_with_no_stamp(client, auth_headers, db_session):
+    """The CSV-import shape: status done, completed_at null. The guard must not
+    swallow this — it still needs a stamp."""
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id, status=TaskStatus.done)
+    assert t.completed_at is None
+
+    r = client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["completed_at"] is not None
+
+
+def test_patch_away_from_done_clears_stamp_and_effort(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id)
+    client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+    client.patch(f"/tasks/{t.id}", headers=auth_headers, json={"effort": "big"})
+
+    r = client.patch(f"/tasks/{t.id}", headers=auth_headers, json={"status": "inbox"})
+    assert r.status_code == 200
+    db_session.expire_all()
+    t = db_session.get(Task, t.id)
+    assert t.completed_at is None
+    assert t.effort is None
+
+
+def test_patch_away_from_done_honours_explicit_effort(client, auth_headers, db_session):
+    """An effort supplied in the same patch is the caller's intent — don't
+    clobber it on the way out of done."""
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id)
+    client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+
+    r = client.patch(f"/tasks/{t.id}", headers=auth_headers,
+                     json={"status": "inbox", "effort": "big"})
+    assert r.status_code == 200
+    db_session.expire_all()
+    t = db_session.get(Task, t.id)
+    assert t.completed_at is None
+    assert t.effort.value == "big"
+
+
+def test_defer_clears_stamp(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id, status=TaskStatus.today)
+    client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+
+    r = client.post(f"/tasks/{t.id}/defer", headers=auth_headers)
+    assert r.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(Task, t.id).completed_at is None
+
+
+def test_unsnooze_clears_stamp(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id, status=TaskStatus.snoozed)
+    client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+
+    r = client.post(f"/tasks/{t.id}/unsnooze", headers=auth_headers)
+    assert r.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(Task, t.id).completed_at is None
+
+
+def test_replayed_completion_keeps_the_original_day(client, auth_headers, db_session):
+    """The real review bug, end to end. The offline queue writes the id before
+    the POST and replays it on the next successful request, so a client timeout
+    re-sends a completion days later. Un-guarded, that re-stamps completed_at to
+    now and the task reappears in a later morning review as work done that day —
+    after it was already reviewed. The stamp must survive the replay."""
+    from datetime import datetime, timezone
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id)
+    client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+
+    # Backdate into an already-reviewed day.
+    db_session.expire_all()
+    row = db_session.get(Task, t.id)
+    original = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    row.completed_at = original
+    row.title = "Finished two days ago"
+    db_session.commit()
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    assert "Finished two days ago" in {x["title"] for x in pending["tasks"]}
+    client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": t.id, "effort": "small"}],
+    })
+    assert client.get("/review/pending", headers=auth_headers).json() is None
+
+    # The offline queue drains and replays the completion.
+    r = client.post(f"/tasks/{t.id}/complete", headers=auth_headers)
+    assert r.status_code == 200
+
+    db_session.expire_all()
+    assert db_session.get(Task, t.id).completed_at == original

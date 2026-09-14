@@ -153,3 +153,154 @@ def test_stored_override_beats_heuristic(client, auth_headers, db_session):
     data = client.get("/review/pending", headers=auth_headers).json()
     guess = {t["title"]: t["effort_guess"] for t in data["tasks"]}
     assert guess["Call pharmacy"] == "big"   # override wins over heuristic "small"
+
+
+# ---------------------------------------------------------------------------
+# "Not done" — she corrects a task the app wrongly recorded as finished.
+# ---------------------------------------------------------------------------
+
+def test_commit_uncompletes_flagged_item(client, auth_headers, db_session):
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    r = client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": t1.id, "done": False}],
+    })
+    assert r.status_code == 200, r.text
+
+    db_session.expire_all()
+    t = db_session.get(Task, t1.id)
+    assert t.status == TaskStatus.inbox
+    assert t.completed_at is None
+    assert t.effort is None
+    assert t.scheduled_date is None
+    assert t.sort_order is None
+    # She corrected a mis-record; she did not push the work forward.
+    assert (t.push_count or 0) == 0
+
+
+def test_uncompleted_item_is_not_learned(client, auth_headers, db_session):
+    """The anti-training pin. An un-flagged row must never reach
+    record_corrections — otherwise a wrong review list actively trains the
+    effort guesser on work that never happened, which is the compounding half
+    of this bug."""
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": t1.id, "done": False}],
+    })
+
+    db_session.expire_all()
+    assert db_session.query(EffortExample).filter_by(user_id=u.id).count() == 0
+
+
+def test_commit_mixes_done_and_not_done(client, auth_headers, db_session):
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    kept = _mk_done(db_session, u.id, "Draft insurance email", day)
+    wrong = _mk_done(db_session, u.id, "Call pharmacy", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    r = client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [
+            {"id": kept.id, "effort": "big"},
+            {"id": wrong.id, "done": False},
+        ],
+    })
+    assert r.status_code == 200, r.text
+
+    db_session.expire_all()
+    assert db_session.get(Task, kept.id).status == TaskStatus.done
+    assert db_session.get(Task, kept.id).effort == Effort.big
+    assert db_session.get(Task, wrong.id).status == TaskStatus.inbox
+    # Only the confirmed row was learned from.
+    keys = {e.title_key for e in db_session.query(EffortExample).filter_by(user_id=u.id)}
+
+
+def test_uncompleted_task_absent_from_future_pending(client, auth_headers, db_session):
+    """The whole point: it must not come back tomorrow."""
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
+    t2 = _mk_done(db_session, u.id, "Sort mail", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": t1.id, "done": False}, {"id": t2.id, "effort": "small"}],
+    })
+
+    # Rewind the watermark so the same day is eligible again — this isolates the
+    # completed_at clearing from the reviewed_through watermark.
+    db_session.expire_all()
+    db_session.get(User, u.id).reviewed_through = None
+    db_session.commit()
+
+    again = client.get("/review/pending", headers=auth_headers).json()
+    titles = {t["title"] for t in (again["tasks"] if again else [])}
+    assert "Call pharmacy" not in titles
+    assert "Sort mail" in titles
+
+
+def test_legacy_payload_without_done_still_commits(client, auth_headers, db_session):
+    """Back-compat pin. A pre-4.17.0 `{id, effort}` commit can be sitting in
+    localStorage.aria_pending_reviews at deploy time, and commitReview drops a
+    permanent 4xx without retrying — a 422 here would silently discard a
+    queued morning."""
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    r = client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": t1.id, "effort": "small"}],
+    })
+    assert r.status_code == 200, r.text
+    db_session.expire_all()
+    assert db_session.get(Task, t1.id).effort == Effort.small
+
+
+def test_done_row_without_effort_is_rejected(client, auth_headers, db_session):
+    u = _user(db_session)
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    r = client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": t1.id}],
+    })
+    assert r.status_code == 422
+
+
+def test_uncomplete_ignores_unowned_ids(client, auth_headers, db_session):
+    """A not-done flag for someone else's task must not touch it."""
+    u = _user(db_session)
+    other = User(name="Someone Else", username="other", hashed_password="x")
+    db_session.add(other)
+    db_session.commit()
+    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    mine = _mk_done(db_session, u.id, "Sort mail", day)
+    theirs = _mk_done(db_session, other.id, "Not mine", day)
+
+    pending = client.get("/review/pending", headers=auth_headers).json()
+    r = client.post("/review/commit", headers=auth_headers, json={
+        "date": pending["date"],
+        "tasks": [{"id": mine.id, "effort": "small"},
+                  {"id": theirs.id, "done": False}],
+    })
+    assert r.status_code == 200, r.text
+
+    db_session.expire_all()
+    t = db_session.get(Task, theirs.id)
+    assert t.status == TaskStatus.done
+    assert t.completed_at is not None
