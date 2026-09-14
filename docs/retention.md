@@ -2,6 +2,16 @@
 *Written 2026-08-20 (BUILD 4.13.1). Revised 2026-09-09 (4.16.1) after the Projects removal.*
 ***Design only — nothing here is implemented.***
 
+> **2026-09-14 — real row count taken, recommendation: do not build.** Prod
+> total is 807 rows. Tier 1 (`routine`/`deleted`, the bucket this whole design
+> exists to sweep) is **50 rows — about 6% of the table**, not the assumed
+> majority. Dominated instead by `task,done` (452) and `routine,done` (164),
+> both real completed-work history. Per this doc's own gate below ("if it
+> doesn't [dominate], re-argue rather than implement"), there is no leak
+> worth the engineering cost of a new column + monthly sweep + test suite for
+> 50 rows. Revisit only if `routine,deleted` grows materially — re-run the
+> `GROUP BY` query in the Recommendation section below to check.
+
 > **2026-09-09 — this design got simpler.** Projects were removed entirely, so
 > `project_stall_map` and the `project_id` column no longer exist. The
 > "unbounded lookback" trap that dominated the original analysis is **gone**, and
