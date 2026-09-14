@@ -105,6 +105,19 @@ def _migrate(target_engine=None):
                 conn.execute(text("DROP TABLE IF EXISTS domains"))
             except Exception:
                 pass
+            # Projects removed (4.16.2). SQLite can't drop a column that is part
+            # of a foreign key, so this is best-effort on stale local dev DBs
+            # (production is Postgres). A leftover nullable column is harmless —
+            # the ORM no longer declares it.
+            if "project_id" in tasks_cols:
+                try:
+                    conn.execute(text("ALTER TABLE tasks DROP COLUMN project_id"))
+                except Exception:
+                    pass
+            try:
+                conn.execute(text("DROP TABLE IF EXISTS projects"))
+            except Exception:
+                pass
             if "rolled_over_on" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN rolled_over_on DATE"))
             if "planned_on" not in users_cols:
@@ -149,6 +162,15 @@ def _migrate(target_engine=None):
             # Domains removed — drop the FK columns then the table (irreversible).
             conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS domain_id"))
             conn.execute(text("DROP TABLE IF EXISTS domains CASCADE"))
+            # Projects removed (4.16.2) — same shape, same irreversibility.
+            # Column BEFORE table: DROP TABLE ... CASCADE removes the FK
+            # constraint but leaves tasks.project_id behind as an orphan.
+            # "projects" was taken out of the RLS loop below in 4.16.1 — ENABLE
+            # ROW LEVEL SECURITY on a dropped table raises in here, and _migrate
+            # runs inside lifespan, so that would crash-loop the service.
+            conn.execute(text("ALTER TABLE tasks DROP COLUMN IF EXISTS project_id"))
+            conn.execute(text("DROP TABLE IF EXISTS projects CASCADE"))
+            conn.execute(text("ALTER TABLE weekly_snapshots DROP COLUMN IF EXISTS stalled_projects"))
             # score/pinned_for deliberately not added — see the SQLite branch.
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS push_count INTEGER NOT NULL DEFAULT 0"))
             conn.execute(text(

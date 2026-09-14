@@ -59,3 +59,40 @@ def test_migrate_dose_drop_is_noop_when_column_absent():
     assert "dose" not in _columns(eng, "medication_schedules")
     _migrate(target_engine=eng)
     assert "dose" not in _columns(eng, "medication_schedules")
+
+
+def _tables(engine):
+    with engine.connect() as conn:
+        return {r[0] for r in conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        ).fetchall()}
+
+
+def test_migrate_drops_projects_table_if_present():
+    """A legacy DB still carrying the projects table loses it (4.16.2).
+
+    The ORM no longer declares Project, so _fresh_engine() never creates the
+    table — simulate a pre-removal DB by building it by hand first.
+    """
+    eng = _fresh_engine()
+    with eng.connect() as conn:
+        conn.execute(text(
+            "CREATE TABLE projects (id INTEGER PRIMARY KEY, user_id INTEGER, title VARCHAR(255))"
+        ))
+        conn.execute(text("ALTER TABLE tasks ADD COLUMN project_id INTEGER"))
+        conn.commit()
+    assert "projects" in _tables(eng)
+    assert "project_id" in _columns(eng, "tasks")
+
+    _migrate(target_engine=eng)
+
+    assert "projects" not in _tables(eng)
+    assert "project_id" not in _columns(eng, "tasks")
+
+
+def test_migrate_projects_drop_is_noop_when_absent():
+    eng = _fresh_engine()
+    assert "projects" not in _tables(eng)
+    _migrate(target_engine=eng)
+    assert "projects" not in _tables(eng)
+    assert "project_id" not in _columns(eng, "tasks")
