@@ -172,6 +172,7 @@ class TaskUpdate(BaseModel):
     tags: Optional[str] = None
     minutes_spent: Optional[int] = None
     is_work: Optional[bool] = None
+    completed_retroactively: Optional[bool] = None
 
 
 class TaskSnoozeRequest(BaseModel):
@@ -210,6 +211,7 @@ class TaskResponse(BaseModel):
     push_count: int = 0
     minutes_spent: Optional[int]
     is_work: Optional[bool]
+    completed_retroactively: Optional[bool]
     completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

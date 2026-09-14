@@ -95,6 +95,8 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN minutes_spent INTEGER"))
             if "is_work" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN is_work BOOLEAN"))
+            if "completed_retroactively" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN completed_retroactively BOOLEAN"))
             if "email" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
             if "is_owner" not in users_cols:
@@ -179,6 +181,7 @@ def _migrate(target_engine=None):
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS push_count INTEGER NOT NULL DEFAULT 0"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS minutes_spent INTEGER"))
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_work BOOLEAN"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_retroactively BOOLEAN"))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
             ))

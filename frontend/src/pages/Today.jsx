@@ -21,6 +21,7 @@ import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import WorkAsk from '../components/WorkAsk'
+import MinutesPrompt from '../components/MinutesPrompt'
 import { PageLoading, PageError } from '../components/PageState'
 import { isTimedVisible } from '../utils/timing'
 
@@ -99,7 +100,8 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   // Quick-add row (top of Today section)
   const [newTitle, setNewTitle]     = useState('')
   const [adding, setAdding]         = useState(false)
-  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title } — plain task just promoted to today
+  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title, source: 'promote'|'gate' }
+  const [pendingGateMinutes, setPendingGateMinutes] = useState(null)  // { id, title } — gate completion, work confirmed
 
   async function handleStartDay() {
     setApplying(true)
@@ -197,10 +199,21 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     catch (err) { console.error(err); fetchAll() }
   }
 
-  async function handleCompleteUpNext(id) {
+  // The forced daily inbox-sort gate. Anything cleared from here is backlog
+  // catch-up, not "did this today" — completed_at still stamps now (keeps
+  // streaks/capacity/TeaBox counts honest), but completed_retroactively
+  // excludes it from the EOD work-log so it never reads as today's work.
+  // Still asked work/not-work + minutes, so the duration survives for later
+  // workload analysis — just routed through a 'gate' source so the answer
+  // sequences into a minutes ask instead of stopping at is_work like promote.
+  async function handleCompleteUpNext(id, title, taskType) {
     setInboxTasks(prev => prev.filter(t => t.id !== id))
     completeTask(id)
+    updateTask(id, { completed_retroactively: true }).catch(() => {})
     getDoneToday().then(setDone).catch(() => {})
+    if (taskType === 'task') {
+      setPendingWorkAsk({ id, title, source: 'gate' })
+    }
   }
 
   async function handleSnoozeUpNext(id, until) {
@@ -249,7 +262,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
       // Asked exactly once, right as a plain task joins today — routines and
       // appointments are never classified (see TeaBox NOT_WORK / is_work scope).
       if (task.task_type === 'task' && task.is_work == null) {
-        setPendingWorkAsk({ id: task.id, title: task.title })
+        setPendingWorkAsk({ id: task.id, title: task.title, source: 'promote' })
       }
     }
     catch (err) { console.error(err); fetchAll() }
@@ -262,6 +275,23 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     updateTask(target.id, { is_work: isWork }).catch((err) => console.error(err))
     const updater = (prev) => prev.map((t) => t.id === target.id ? { ...t, is_work: isWork } : t)
     setTodayTasks(updater)
+    // Gate completions (backlog cleared from Up Next) still get minutes asked
+    // so the duration isn't lost — promoted-to-today tasks get minutes later,
+    // at actual completion time via Focus.jsx, so they stop here.
+    if (target.source === 'gate' && isWork) {
+      setPendingGateMinutes({ id: target.id, title: target.title })
+    }
+  }
+
+  function handleGateMinutesSave(minutes) {
+    const target = pendingGateMinutes
+    setPendingGateMinutes(null)
+    if (!target) return
+    updateTask(target.id, { minutes_spent: minutes }).catch((err) => console.error(err))
+  }
+
+  function handleGateMinutesSkip() {
+    setPendingGateMinutes(null)
   }
 
   async function handleDragEnd(event) {
@@ -453,7 +483,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                     <div key={task.id} className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <TaskCard task={task} variant="today"
-                          onComplete={handleCompleteUpNext}
+                          onComplete={(id) => handleCompleteUpNext(id, task.title, task.task_type)}
                           onSnooze={(id, until) => handleSnoozeUpNext(id, until)}
                           onDefer={(id) => {
                             setInboxTasks(prev => prev.filter(t => t.id !== id))
@@ -556,6 +586,14 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
       )}
 
       {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
+      {pendingGateMinutes && (
+        <MinutesPrompt
+          title={pendingGateMinutes.title}
+          defaultMinutes={null}
+          onSave={handleGateMinutesSave}
+          onSkip={handleGateMinutesSkip}
+        />
+      )}
     </div>
   )
 }

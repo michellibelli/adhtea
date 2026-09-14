@@ -53,11 +53,11 @@ function DraggableTaskRow({ task, onMinutesCommit }) {
       {...listeners}
       {...attributes}
       style={style}
-      className="flex items-center gap-2 bg-ui-surface border border-ui-border rounded-lg px-2.5 py-2 cursor-grab active:cursor-grabbing"
+      className="flex items-start gap-2 bg-ui-surface border border-ui-border rounded-lg px-2.5 py-2 cursor-grab active:cursor-grabbing"
     >
-      <span className="flex-1 text-xs text-ui-text truncate">{task.title}</span>
+      <span className="flex-1 min-w-0 text-xs text-ui-text break-words">{task.title}</span>
       {task.minutes_spent != null
-        ? <span className="text-xs text-ui-subtext flex-shrink-0">{task.minutes_spent}m</span>
+        ? <span className="text-xs text-ui-subtext flex-shrink-0 pt-px">{task.minutes_spent}m</span>
         : onMinutesCommit && <MinutesInlineInput onCommit={onMinutesCommit} />}
     </div>
   )
@@ -89,7 +89,7 @@ function LogScreen({ onContinue }) {
 
   useEffect(() => {
     getDoneToday()
-      .then((done) => setTasks(done.filter((t) => t.task_type === 'task')))
+      .then((done) => setTasks(done.filter((t) => t.task_type === 'task' && !t.completed_retroactively)))
       .catch(() => setTasks([]))
   }, [])
 

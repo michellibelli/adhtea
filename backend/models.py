@@ -205,6 +205,13 @@ class Task(Base):
     # lists at end-of-day. Null = not yet answered; treated as not-work for
     # bucketing (fail-closed — nothing reaches the boss report by default).
     is_work = Column(Boolean, nullable=True)
+    # Set when a task is completed from the once-daily forced inbox-sort gate
+    # (Today.jsx handleCompleteUpNext) rather than actually finished today —
+    # completed_at still stamps "now" (correct for streaks/capacity/TeaBox
+    # counts), but the EOD work-log excludes these so backlog catch-up never
+    # reads as today's work. Still gets is_work/minutes_spent asked, so the
+    # duration data survives for later workload analysis.
+    completed_retroactively = Column(Boolean, nullable=True)
 
     # Deadline / scheduling
     due_date = Column(Date, nullable=True)              # hard deadline date (tasks, appointments)
