@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useContext } from 'react'
-import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask, reorderTasks } from '../api/tasks'
+import { getToday, completeTask, snoozeTask, getBonusTasks, getDoneToday, updateTask, reorderTasks, createTask } from '../api/tasks'
 import SnoozeSheet from '../components/SnoozeSheet'
 import { resolveSnoozeDate } from '../utils/snooze'
 import EditTaskSheet from '../components/EditTaskSheet'
@@ -309,6 +309,28 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     }
   }
 
+  // Kettle press — a blank bag, due today and top of the box, ready to name.
+  // Full Capture stays reachable from the "all done" screen for anything that
+  // needs a due date, notes, or type other than a plain task.
+  async function handleQuickAdd() {
+    const todayIso = new Date().toISOString().slice(0, 10)
+    try {
+      const created = await createTask({ title: 'New task', task_type: 'task', due_date: todayIso, is_critical: true })
+      const minOrder = tasks.reduce((min, t) => t.sort_order != null ? Math.min(min, t.sort_order) : min, 0)
+      const topOrder = minOrder - 1
+      if (created.status === 'today') {
+        await updateTask(created.id, { sort_order: topOrder })
+        setTasks(prev => [{ ...created, sort_order: topOrder }, ...prev])
+        setSelectedId(created.id)
+        setShowEdit(true)
+      } else {
+        // Today was full — backend snapped it to tomorrow. Refetch so bonus/
+        // capacity counts stay right; she'll find and name it in Inbox.
+        fetchAll()
+      }
+    } catch (err) { console.error(err) }
+  }
+
   // A bag dragged in the tea-box. Her order wins for the rest of the app-day, so
   // the card follows the front bag from here on. Optimistic — the bags have
   // already moved under her finger; a failed save reverts to the server's order.
@@ -580,7 +602,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
         {/* Tea box flanked by Capture (left) and Done (right) */}
         <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: isLinen ? 220 : 380, zIndex: 5 }}>
               <button
-                onClick={() => onNavigate?.('capture')}
+                onClick={handleQuickAdd}
                 aria-label="Capture"
                 className={isLinen ? 'focus-btn-wc active:scale-95 transition-all' : 'focus-btn-capture flex-shrink-0 flex items-center justify-center rounded-lg active:scale-95 transition-all'}
                 style={isLinen ? { position: 'absolute', left: -80, bottom: -10 } : undefined}

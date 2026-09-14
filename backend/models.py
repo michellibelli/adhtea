@@ -198,6 +198,9 @@ class Task(Base):
     # scoring.py::EFFORT_POINTS).
     effort = Column(SAEnum(Effort), nullable=True)
     is_critical = Column(Boolean, default=False)        # always surface on low-focus list
+    # Retrospective minutes spent, entered at end-of-day for the boss report.
+    # Null until she types a number — silence must never read as zero minutes.
+    minutes_spent = Column(Integer, nullable=True)
 
     # Deadline / scheduling
     due_date = Column(Date, nullable=True)              # hard deadline date (tasks, appointments)

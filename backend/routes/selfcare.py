@@ -261,13 +261,17 @@ def get_daily_summary(
         SelfCareLog.log_date == today,
     ).first()
 
+    all_done = done_tasks + done_routines + done_appointments
+    total_minutes = sum(t.minutes_spent for t in all_done if t.minutes_spent)
+
     return {
-        "tasks_done": [{"id": t.id, "title": t.title} for t in done_tasks],
-        "routines_done": [{"id": t.id, "title": t.title} for t in done_routines],
-        "appointments_done": [{"id": t.id, "title": t.title} for t in done_appointments],
+        "tasks_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_tasks],
+        "routines_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_routines],
+        "appointments_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_appointments],
         "tasks_done_count": len(done_tasks),
         "routines_done_count": len(done_routines),
         "medications_taken": meds_taken,
+        "total_minutes": total_minutes,
         "mood": log.mood if log else None,
         "notes": log.notes if log else None,
     }

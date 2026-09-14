@@ -1,6 +1,108 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { upsertLog, getDailySummary } from '../api/selfcare'
+import { getDoneToday, updateTask } from '../api/tasks'
 import Button from '../components/Button'
+
+function formatMinutes(total) {
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
+// ─── Work log screen ─────────────────────────────────────────────────────────
+// Retrospective, not a live timer (see docs/time-tracking.md) — she types
+// minutes for what's already done, never guesses ahead of time.
+
+function LogScreen({ onContinue }) {
+  const [tasks,   setTasks]   = useState(null)   // null = loading
+  const [minutes, setMinutes] = useState({})     // id -> string (raw input)
+  const [copied,  setCopied]  = useState(false)
+
+  useEffect(() => {
+    getDoneToday().then(done => {
+      setTasks(done)
+      const initial = {}
+      for (const t of done) if (t.minutes_spent != null) initial[t.id] = String(t.minutes_spent)
+      setMinutes(initial)
+    }).catch(() => setTasks([]))
+  }, [])
+
+  function saveMinutes(id, raw) {
+    const n = parseInt(raw, 10)
+    updateTask(id, { minutes_spent: Number.isFinite(n) && n >= 0 ? n : null }).catch(() => {})
+  }
+
+  async function handleCopy() {
+    const lines = (tasks || [])
+      .filter(t => minutes[t.id])
+      .map(t => `${t.title} — ${formatMinutes(parseInt(minutes[t.id], 10))}`)
+    const total = Object.values(minutes).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0)
+    const text = [...lines, '', `Total: ${formatMinutes(total)}`].join('\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard blocked — text is still on screen to select by hand
+    }
+  }
+
+  const anyMinutes = Object.values(minutes).some(v => v)
+  const total = Object.values(minutes).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0)
+
+  return (
+    <div className="aria-page flex items-center justify-center">
+      <div className="px-6 pb-32 md:pb-8 max-w-sm w-full">
+
+        <div className="text-4xl mb-3 text-center">🍵</div>
+        <h2 className="text-xl font-semibold text-ui-text mb-1 text-center">Today's work</h2>
+        <p className="text-sm text-ui-subtext mb-6 text-center">
+          Minutes on what you finished today. Leave blank if it isn't billable.
+        </p>
+
+        {tasks === null && <p className="text-sm text-ui-subtext text-center">Loading…</p>}
+
+        {tasks?.length === 0 && (
+          <p className="text-sm text-ui-subtext text-center mb-6">Nothing marked done today.</p>
+        )}
+
+        {tasks && tasks.length > 0 && (
+          <div className="space-y-2 mb-6">
+            {tasks.map(t => (
+              <div key={t.id} className="flex items-center gap-2">
+                <span className="flex-1 text-sm text-ui-text truncate">{t.title}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  placeholder="min"
+                  value={minutes[t.id] ?? ''}
+                  onChange={e => setMinutes(m => ({ ...m, [t.id]: e.target.value }))}
+                  onBlur={e => saveMinutes(t.id, e.target.value)}
+                  className="w-16 text-sm text-right bg-ui-input border border-ui-input-border rounded-lg px-2 py-1.5 text-ui-text outline-none focus:border-ui-accent transition-colors"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {anyMinutes && (
+          <p className="text-xs text-ui-subtext text-center mb-3">Total: {formatMinutes(total)}</p>
+        )}
+
+        {tasks && tasks.length > 0 && (
+          <Button size="lg" variant="secondary" className="w-full mb-3" onClick={handleCopy} disabled={!anyMinutes}>
+            {copied ? 'Copied!' : 'Copy for boss'}
+          </Button>
+        )}
+
+        <Button size="lg" className="w-full" onClick={onContinue}>Continue</Button>
+      </div>
+    </div>
+  )
+}
 
 const MOODS = [
   { value: 1, emoji: '😔', label: 'Rough' },
@@ -107,6 +209,7 @@ function SummaryScreen({ summary, moodValue, onContinue }) {
 // ─── EOD Gate ────────────────────────────────────────────────────────────────
 
 export default function EODGate({ onComplete }) {
+  const [step,    setStep]    = useState('log')   // 'log' -> 'mood' -> summary
   const [mood,    setMood]    = useState(null)
   const [saving,  setSaving]  = useState(false)
   const [summary, setSummary] = useState(null)
@@ -125,6 +228,10 @@ export default function EODGate({ onComplete }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (step === 'log') {
+    return <LogScreen onContinue={() => setStep('mood')} />
   }
 
   if (summary) {

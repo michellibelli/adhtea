@@ -91,6 +91,8 @@ def _migrate(target_engine=None):
             # writes them. See HANDOFF "Known issues".
             if "push_count" not in tasks_cols:
                 conn.execute(text("ALTER TABLE tasks ADD COLUMN push_count INTEGER NOT NULL DEFAULT 0"))
+            if "minutes_spent" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN minutes_spent INTEGER"))
             if "email" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
             if "is_owner" not in users_cols:
@@ -173,6 +175,7 @@ def _migrate(target_engine=None):
             conn.execute(text("ALTER TABLE weekly_snapshots DROP COLUMN IF EXISTS stalled_projects"))
             # score/pinned_for deliberately not added — see the SQLite branch.
             conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS push_count INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS minutes_spent INTEGER"))
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) NOT NULL DEFAULT 'America/Los_Angeles'"
             ))

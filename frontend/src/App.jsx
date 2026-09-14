@@ -291,7 +291,7 @@ function AppShell() {
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
         {screen === 'selfcare'  && <SelfCare userId={user?.id} />}
-        {screen === 'settings'  && <Settings onNavigate={setScreen} user={user} />}
+        {screen === 'settings'  && <Settings onNavigate={setScreen} onEndDay={() => setShowEOD(true)} user={user} />}
         {screen === 'tasks'     && <AllTasks />}
       </main>
 

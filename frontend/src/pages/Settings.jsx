@@ -334,7 +334,7 @@ function AlphaCodeSection() {
 }
 
 
-export default function Settings({ onNavigate, user }) {
+export default function Settings({ onNavigate, onEndDay, user }) {
   function handleLogout() {
     logout().then(() => window.location.reload())
   }
@@ -364,6 +364,17 @@ export default function Settings({ onNavigate, user }) {
                 <div>
                   <p className="text-sm font-medium text-ui-text">All tasks</p>
                   <p className="text-xs text-ui-subtext mt-0.5">Browse, search, and batch-schedule</p>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18, opacity: 0.3, flexShrink: 0 }}>
+                  <path d="M9 6l6 6-6 6" stroke="var(--aria-text)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </Card>
+            <Card className="settings-nav-card px-5 py-4" onClick={() => onEndDay?.()}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ui-text">End of day 🌙</p>
+                  <p className="text-xs text-ui-subtext mt-0.5">Log today's minutes, wrap up</p>
                 </div>
                 <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18, opacity: 0.3, flexShrink: 0 }}>
                   <path d="M9 6l6 6-6 6" stroke="var(--aria-text)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
