@@ -233,6 +233,10 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
     today = _app_today(current_user)
     response["day_planned"] = current_user.planned_on == today
     response["box_manual"] = current_user.box_ordered_on == today
+    if response["day_planned"]:
+        response["day_capacity_slots"] = current_user.day_capacity_slots
+    else:
+        response["day_capacity_slots"] = None
     return response
 
 

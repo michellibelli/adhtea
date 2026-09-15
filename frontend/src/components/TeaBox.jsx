@@ -9,15 +9,33 @@ import {
   SortableContext,
   useSortable,
   arrayMove,
-  horizontalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { TAG_COLORS } from '../utils/taskColors'
 import { orderTasks } from '../utils/ordering'
-import { SmartPointerSensor, looseInBox } from '../utils/dnd'
+import { SmartPointerSensor } from '../utils/dnd'
 
-// The box holds at most 15 bags — the natural display limit for a day's plan.
-const BOX_CAPACITY = 15
+// Pre-plan fallback slot count — mirrors Today.jsx's FALLBACK_MAX_TODAY, used
+// until "Start my day" snapshots a real capacity-driven number.
+const FALLBACK_SLOTS = 10
+
+// Bags per box tier — width-tuned to what one wood-panel box comfortably
+// holds. Once a day's bags (real + empty + routine + bonus) outgrow one box,
+// a second complete box tier stacks below it. Not a scrollbar, not one box
+// stretched taller — an honest second box for an honest bigger day.
+const ROW_CAPACITY = 9
+
+// Keeps a dragged bag inside the stack of boxes rather than letting it fly
+// off into the middle of the page. Inset by SIDE_INSET horizontally — the
+// bag's selection ring is a box-shadow, which paints outside the border box
+// dnd-kit measures, so a flush clamp would read as the bag breaking through
+// the wall. Vertically it's inset by VERTICAL_OVERHANG rather than clamped
+// flush to the stack, since bags are meant to stand proud of each tier's rim
+// (and, with more than one tier, a bag needs real vertical room to travel
+// from one box to the other).
+const SIDE_INSET = 12
+const VERTICAL_OVERHANG = 20
 
 const GOLD = {
   bg: 'linear-gradient(135deg, #F6E29A 0%, #E4B63C 38%, #F3D777 58%, #C9971F 100%)',
@@ -33,10 +51,8 @@ const NOT_WORK = {
   shadow: '#6E5486',
 }
 
-// Bags sit in the shared today-order (see utils/ordering.js) — the same order
-// Focus picks from, so the focused task is the first selectable bag.
-function orderedBags(tasks, manual) {
-  return orderTasks(tasks, manual).slice(0, BOX_CAPACITY)
+function colorsFor(t) {
+  return t.is_work === false ? NOT_WORK : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
 }
 
 // One bag in the box. `gold` bags are completed bonus tasks — decorative,
@@ -103,7 +119,7 @@ function Bag({ colors, active, gold, onClick, title, dragRef, dragProps, dragSty
   )
 }
 
-// A bag the user can pick up and drop somewhere else in the row.
+// A bag the user can pick up and drop somewhere else in the stack.
 function SortableBag({ task, ...bagProps }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id })
@@ -123,32 +139,72 @@ function SortableBag({ task, ...bagProps }) {
   )
 }
 
+// One wood-box tier holding up to ROW_CAPACITY bags: a bag row standing proud
+// of the rim, over the same front panel used everywhere else in the app.
+function BoxTier({ items, renderItem }) {
+  return (
+    <div style={{ position: 'relative', height: 62 }}>
+      <div
+        className="absolute left-0 right-0 flex items-end justify-start px-3"
+        style={{ bottom: 16 }}
+      >
+        {items.map(renderItem)}
+      </div>
+      <div className="tea-box-front absolute left-0 right-0 bottom-0" />
+    </div>
+  )
+}
+
+function chunk(items, size) {
+  const rows = []
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size))
+  return rows
+}
+
 // Tea-box for the Focus page. 2D side profile, no lid: an open box holding
-// today's tasks as bags in a single packed row, ordered roughly morning →
+// today's tasks as bags standing proud of the rim, ordered roughly morning →
 // evening. As today's tasks are completed the coloured bags drain; completed
 // bonus tasks (goldCount) refill the box as gold bags. Clicking the box opens
 // Today; clicking a bag focuses that task on the Focus card (via onSelectTask)
 // so the user can act on a specific item — e.g. an 8am routine done at 9am
 // that the time-of-day window would otherwise keep off the card.
 //
+// The box is sized to the day's capacity (capacitySlots, snapshotted at
+// "Start my day"): that many task/appointment bags get real slots, padded
+// with dashed empty-slot outlines if she's under plan. Routines don't count
+// against that number — they ride along additively, appended after the
+// capacity section, because a routine isn't optional work she chose to take
+// on today. Nothing is ever hidden: if a day's bags don't fit in one box tier,
+// a second complete tier stacks below it (see BoxTier/ROW_CAPACITY) — no
+// scrollbar, which read as too "app" for a screen meant to feel chill.
+//
 // Dragging a bag hands the day's order to her: onReorder persists the new
 // sort_order and flips the box into manual mode, where the clock stops
 // reshuffling the row (see utils/ordering.js). Since Focus picks the first bag,
-// dragging a bag to the front is how she chooses what she does next.
-export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, overCapacity = false, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate }) {
-  const BOX_VISIBLE = 9
-  const ordered = orderedBags(tasks, manualOrder)
-  const colored = ordered.slice(0, BOX_VISIBLE)
-  const goldShown = Math.max(0, Math.min(goldCount, BOX_VISIBLE - colored.length))
-  const boxFull = goldCount >= BOX_VISIBLE
+// dragging a bag to the front is how she chooses what she does next. Task and
+// routine bags share one sortable list, so a bag can be dragged across tiers
+// or between the task and routine sections — manual order already outranks
+// every automatic rule elsewhere in the app.
+export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, capacitySlots = null, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate, showDrawers = false }) {
+  const ordered = orderTasks(tasks, manualOrder)
+  // Routines are additive, not counted against capacity — pulled out and
+  // appended after the capacity-sized task section rather than interleaved.
+  const slotBags = ordered.filter(t => t.task_type !== 'routine')
+  const routineBags = ordered.filter(t => t.task_type === 'routine')
+  const slots = capacitySlots ?? FALLBACK_SLOTS
+  const overCapacity = slotBags.length > slots
+
+  const sortableIds = [...slotBags, ...routineBags].map(t => t.id)
 
   // A drag ends with a click event on the bag the user let go of, which would
   // otherwise focus it. Set on drag start, cleared on the macrotask after drop —
   // pointerup → click all dispatch before the timeout, so the guard is up in time.
   const draggedRef = useRef(false)
   // Suppresses the box's press-scale for the duration of a drag: a 0.98 scale on
-  // the row would move every bag out from under dnd-kit's measured drop targets.
+  // the stack would move every bag out from under dnd-kit's measured drop targets.
   const [dragging, setDragging] = useState(false)
+  const stackRef = useRef(null)
+  const containerRectRef = useRef(null)
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
   )
@@ -156,6 +212,22 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
   function handleDragStart() {
     draggedRef.current = true
     setDragging(true)
+    containerRectRef.current = stackRef.current?.getBoundingClientRect() ?? null
+  }
+
+  function looseInStack({ draggingNodeRect, transform }) {
+    const rect = containerRectRef.current
+    if (!rect || !draggingNodeRect) return transform
+    const minX = (rect.left + SIDE_INSET) - draggingNodeRect.left
+    const maxX = (rect.right - SIDE_INSET) - draggingNodeRect.right
+    const minY = (rect.top - VERTICAL_OVERHANG) - draggingNodeRect.top
+    const maxY = (rect.bottom + VERTICAL_OVERHANG) - draggingNodeRect.bottom
+    return {
+      ...transform,
+      // A stack narrower/shorter than the inset would invert the bounds; keep min <= max.
+      x: Math.min(Math.max(transform.x, Math.min(minX, maxX)), Math.max(minX, maxX)),
+      y: Math.min(Math.max(transform.y, Math.min(minY, maxY)), Math.max(minY, maxY)),
+    }
   }
 
   function handleDragEnd({ active, over }) {
@@ -165,82 +237,95 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
     const from = ordered.findIndex(t => t.id === active.id)
     const to   = ordered.findIndex(t => t.id === over.id)
     if (from < 0 || to < 0) { settle(); return }
-    // Renumber the whole ordered list, not just the nine visible bags, so the
-    // bags below the fold keep a coherent sort_order behind the ones on screen.
     onReorder?.(arrayMove(ordered, from, to).map((t, i) => ({ ...t, sort_order: i })))
     settle()
   }
 
+  function handleBoxClick() {
+    if (draggedRef.current) return
+    onOpen?.()
+  }
+
+  function handleBagClick(t) {
+    return e => {
+      e.stopPropagation()
+      if (draggedRef.current) return
+      onSelectTask?.(t.id)
+    }
+  }
+
+  // Build the flat visual sequence (slot bags → routines → gold), then split
+  // it into box-tier-sized chunks. Whether an item is a real task or a bonus
+  // bag, it's still a bag-sized thing taking up room in the box.
+  const visual = [
+    ...slotBags.map(t => ({ kind: 'slot', task: t })),
+    ...routineBags.map(t => ({ kind: 'routine', task: t })),
+    ...Array.from({ length: goldCount }, (_, i) => ({ kind: 'gold', key: `gold-${i}` })),
+  ]
+  const tiers = chunk(visual, ROW_CAPACITY)
+
+  function renderItem(item) {
+    if (item.kind === 'gold') return <Bag key={item.key} colors={GOLD} gold title="Bonus task done" />
+    const t = item.task
+    return (
+      <SortableBag
+        key={t.id}
+        task={t}
+        colors={colorsFor(t)}
+        active={activeTaskId != null && t.id === activeTaskId}
+        title={t.title}
+        onClick={handleBagClick(t)}
+      />
+    )
+  }
+
   return (
     <>
-      {boxFull && (
+      {overCapacity ? (
+        <p className="text-center mb-1.5">
+          <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
+            {slotBags.length - slots} over today's {slots}-task plan
+          </span>
+        </p>
+      ) : goldCount >= slots && slots > 0 ? (
         <p className="text-center mb-1.5">
           <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
             Box full — time for some well-earned self care
           </span>
         </p>
-      )}
+      ) : null}
 
       <div
+        ref={stackRef}
         className={`relative w-full select-none cursor-pointer transition-transform${dragging ? '' : ' active:scale-[0.98]'}`}
-        style={{ height: 62 }}
-        onClick={() => { if (!draggedRef.current) onOpen?.() }}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.() } }}
+        onClick={handleBoxClick}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleBoxClick() } }}
         role="button"
         tabIndex={0}
         aria-label="Open today's list"
         title="Open today's list"
       >
-        {/* Deliberately unclipped: bags stand proud of the box and their tags and
-            selection rings must stay visible above the rim. A dragged bag is kept
-            off the side walls by the looseInBox modifier instead. */}
-        <div
-          className="absolute left-0 right-0 flex items-end justify-start px-3"
-          style={{ bottom: 16, transition: 'all 0.3s ease' }}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[looseInStack]}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={[looseInBox]}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={colored.map(t => t.id)} strategy={horizontalListSortingStrategy}>
-              {colored.map(t => {
-                const colors = t.is_work === false ? NOT_WORK : (TAG_COLORS[t.task_type] || TAG_COLORS.task)
-                const active = activeTaskId != null && t.id === activeTaskId
-                return (
-                  <SortableBag
-                    key={t.id}
-                    task={t}
-                    colors={colors}
-                    active={active}
-                    title={t.title}
-                    onClick={e => {
-                      e.stopPropagation()
-                      if (draggedRef.current) return
-                      onSelectTask?.(t.id)
-                    }}
-                  />
-                )
-              })}
-            </SortableContext>
-          </DndContext>
-          {Array.from({ length: goldShown }).map((_, i) => (
-            <Bag key={`gold-${i}`} colors={GOLD} gold title="Bonus task done" />
-          ))}
-        </div>
-
-        {/* Box front panel */}
-        <div
-          className="tea-box-front absolute left-0 right-0 bottom-0"
-          style={overCapacity ? { boxShadow: '0 0 8px 2px rgba(217,119,6,0.25)' } : undefined}
-        />
+          <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+            {tiers.map((items, i) => (
+              <div key={i} style={{ marginTop: i > 0 ? 10 : 0 }}>
+                <BoxTier items={items} renderItem={renderItem} />
+              </div>
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
-      {/* Drawers — three equally sized compartments below the box,
-          same wood material, part of the same furniture piece. */}
-      {onNavigate && (
+      {/* Drawers — three equally sized compartments below the box, same wood
+          material, part of the same furniture piece. Off by default for now
+          (kept for a possible future return — see showDrawers). */}
+      {showDrawers && onNavigate && (
         <div className="tea-box-drawers">
           {[
             { id: 'routines', label: 'Routines', path: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' },

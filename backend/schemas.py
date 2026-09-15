@@ -114,6 +114,7 @@ class UserResponse(BaseModel):
     is_onboarded: bool = True
     day_planned: bool = False   # true once user hit "Start my day" this app-day
     box_manual: bool = False    # true once user hand-ordered the tea-box this app-day
+    day_capacity_slots: Optional[int] = None  # tea-box size, snapshotted at Start my day
 
     model_config = {"from_attributes": True}
 

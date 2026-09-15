@@ -103,6 +103,13 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   const [pendingCompletionMinutes, setPendingCompletionMinutes] = useState(null)  // { id, title, defaultMinutes, updatesAnchor }
 
   async function handleStartDay() {
+    // Backend won't snapshot a slot count without today's capacity — send her
+    // to log it instead of firing a doomed request. `capacity` is already in
+    // state from fetchAll's getTodayCapacity() call.
+    if (!capacity) {
+      onNavigate?.('selfcare')
+      return
+    }
     setApplying(true)
     setPlanned(true)          // optimistic — flip to started immediately
     // Anchor for the first post-completion minutes prompt's elapsed-time
@@ -115,6 +122,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     } catch (err) {
       console.error(err)
       setPlanned(false)       // revert on failure so the ritual can be retried
+      if (err?.status === 409) onNavigate?.('selfcare')
     } finally {
       setApplying(false)
     }
@@ -570,7 +578,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
               pointerEvents: 'auto',
             }}
           >
-            {applying ? 'Starting…' : 'Start my day ☕'}
+            {applying ? 'Starting…' : capacity ? 'Start my day ☕' : 'Log self-care to start my day'}
           </button>
         </div>
       )}

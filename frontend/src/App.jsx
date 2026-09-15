@@ -282,6 +282,7 @@ function AppShell() {
             onNavigate={setScreen}
             boxManual={!!user?.box_manual}
             onBoxOrdered={() => setUser(u => u ? { ...u, box_manual: true } : u)}
+            daySlots={user?.day_capacity_slots ?? null}
           />
         )}
         {screen === 'today'    && (
