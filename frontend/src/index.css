@@ -925,6 +925,16 @@ body {
 }
 .tag-wc .tag-corner-left  { left: 2px; }
 .tag-wc .tag-corner-right { right: 2px; }
+.tag-wc .tag-corner-center {
+  left: 50%;
+  transform: translateX(-50%);
+  /* Status indicator, not just an action — stays fully visible instead of
+     fading to 0.5 like edit/snooze until hovered. */
+  opacity: 1;
+}
+.tag-wc .tag-corner-center:active:not(:disabled) {
+  transform: translateX(-50%) scale(0.88);
+}
 
 /* Painted dot where string meets tag */
 .tag-wc .tag-dot {

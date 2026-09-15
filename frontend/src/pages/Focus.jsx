@@ -458,27 +458,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                       <div className="tag-wc-speckles" style={{ backgroundImage: makeSpeckles(task?.id) }} />
                       <span className="tag-type" style={{ fontSize: fs }}>{name}</span>
                       {tagDateLabel(task) && <span className="tag-date">{tagDateLabel(task)}</span>}
-                      {task?.task_type === 'task' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleWork() }}
-                          disabled={celebrate}
-                          aria-label="Toggle work"
-                          title={task.is_work === false ? 'Not work — tap to mark work' : 'Work — tap to mark not work'}
-                          style={{ display: 'inline-flex', marginTop: 2, opacity: celebrate ? 0.4 : 1 }}
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            strokeWidth={2}
-                            stroke={task.is_work === false ? '#8A7050' : '#8C5A2B'}
-                            fill={task.is_work === false ? 'none' : '#8C5A2B'}
-                            style={{ width: 11, height: 11 }}
-                          >
-                            <path d="M4 3h11v9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V3Z" />
-                            <path d="M15 6h2a3 3 0 0 1 0 6h-2" />
-                            <line x1="3" y1="20" x2="17" y2="20" />
-                          </svg>
-                        </button>
-                      )}
                     </div>
 
                     {/* Corner actions. The whole tag used to be one big edit
@@ -509,6 +488,26 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                         <path d="M5 3 2.5 5.5M19 3l2.5 2.5" />
                       </svg>
                     </button>
+                    {task?.task_type === 'task' && (
+                      <button
+                        className="tag-corner tag-corner-center"
+                        onClick={(e) => { e.stopPropagation(); handleToggleWork() }}
+                        disabled={celebrate}
+                        aria-label="Toggle work"
+                        title={task.is_work === false ? 'Not work — tap to mark work' : 'Work — tap to mark not work'}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke={task.is_work === false ? '#8A7050' : '#8C5A2B'}
+                          fill={task.is_work === false ? 'none' : '#8C5A2B'}
+                        >
+                          <path d="M4 3h11v9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V3Z" />
+                          <path d="M15 6h2a3 3 0 0 1 0 6h-2" />
+                          <line x1="3" y1="20" x2="17" y2="20" />
+                        </svg>
+                      </button>
+                    )}
 
                     <div className="tag-dot" />
                   </div>
