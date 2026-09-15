@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getBacklog, completeTask, unsnoozeTask, deleteTask, updateTask } from '../api/tasks'
 import Card from '../components/Card'
-import WorkAsk from '../components/WorkAsk'
 import MinutesPrompt from '../components/MinutesPrompt'
 import { PageLoading, PageError } from '../components/PageState'
 
@@ -120,7 +119,6 @@ export default function Waiting() {
   const [tasks,   setTasks]   = useState([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
-  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title }
   const [pendingMinutes, setPendingMinutes] = useState(null)  // { id, title }
 
   const fetchTasks = useCallback(async () => {
@@ -136,26 +134,20 @@ export default function Waiting() {
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
   // Completing from the backlog view is catch-up, same as Today's Up Next
-  // gate — retroactive, asked work + minutes, excluded from the EOD work-log.
+  // gate — retroactive, excluded from the EOD work-log. Plain tasks default
+  // to work at creation (missing/null reads the same as true), so this goes
+  // straight to the minutes ask.
   async function handleComplete(id) {
     const task = tasks.find(t => t.id === id)
     await completeTask(id)
     updateTask(id, { completed_retroactively: true }).catch(() => {})
     fetchTasks()
-    if (task?.task_type === 'task') {
-      setPendingWorkAsk({ id, title: task.title })
+    if (task?.task_type === 'task' && task.is_work !== false) {
+      setPendingMinutes({ id, title: task.title })
     }
   }
   async function handleUnsnooze(id)  { await unsnoozeTask(id);  fetchTasks() }
   async function handleDelete(id)    { await deleteTask(id);    fetchTasks() }
-
-  function handleWorkAnswer(isWork) {
-    const target = pendingWorkAsk
-    setPendingWorkAsk(null)
-    if (!target) return
-    updateTask(target.id, { is_work: isWork }).catch(() => {})
-    if (isWork) setPendingMinutes({ id: target.id, title: target.title })
-  }
 
   function handleMinutesSave(minutes) {
     const target = pendingMinutes
@@ -215,7 +207,6 @@ export default function Waiting() {
         )}
 
       </div>
-      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
       {pendingMinutes && (
         <MinutesPrompt
           title={pendingMinutes.title}

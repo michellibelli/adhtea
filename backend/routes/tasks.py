@@ -117,7 +117,11 @@ def create_task(
         sort_order=float(today_count) if place_today else None,
         actuator_category_id=body.actuator_category_id,
         is_critical=body.is_critical,
-        is_work=body.is_work,
+        # Plain tasks default to work — no popup ask, correct it on the card
+        # afterward. Routines/appointments/notes never get classified.
+        is_work=body.is_work if body.is_work is not None else (
+            True if body.task_type == TaskType.task else None
+        ),
         due_date=due_date,
         due_time=body.due_time,
         location_type=body.location_type,

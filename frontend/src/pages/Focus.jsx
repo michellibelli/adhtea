@@ -4,7 +4,6 @@ import SnoozeSheet from '../components/SnoozeSheet'
 import { resolveSnoozeDate } from '../utils/snooze'
 import EditTaskSheet from '../components/EditTaskSheet'
 import MinutesPrompt from '../components/MinutesPrompt'
-import WorkAsk from '../components/WorkAsk'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { isTimedVisible } from '../utils/timing'
@@ -134,8 +133,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
   const [showEdit,      setShowEdit]      = useState(false)
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [pendingMinutes, setPendingMinutes] = useState(null)  // { taskId, title, defaultMinutes }
-  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title } — kettle-created task awaiting classification
-  const newTaskIdRef = useRef(null)          // kettle-created task awaiting its title before the work-ask fires
   const minutesWaitRef = useRef(null)        // full { taskId, wasBonus } while the minutes prompt is up
   const { theme } = useContext(ThemeContext)
   const isLinen = theme === 'aria-linen'
@@ -266,7 +263,10 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     completedTaskRef.current = {
       taskId, wasBonus,
       title: task.title,
-      isWork: task.is_work,
+      // Plain tasks default to work at creation now — missing/null reads the
+      // same as true (covers pre-4.21.0 tasks too). Routines/appointments
+      // never get classified, so they're excluded by type, not by value.
+      isWork: task.task_type === 'task' && task.is_work !== false,
       defaultMinutes: elapsedMinutesSinceLastCompletion(),
     }
     // Each completed bonus task drops into the tea-box as a gold bag.
@@ -288,8 +288,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
 
   async function handleEditSave(patch) {
     if (!task) return
-    const wasNewFromKettle = newTaskIdRef.current === task.id
-    newTaskIdRef.current = null
     try {
       await updateTask(task.id, patch)
       // If due_date moved off today, refetch so the task drops out of view
@@ -304,21 +302,19 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
         if (isBonusMode) setBonusTasks(updater)
         else setTasks(updater)
       }
-      // Ask work/not-work exactly once, right as the kettle-created task gets
-      // its real title — not on every later edit of an already-classified task.
-      if (wasNewFromKettle && !movedOffToday) {
-        setPendingWorkAsk({ id: task.id, title: patch.title || task.title })
-      }
     } catch (err) { console.error(err) }
   }
 
-  function handleWorkAnswer(isWork) {
-    const target = pendingWorkAsk
-    setPendingWorkAsk(null)
-    if (!target) return
-    updateTask(target.id, { is_work: isWork }).catch((err) => console.error(err))
-    // Kettle-created tasks always land in `tasks`, never the bonus pool.
-    setTasks((prev) => prev.map((t) => t.id === target.id ? { ...t, is_work: isWork } : t))
+  // Every plain task defaults to work at creation (missing/null reads the
+  // same as true) — this is the correction control on the focused card's
+  // tag, not an ask. No popup; tap flips it immediately.
+  function handleToggleWork() {
+    if (!task || celebrate) return
+    const next = task.is_work === false
+    const updater = (prev) => prev.map((t) => t.id === task.id ? { ...t, is_work: next } : t)
+    if (isBonusMode) setBonusTasks(updater)
+    else setTasks(updater)
+    updateTask(task.id, { is_work: next }).catch((err) => console.error(err))
   }
 
 
@@ -348,7 +344,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
         await updateTask(created.id, { sort_order: topOrder })
         setTasks(prev => [{ ...created, sort_order: topOrder }, ...prev])
         setSelectedId(created.id)
-        newTaskIdRef.current = created.id
         setShowEdit(true)
       } else {
         // Today was full — backend snapped it to tomorrow. Refetch so bonus/
@@ -463,6 +458,27 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                       <div className="tag-wc-speckles" style={{ backgroundImage: makeSpeckles(task?.id) }} />
                       <span className="tag-type" style={{ fontSize: fs }}>{name}</span>
                       {tagDateLabel(task) && <span className="tag-date">{tagDateLabel(task)}</span>}
+                      {task?.task_type === 'task' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleWork() }}
+                          disabled={celebrate}
+                          aria-label="Toggle work"
+                          title={task.is_work === false ? 'Not work — tap to mark work' : 'Work — tap to mark not work'}
+                          style={{ display: 'inline-flex', marginTop: 2, opacity: celebrate ? 0.4 : 1 }}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke={task.is_work === false ? '#8A7050' : '#8C5A2B'}
+                            fill={task.is_work === false ? 'none' : '#8C5A2B'}
+                            style={{ width: 11, height: 11 }}
+                          >
+                            <path d="M4 3h11v9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V3Z" />
+                            <path d="M15 6h2a3 3 0 0 1 0 6h-2" />
+                            <line x1="3" y1="20" x2="17" y2="20" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
 
                     {/* Corner actions. The whole tag used to be one big edit
@@ -702,7 +718,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
           onSkip={handleMinutesSkip}
         />
       )}
-      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
     </div>
   )
 }

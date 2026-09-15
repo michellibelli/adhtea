@@ -213,6 +213,16 @@ export default function TaskCard({
     setShowActions(false)
   }
 
+  // Every plain task defaults to work at creation (missing/null reads the
+  // same as true) — this is the correction control, not the ask. No popup;
+  // tap flips it and the cup fills or empties immediately.
+  function handleToggleWork(e) {
+    e.stopPropagation()
+    const next = task.is_work === false
+    setTask((t) => ({ ...t, is_work: next }))
+    updateTask(task.id, { is_work: next }).catch((err) => console.error(err))
+  }
+
   return (
     <>
       <Card className={`px-4 py-3 transition-all duration-300 ${leaving ? 'opacity-0 scale-95 translate-x-3' : 'opacity-100'} ${(task.push_count || 0) >= 5 ? 'border-amber-400/40' : ''}`}>
@@ -306,6 +316,27 @@ export default function TaskCard({
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
                       <circle cx="12" cy="12" r="9" />
                       <polyline points="12 7 12 12 15.5 14" />
+                    </svg>
+                  </button>
+                )}
+                {task.task_type === 'task' && (
+                  <button
+                    onClick={handleToggleWork}
+                    title={task.is_work === false ? 'Not work — tap to mark work' : 'Work — tap to mark not work'}
+                    aria-label="Toggle work"
+                    className="p-1 transition-colors"
+                    style={{ color: task.is_work === false ? undefined : '#8C5A2B' }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      className={`w-3.5 h-3.5 ${task.is_work === false ? 'text-ui-subtext/40' : ''}`}
+                      stroke="currentColor"
+                      fill={task.is_work === false ? 'none' : 'currentColor'}
+                    >
+                      <path d="M4 3h11v9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V3Z" />
+                      <path d="M15 6h2a3 3 0 0 1 0 6h-2" />
+                      <line x1="3" y1="20" x2="17" y2="20" />
                     </svg>
                   </button>
                 )}

@@ -202,9 +202,11 @@ class Task(Base):
     # Retrospective minutes spent, entered at end-of-day for the boss report.
     # Null until she types a number — silence must never read as zero minutes.
     minutes_spent = Column(Integer, nullable=True)
-    # Work vs personal, set by the post-completion prompt or dragged between
-    # lists at end-of-day. Null = not yet answered; treated as not-work for
-    # bucketing (fail-closed — nothing reaches the boss report by default).
+    # Work vs personal. Defaults to True at creation for plain tasks
+    # (routes/tasks.py create_task) — no ask, correct it with the cup-icon
+    # toggle on the task card. Null only on tasks pre-dating this default or
+    # on routines/appointments/notes, which are never classified; treated the
+    # same as True everywhere is_work is read, so old data isn't stranded.
     is_work = Column(Boolean, nullable=True)
     # Set when a task is completed from the once-daily forced inbox-sort gate
     # (Today.jsx handleCompleteUpNext) rather than actually finished today —

@@ -20,7 +20,6 @@ import TaskCard from '../components/TaskCard'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import WorkAsk from '../components/WorkAsk'
 import MinutesPrompt from '../components/MinutesPrompt'
 import { elapsedMinutesSinceLastCompletion, markWorkCompletionNow } from '../utils/lastWorkCompletion'
 import { PageLoading, PageError } from '../components/PageState'
@@ -101,7 +100,6 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   // Quick-add row (top of Today section)
   const [newTitle, setNewTitle]     = useState('')
   const [adding, setAdding]         = useState(false)
-  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title, source: 'promote'|'gate' }
   const [pendingCompletionMinutes, setPendingCompletionMinutes] = useState(null)  // { id, title, defaultMinutes, updatesAnchor }
 
   async function handleStartDay() {
@@ -193,9 +191,11 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
       getDoneToday().then(setDone).catch(() => {})
       getTodayCapacity().then(setCapacity).catch(() => {})
     }, 350)
-    // Same ask as Focus.jsx's completion flow — only fires for a task the
-    // gate/capture/promote flow already marked work.
-    if (task?.is_work === true) {
+    // Same ask as Focus.jsx's completion flow. Plain tasks default to work at
+    // creation — missing/null reads the same as true (covers pre-4.21.0
+    // tasks too); routines/appointments never get classified, excluded by
+    // type rather than value.
+    if (task?.task_type === 'task' && task.is_work !== false) {
       setPendingCompletionMinutes({
         id, title: task.title,
         defaultMinutes: elapsedMinutesSinceLastCompletion(),
@@ -214,16 +214,15 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   // catch-up, not "did this today" — completed_at still stamps now (keeps
   // streaks/capacity/TeaBox counts honest), but completed_retroactively
   // excludes it from the EOD work-log so it never reads as today's work.
-  // Still asked work/not-work + minutes, so the duration survives for later
-  // workload analysis — just routed through a 'gate' source so the answer
-  // sequences into a minutes ask instead of stopping at is_work like promote.
-  async function handleCompleteUpNext(id, title, taskType) {
+  // Still asked minutes (defaults to work like everywhere else), so the
+  // duration survives for later workload analysis.
+  async function handleCompleteUpNext(id, title, taskType, isWork) {
     setInboxTasks(prev => prev.filter(t => t.id !== id))
     completeTask(id)
     updateTask(id, { completed_retroactively: true }).catch(() => {})
     getDoneToday().then(setDone).catch(() => {})
-    if (taskType === 'task') {
-      setPendingWorkAsk({ id, title, source: 'gate' })
+    if (taskType === 'task' && isWork !== false) {
+      setPendingCompletionMinutes({ id, title, defaultMinutes: null, updatesAnchor: false })
     }
   }
 
@@ -268,32 +267,8 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   async function handlePromote(task) {
     setInboxTasks(prev => prev.filter(t => t.id !== task.id))
     setTodayTasks(prev => [...prev, task])
-    try {
-      await scheduleToday(task.id)
-      // Asked exactly once, right as a plain task joins today — routines and
-      // appointments are never classified (see TeaBox NOT_WORK / is_work scope).
-      if (task.task_type === 'task' && task.is_work == null) {
-        setPendingWorkAsk({ id: task.id, title: task.title, source: 'promote' })
-      }
-    }
+    try { await scheduleToday(task.id) }
     catch (err) { console.error(err); fetchAll() }
-  }
-
-  function handleWorkAnswer(isWork) {
-    const target = pendingWorkAsk
-    setPendingWorkAsk(null)
-    if (!target) return
-    updateTask(target.id, { is_work: isWork }).catch((err) => console.error(err))
-    const updater = (prev) => prev.map((t) => t.id === target.id ? { ...t, is_work: isWork } : t)
-    setTodayTasks(updater)
-    // Gate completions (backlog cleared from Up Next) still get minutes asked
-    // so the duration isn't lost — promoted-to-today tasks get minutes later,
-    // at actual completion time (here or Focus.jsx), so they stop here.
-    // No elapsed-time guess and no anchor update: a gate completion isn't a
-    // real-time work session, so it shouldn't skew the next real one's default.
-    if (target.source === 'gate' && isWork) {
-      setPendingCompletionMinutes({ id: target.id, title: target.title, defaultMinutes: null, updatesAnchor: false })
-    }
   }
 
   function handleCompletionMinutesSave(minutes) {
@@ -498,7 +473,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                     <div key={task.id} className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
                         <TaskCard task={task} variant="today"
-                          onComplete={(id) => handleCompleteUpNext(id, task.title, task.task_type)}
+                          onComplete={(id) => handleCompleteUpNext(id, task.title, task.task_type, task.is_work)}
                           onSnooze={(id, until) => handleSnoozeUpNext(id, until)}
                           onDefer={(id) => {
                             setInboxTasks(prev => prev.filter(t => t.id !== id))
@@ -600,7 +575,6 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
         </div>
       )}
 
-      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
       {pendingCompletionMinutes && (
         <MinutesPrompt
           title={pendingCompletionMinutes.title}

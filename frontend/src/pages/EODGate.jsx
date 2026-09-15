@@ -121,11 +121,11 @@ function LogScreen({ onContinue }) {
   }
 
   const list = tasks || []
-  // Unclassified (null) bucket with not-work — fail-closed, matches every
-  // other default in this feature: nothing reaches the boss unless it was
-  // actively marked work.
-  const workItems    = list.filter((t) => t.is_work === true)
-  const notWorkItems = list.filter((t) => t.is_work !== true)
+  // Unclassified (null) buckets with work — plain tasks default to work at
+  // creation now, so null only means a pre-4.21.0 task, treated the same as
+  // true everywhere is_work is read.
+  const workItems    = list.filter((t) => t.is_work !== false)
+  const notWorkItems = list.filter((t) => t.is_work === false)
   const anyMinutes = workItems.some((t) => t.minutes_spent != null)
   const total = workItems.reduce((sum, t) => sum + (t.minutes_spent || 0), 0)
 
