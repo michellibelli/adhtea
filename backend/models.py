@@ -130,6 +130,12 @@ class User(Base):
     # it opens in "planning" and shows the Start-my-day button. Resets at the
     # day_start_hour boundary automatically since it's compared against _app_today.
     planned_on = Column(Date, nullable=True)
+    # Task-slot count the tea-box was sized to at "Start my day", snapshotted
+    # from max_slots_for(CapacitySnapshot.overall) — fixed for the rest of the
+    # app-day so the box shows how the plan held up, not a live-recomputed
+    # number. Plan-day is blocked until a capacity snapshot exists (see
+    # plan_day), so this is never null once planned_on is set for the day.
+    day_capacity_slots = Column(Integer, nullable=True)
     # Last app-day the user hand-ordered the tea-box by dragging a bag. While this
     # equals the current app-day the box and the Focus card follow her manual
     # sort_order instead of the computed time tiers (see utils/ordering.js).
@@ -396,6 +402,9 @@ class OAuthState(Base):
     created_at = Column(DateTime, default=utcnow, index=True)
 
 
+# ORPHANED — Google Calendar integration removed (2026-09-15, more trouble than
+# help). Model + table kept (not dropped) so account-deletion cleanup in
+# auth.py still catches any existing rows; no code writes to it anymore.
 class GoogleCalendarToken(Base):
     __tablename__ = "google_calendar_tokens"
 

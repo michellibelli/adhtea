@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 
 from database import engine, Base
 from rate_limit import limiter
-from routes import auth, tasks, routines, selfcare, import_csv, gcal
+from routes import auth, tasks, routines, selfcare, import_csv
 from routes import insights, review, export_csv
 
 load_dotenv()
@@ -130,6 +130,8 @@ def _migrate(target_engine=None):
                 conn.execute(text("ALTER TABLE users ADD COLUMN rolled_over_on DATE"))
             if "planned_on" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN planned_on DATE"))
+            if "day_capacity_slots" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN day_capacity_slots INTEGER"))
             if "box_ordered_on" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN box_ordered_on DATE"))
             if "reviewed_through" not in users_cols:
@@ -198,6 +200,7 @@ def _migrate(target_engine=None):
             conn.execute(text("UPDATE users SET day_start_hour=4 WHERE day_start_hour=6"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS rolled_over_on DATE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS planned_on DATE"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS day_capacity_slots INTEGER"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS box_ordered_on DATE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reviewed_through DATE"))
             # Effort model (4.11): add the retrospective small/big tag, then drop
@@ -267,7 +270,6 @@ app.include_router(routines.router,    tags=["routines"])
 app.include_router(selfcare.router,    tags=["self-care"])
 app.include_router(import_csv.router,  tags=["import"])
 app.include_router(export_csv.router,  tags=["export"])
-app.include_router(gcal.router,        tags=["google-calendar"])
 app.include_router(insights.router)
 app.include_router(review.router,      tags=["review"])
 
