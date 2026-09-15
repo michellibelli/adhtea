@@ -200,7 +200,7 @@ function AppShell() {
     return (
       <ThemeProvider>
         <SelfCare
-          userId={user?.id}
+          medicationQuestionEnabled={user?.medication_question_enabled !== false}
           gateMode
           preloadedLog={checkInLog}
           preloadedCapacity={capacity}
@@ -295,8 +295,15 @@ function AppShell() {
         {screen === 'inbox'    && <Inbox />}
         {screen === 'waiting'  && <Waiting />}
         {screen === 'routines' && <Routines />}
-        {screen === 'selfcare'  && <SelfCare userId={user?.id} />}
-        {screen === 'settings'  && <Settings onNavigate={setScreen} onEndDay={() => setShowEOD(true)} user={user} />}
+        {screen === 'selfcare'  && <SelfCare medicationQuestionEnabled={user?.medication_question_enabled !== false} />}
+        {screen === 'settings'  && (
+          <Settings
+            onNavigate={setScreen}
+            onEndDay={() => setShowEOD(true)}
+            user={user}
+            onUserUpdate={(updated) => setUser(u => u ? { ...u, ...updated } : u)}
+          />
+        )}
         {screen === 'tasks'     && <AllTasks />}
       </main>
 

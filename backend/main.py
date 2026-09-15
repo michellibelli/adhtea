@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 
 from database import engine, Base
 from rate_limit import limiter
-from routes import auth, tasks, routines, selfcare, medication, import_csv, gcal
+from routes import auth, tasks, routines, selfcare, import_csv, gcal
 from routes import insights, review, export_csv
 
 load_dotenv()
@@ -104,6 +104,8 @@ def _migrate(target_engine=None):
                 conn.execute(text("UPDATE users SET is_owner=1 WHERE id=(SELECT MIN(id) FROM users)"))
             if "alpha_code_version" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN alpha_code_version INTEGER NOT NULL DEFAULT 0"))
+            if "medication_question_enabled" not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN medication_question_enabled BOOLEAN NOT NULL DEFAULT 1"))
             if "is_onboarded" not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_onboarded BOOLEAN NOT NULL DEFAULT 0"))
                 conn.execute(text("UPDATE users SET is_onboarded=1"))  # existing users skip onboarding
@@ -160,6 +162,7 @@ def _migrate(target_engine=None):
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS alpha_code_version INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS medication_question_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_onboarded BOOLEAN NOT NULL DEFAULT FALSE"))
             conn.execute(text("UPDATE users SET is_onboarded=TRUE WHERE is_onboarded=FALSE"))
             conn.execute(text(
@@ -262,7 +265,6 @@ app.include_router(auth.router,        tags=["auth"])
 app.include_router(tasks.router,       tags=["tasks"])
 app.include_router(routines.router,    tags=["routines"])
 app.include_router(selfcare.router,    tags=["self-care"])
-app.include_router(medication.router,  tags=["medication"])
 app.include_router(import_csv.router,  tags=["import"])
 app.include_router(export_csv.router,  tags=["export"])
 app.include_router(gcal.router,        tags=["google-calendar"])

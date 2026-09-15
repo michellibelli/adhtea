@@ -75,6 +75,7 @@ class UserSettingsUpdate(BaseModel):
     triage_end_hour: Optional[int] = None
     timezone: Optional[str] = None
     day_start_hour: Optional[int] = None
+    medication_question_enabled: Optional[bool] = None
 
 
 class SignupRequest(BaseModel):
@@ -107,6 +108,7 @@ class UserResponse(BaseModel):
     triage_end_hour: int
     timezone: str
     day_start_hour: int
+    medication_question_enabled: bool = True
     created_at: datetime
     needs_alpha_challenge: bool = False
     is_onboarded: bool = True
@@ -299,42 +301,6 @@ class SelfCareLogResponse(BaseModel):
     medication_taken: Optional[bool]
     mood: Optional[int]
     notes: Optional[str]
-
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
-# Medication
-# ---------------------------------------------------------------------------
-
-class MedicationScheduleCreate(BaseModel):
-    name: str
-    reminder_times: Optional[str] = None   # "08:00,14:00"
-
-
-class MedicationScheduleUpdate(BaseModel):
-    name: Optional[str] = None
-    reminder_times: Optional[str] = None
-    active: Optional[bool] = None
-
-
-class MedicationScheduleResponse(BaseModel):
-    id: int
-    user_id: int
-    name: str
-    reminder_times: Optional[str]
-    active: bool
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class MedicationLogResponse(BaseModel):
-    id: int
-    schedule_id: int
-    user_id: int
-    log_date: date
-    taken_at: datetime
 
     model_config = {"from_attributes": True}
 

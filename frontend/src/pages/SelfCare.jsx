@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react'
 import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
-import { getMedication, createMedication, updateMedication, logMedicationTaken, getMedicationTodayLog } from '../api/medication'
-import { getMedName, setMedName } from '../utils/medicationStore'
 import { createTask } from '../api/tasks'
 import { getWeekly } from '../api/insights'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import { Input } from '../components/Input'
 import { PageLoading, PageError } from '../components/PageState'
 
 
@@ -36,93 +33,6 @@ function TapRow({ options, labels, value, onChange }) {
 }
 
 
-function MedCard({ med, userId, taken, onLogTaken }) {
-  const [editing, setEditing] = useState(false)
-  const displayName = getMedName(userId, med.id, med.name)
-  const nameIsLocal = displayName !== med.name
-  const times = med.reminder_times ? med.reminder_times.split(',').map(t => t.trim()) : []
-  const [draft, setDraft] = useState(displayName)
-
-  function startEdit() { setDraft(displayName); setEditing(true) }
-
-  function saveEdit() {
-    const trimmed = draft.trim()
-    if (trimmed) setMedName(userId, med.id, trimmed)
-    setEditing(false)
-  }
-
-  return (
-    <Card className="px-4 py-3 flex items-center justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        {editing ? (
-          <form onSubmit={e => { e.preventDefault(); saveEdit() }} className="flex items-center gap-2">
-            <input
-              type="text"
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              autoFocus
-              onBlur={saveEdit}
-              className="flex-1 min-w-0 text-sm font-medium bg-transparent text-ui-text border-b border-ui-accent outline-none py-0.5"
-            />
-          </form>
-        ) : (
-          <button type="button" onClick={startEdit} className="text-left">
-            <p className="text-sm font-medium text-ui-text">{displayName}</p>
-            {!nameIsLocal && (
-              <p className="text-[10px] text-ui-subtext/50 italic">tap to set name on this device</p>
-            )}
-          </button>
-        )}
-        {times.length > 0 && (
-          <p className="text-xs text-ui-subtext mt-0.5">{times.join(' · ')}</p>
-        )}
-      </div>
-      {taken ? (
-        <span className="text-xs text-ui-accent font-medium flex-shrink-0">Taken</span>
-      ) : (
-        <Button size="sm" onClick={onLogTaken} className="flex-shrink-0">
-          Mark taken
-        </Button>
-      )}
-    </Card>
-  )
-}
-
-
-// ---------------------------------------------------------------------------
-// One-time migration: pre-3.9.13 meds were stored with real names server-side.
-// On first load after deploy, copy the real name into localStorage and rename
-// the server row to "Medication N" so the server only ever holds placeholders.
-// Idempotent — once renamed, the regex match skips the row.
-// ---------------------------------------------------------------------------
-const PLACEHOLDER_RE = /^Medication \d+$/
-
-async function migrateLegacyMedNames(meds, userId) {
-  if (!userId) return meds
-  const sorted = [...meds].sort((a, b) => a.id - b.id)
-  let counter = 1
-  const out = []
-  for (const m of sorted) {
-    if (PLACEHOLDER_RE.test(m.name)) {
-      out.push(m)
-      const n = parseInt(m.name.slice('Medication '.length), 10)
-      if (n >= counter) counter = n + 1
-      continue
-    }
-    setMedName(userId, m.id, m.name)
-    const placeholder = `Medication ${counter++}`
-    try {
-      const updated = await updateMedication(m.id, { name: placeholder })
-      out.push(updated)
-    } catch (err) {
-      console.error('med pseudonym migration failed for', m.id, err)
-      out.push(m)
-    }
-  }
-  return out
-}
-
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -133,38 +43,36 @@ const EMPTY_FORM = {
   meals: null,
   exercise: null,
   exercise_minutes: null,
+  medication_taken: null,
   mood: null,
 }
 
 function formFromLog(log) {
   if (!log) return EMPTY_FORM
   return {
-    sleep_hours:      log.sleep_hours,
-    sleep_quality:    log.sleep_quality,
-    meals:            log.meals,
-    exercise:         log.exercise,
-    exercise_minutes: log.exercise_minutes,
-    mood:             log.mood,
+    sleep_hours:       log.sleep_hours,
+    sleep_quality:     log.sleep_quality,
+    meals:             log.meals,
+    exercise:          log.exercise,
+    exercise_minutes:  log.exercise_minutes,
+    medication_taken:  log.medication_taken,
+    mood:              log.mood,
   }
 }
 
-export default function SelfCare({ userId, gateMode = false, onComplete, preloadedLog, preloadedCapacity }) {
+export default function SelfCare({ medicationQuestionEnabled = true, gateMode = false, onComplete, preloadedLog, preloadedCapacity }) {
   // When the app shell already fetched the log (the morning gate), seed state
-  // from it and skip the blocking spinner — the form paints instantly and meds
-  // load quietly in the background. Otherwise fall back to a normal blocking load.
+  // from it and skip the blocking spinner — the form paints instantly.
+  // Otherwise fall back to a normal blocking load.
   const hasPreload = preloadedLog !== undefined
   const [log,        setLog]        = useState(preloadedLog ?? null)
   const [capacity,   setCapacity]   = useState(preloadedCapacity ?? null)
-  const [medication, setMedication] = useState([])
-  const [medLogs,    setMedLogs]    = useState({})   // schedule_id → log
   const [loading,    setLoading]    = useState(!hasPreload)
   const [error,      setError]      = useState(null)
   const [saving,     setSaving]     = useState(false)
   const [saved,      setSaved]      = useState(false)
   const [form,       setForm]       = useState(() => formFromLog(preloadedLog))
 
-  const [showMedForm,   setShowMedForm]   = useState(false)
-  const [medForm,       setMedForm]       = useState({ name: '', reminder_times: '' })
   const [checkinText,   setCheckinText]   = useState('')
   const [checkinSaving, setCheckinSaving] = useState(false)
   const [checkinDone,   setCheckinDone]   = useState(false)
@@ -177,17 +85,10 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
     setError(null)
     ;(async () => {
       try {
-        const [todayLog, cap, rawMeds] = await Promise.all([getTodayLog(), getTodayCapacity(), getMedication()])
-        const meds = await migrateLegacyMedNames(rawMeds, userId)
+        const [todayLog, cap] = await Promise.all([getTodayLog(), getTodayCapacity()])
         setLog(todayLog)
         setCapacity(cap)
-        setMedication(meds)
         if (todayLog && !background) setForm(formFromLog(todayLog))
-        const ml = {}
-        await Promise.all(
-          meds.map(m => getMedicationTodayLog(m.id).then(l => { if (l) ml[m.id] = l }))
-        )
-        setMedLogs(ml)
       } catch (err) { console.error(err); if (!background) setError(true) }
       finally {
         if (!background) setLoading(false)
@@ -223,13 +124,6 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
     finally { setSaving(false) }
   }
 
-  async function handleLogMed(id) {
-    try {
-      const ml = await logMedicationTaken(id)
-      setMedLogs(prev => ({ ...prev, [id]: ml }))
-    } catch (err) { console.error(err) }
-  }
-
   async function handleCheckin() {
     if (!checkinText.trim()) return
     setCheckinSaving(true)
@@ -240,20 +134,6 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
       setTimeout(() => setCheckinDone(false), 2500)
     } catch (_) { /* non-blocking */ }
     setCheckinSaving(false)
-  }
-
-  async function handleAddMed() {
-    if (!medForm.name.trim()) return
-    try {
-      const times = medForm.reminder_times.trim().replace(/\s+/g, '').replace(/,+/g, ',').replace(/,$/, '') || null
-      // Server gets a placeholder — it never sees the actual medication name
-      const placeholder = `Medication ${medication.length + 1}`
-      const created = await createMedication({ name: placeholder, reminder_times: times })
-      if (userId) setMedName(userId, created.id, medForm.name.trim())
-      setMedication(prev => [...prev, created])
-      setMedForm({ name: '', reminder_times: '' })
-      setShowMedForm(false)
-    } catch (err) { console.error(err) }
   }
 
   if (loading) return <PageLoading />
@@ -379,6 +259,29 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
               </div>
             </div>
 
+            {/* Medication — plain yes/no, nothing else stored. Off entirely
+                when disabled in Settings. */}
+            {medicationQuestionEnabled && (
+              <div>
+                <span className="text-xs text-ui-subtext block mb-1.5">Did you take your medicine?</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {[{ v: true, l: 'Yes' }, { v: false, l: 'No' }].map(({ v, l }) => (
+                    <button
+                      key={l}
+                      onClick={() => setForm(f => ({ ...f, medication_taken: v }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        form.medication_taken === v
+                          ? 'bg-ui-primary text-ui-primary-text border-transparent'
+                          : 'border-ui-border text-ui-subtext hover:text-ui-accent'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Mood */}
             <div>
               <span className="text-xs text-ui-subtext block mb-1.5">Mood</span>
@@ -399,53 +302,6 @@ export default function SelfCare({ userId, gateMode = false, onComplete, preload
             </div>
 
           </Card>
-        </div>
-
-        {/* Medication */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-ui-subtext uppercase tracking-wider">Medication</p>
-            <Button size="sm" variant="secondary" onClick={() => setShowMedForm(!showMedForm)}>
-              {showMedForm ? 'Cancel' : '+ Add'}
-            </Button>
-          </div>
-          <p className="text-[11px] text-ui-subtext/60 mb-3 leading-snug">
-            Names stored on this device only — the server only knows "Medication 1", "Medication 2", etc.
-            If you clear browser data or switch devices, names will show as placeholders until re-entered.
-            Your logs and reminders are always safe on the server.
-          </p>
-
-          {showMedForm && (
-            <Card className="px-4 py-3 mb-3 space-y-2">
-              <Input
-                value={medForm.name}
-                onChange={e => setMedForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Medication name"
-              />
-              <Input
-                value={medForm.reminder_times}
-                onChange={e => setMedForm(f => ({ ...f, reminder_times: e.target.value }))}
-                placeholder="Reminder times e.g. 08:00, 14:00 (optional)"
-              />
-              <Button onClick={handleAddMed} disabled={!medForm.name.trim()}>Add</Button>
-            </Card>
-          )}
-
-          {medication.length === 0 && !showMedForm ? (
-            <p className="text-sm text-ui-subtext">No medication configured.</p>
-          ) : (
-            <div className="space-y-2">
-              {medication.map(med => (
-                <MedCard
-                  key={med.id}
-                  med={med}
-                  userId={userId}
-                  taken={!!medLogs[med.id]}
-                  onLogTaken={() => handleLogMed(med.id)}
-                />
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Gate mode: prominent continue CTA, only enabled once the log

@@ -8,10 +8,10 @@ summary aggregates completed work + mood.
 from datetime import date, datetime
 
 from models import (
-    CapacitySnapshot, MedicationLog, MedicationSchedule, SelfCareLog,
+    CapacitySnapshot, SelfCareLog,
     Task, TaskStatus, TaskType, User,
 )
-from routes.selfcare import _compute_capacity
+from routes.selfcare import _compute_capacity, _med_adherence
 
 
 def _user(db):
@@ -55,6 +55,36 @@ def test_capacity_exec_cap_drops_sharply_below_5_hours():
     out = _compute_capacity(log)
     # 5h threshold → 15 base; quality=3 → multiplier 0.6 + 0.4*3/5 = 0.84
     assert out["executive_capacitor"] == round(15.0 * 0.84, 1)
+
+
+# ---------------------------------------------------------------------------
+# medication_taken (plain yes/no, replaced MedicationSchedule/Log in 4.22.0)
+# ---------------------------------------------------------------------------
+
+def test_med_adherence_full_when_taken():
+    log = SelfCareLog(medication_taken=True)
+    assert _med_adherence(log) == 1.0
+
+
+def test_med_adherence_zero_when_not_taken():
+    log = SelfCareLog(medication_taken=False)
+    assert _med_adherence(log) == 0.0
+
+
+def test_med_adherence_none_when_unanswered():
+    """No regimen or the question is off in Settings — either way it should
+    neither help nor hurt capacity, matching the None branch in
+    _compute_capacity's exec_cap modulation."""
+    log = SelfCareLog(medication_taken=None)
+    assert _med_adherence(log) is None
+
+
+def test_capacity_medication_taken_true_beats_false():
+    log_yes = SelfCareLog(sleep_hours=6, sleep_quality=3, medication_taken=True)
+    log_no  = SelfCareLog(sleep_hours=6, sleep_quality=3, medication_taken=False)
+    out_yes = _compute_capacity(log_yes, _med_adherence(log_yes))
+    out_no  = _compute_capacity(log_no,  _med_adherence(log_no))
+    assert out_yes["executive_capacitor"] > out_no["executive_capacitor"]
 
 
 # ---------------------------------------------------------------------------
@@ -109,12 +139,10 @@ def test_daily_summary_aggregates_completed_work(client, auth_headers, db_sessio
     db_session.add(Task(owner_id=user.id, title="open", task_type=TaskType.task,
                        status=TaskStatus.inbox))
 
-    sched = MedicationSchedule(user_id=user.id, name="Medication 1", active=True)
-    db_session.add(sched)
-    db_session.commit()
-    db_session.refresh(sched)
-    db_session.add(MedicationLog(schedule_id=sched.id, user_id=user.id, log_date=date.today()))
-    db_session.add(SelfCareLog(user_id=user.id, log_date=date.today(), mood=4, notes="ok"))
+    db_session.add(SelfCareLog(
+        user_id=user.id, log_date=date.today(), mood=4, notes="ok",
+        medication_taken=True,
+    ))
     db_session.commit()
 
     r = client.get("/self-care/daily-summary", headers=auth_headers)

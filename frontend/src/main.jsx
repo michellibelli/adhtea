@@ -6,8 +6,7 @@ import App from './App.jsx'
 // On new build: wipe stale localStorage so bug fixes reach users who haven't
 // manually cleared. Preserves the irreplaceables: aria_token (session),
 // aria_session_expires_at (dropping it forced a fresh login on every single deploy),
-// aria_theme (user pick), med_name_* (real medication names live
-// ONLY here — server has placeholders, wipe = permanent data loss).
+// aria_theme (user pick).
 const BUILD = __BUILD_TIME__
 const KEEP_ON_BUILD_CHANGE = [
   'aria_token',
@@ -17,11 +16,8 @@ const KEEP_ON_BUILD_CHANGE = [
 const prevBuild = localStorage.getItem('aria_build')
 if (prevBuild && prevBuild !== BUILD) {
   const kept = KEEP_ON_BUILD_CHANGE.map(k => [k, localStorage.getItem(k)])
-  const medPairs = Object.keys(localStorage)
-    .filter(k => k.startsWith('med_name_'))
-    .map(k => [k, localStorage.getItem(k)])
   localStorage.clear()
-  for (const [k, v] of [...kept, ...medPairs]) {
+  for (const [k, v] of kept) {
     if (v !== null) localStorage.setItem(k, v)
   }
 }

@@ -115,6 +115,11 @@ class User(Base):
     triage_end_hour = Column(Integer, default=12)
     timezone = Column(String(50), default="America/Los_Angeles", nullable=False)
     day_start_hour = Column(Integer, default=4, nullable=False)   # new day begins at this local hour
+    # Gates the morning check-in's medication question (SelfCareLog.medication_taken).
+    # Off = the question never shows and nothing about medication is asked or
+    # stored beyond that one plain yes/no — no names, no schedules, no per-dose
+    # log. Replaced the MedicationSchedule/MedicationLog system in 4.22.0.
+    medication_question_enabled = Column(Boolean, default=True, nullable=False)
     alpha_code_version = Column(Integer, default=0, nullable=False)
     is_onboarded = Column(Boolean, default=False, nullable=False)
     # Last app-day the once-per-day rollover sweeps ran for this user. Used as an
@@ -321,10 +326,18 @@ class SelfCareLog(Base):
 
 
 # ---------------------------------------------------------------------------
-# Medication
+# Medication — ORPHANED (4.22.0)
 # ---------------------------------------------------------------------------
 
 class MedicationSchedule(Base):
+    """ORPHANED. Per-medication tracking (names, reminder times, individual
+    logs), replaced in 4.22.0 by a single SelfCareLog.medication_taken
+    yes/no gated by User.medication_question_enabled — simpler and stores
+    no medication data beyond that one plain boolean. Nothing reads or
+    writes these two tables now except the account-deletion cascade
+    (routes/auth.py); kept declared so the ORM keeps matching the live
+    Postgres tables. Real deletion of the rows is a separate, deliberate
+    step — see HANDOFF "Known issues"."""
     __tablename__ = "medication_schedules"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -338,6 +351,7 @@ class MedicationSchedule(Base):
 
 
 class MedicationLog(Base):
+    """ORPHANED. See MedicationSchedule."""
     __tablename__ = "medication_logs"
 
     id = Column(Integer, primary_key=True, index=True)

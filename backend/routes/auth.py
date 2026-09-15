@@ -265,6 +265,8 @@ def update_settings(
         if not (0 <= update.day_start_hour <= 11):
             raise HTTPException(status_code=400, detail="day_start_hour must be between 0 and 11")
         current_user.day_start_hour = update.day_start_hour
+    if update.medication_question_enabled is not None:
+        current_user.medication_question_enabled = update.medication_question_enabled
     db.commit()
     db.refresh(current_user)
     return current_user

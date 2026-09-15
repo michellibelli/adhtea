@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
-    SelfCareLog, CapacitySnapshot, Task, TaskStatus, TaskType,
-    MedicationSchedule, MedicationLog, utcnow,
+    SelfCareLog, CapacitySnapshot, Task, TaskStatus, TaskType, utcnow,
 )
 from schemas import SelfCareLogCreate, SelfCareLogResponse, CapacitySnapshotResponse
 from routes.auth import get_current_user
@@ -19,24 +18,15 @@ router = APIRouter()
 # Capacity computation (rules-based, v1)
 # ---------------------------------------------------------------------------
 
-def _med_adherence(db: Session, user_id: int, log_date) -> float | None:
-    """Fraction of the day's active medication schedules she actually logged
-    (0.0–1.0). None when she has no active meds — no regimen means meds should
-    neither help nor hurt her capacity. Distinct schedules taken / active count."""
-    active = (
-        db.query(MedicationSchedule)
-        .filter(MedicationSchedule.user_id == user_id, MedicationSchedule.active == True)
-        .count()
-    )
-    if active == 0:
+def _med_adherence(log: SelfCareLog) -> float | None:
+    """1.0/0.0 for the day's plain yes/no (SelfCareLog.medication_taken), or
+    None when unanswered — no regimen (or the question is off in Settings)
+    means meds should neither help nor hurt capacity. Replaced the
+    MedicationSchedule/MedicationLog fractional-adherence calc in 4.22.0;
+    there's only one question now, not several to divide across."""
+    if log.medication_taken is None:
         return None
-    taken = (
-        db.query(MedicationLog.schedule_id)
-        .filter(MedicationLog.user_id == user_id, MedicationLog.log_date == log_date)
-        .distinct()
-        .count()
-    )
-    return min(taken / active, 1.0)
+    return 1.0 if log.medication_taken else 0.0
 
 
 def _compute_capacity(log: SelfCareLog, med_adherence: float | None = None) -> dict:
@@ -102,7 +92,7 @@ def _compute_capacity(log: SelfCareLog, med_adherence: float | None = None) -> d
 
 
 def _upsert_snapshot(log: SelfCareLog, user_id: int, db: Session) -> CapacitySnapshot:
-    vals = _compute_capacity(log, _med_adherence(db, user_id, log.log_date))
+    vals = _compute_capacity(log, _med_adherence(log))
     snap = db.query(CapacitySnapshot).filter(
         CapacitySnapshot.user_id == user_id,
         CapacitySnapshot.log_date == log.log_date,
@@ -251,11 +241,6 @@ def get_daily_summary(
         Task.task_type == TaskType.appointment,
     ).all()
 
-    meds_taken = db.query(MedicationLog).filter(
-        MedicationLog.user_id == current_user.id,
-        MedicationLog.log_date == today,
-    ).count()
-
     log = db.query(SelfCareLog).filter(
         SelfCareLog.user_id == current_user.id,
         SelfCareLog.log_date == today,
@@ -270,7 +255,9 @@ def get_daily_summary(
         "appointments_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_appointments],
         "tasks_done_count": len(done_tasks),
         "routines_done_count": len(done_routines),
-        "medications_taken": meds_taken,
+        # Kept as an int (0 or 1), not a bool — the EOD summary card already
+        # does `medications_taken > 0` / pluralizes on it unchanged.
+        "medications_taken": 1 if (log and log.medication_taken) else 0,
         "total_minutes": total_minutes,
         "mood": log.mood if log else None,
         "notes": log.notes if log else None,

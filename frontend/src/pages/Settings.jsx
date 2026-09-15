@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getGcalStatus, getGcalConnectUrl, disconnectGcal, syncGcal, listCalendars, updateCalendars } from '../api/gcal'
-import { listUsers, createUser, deleteUser, logout, getAlphaCode, setAlphaCode } from '../api/auth'
+import { listUsers, createUser, deleteUser, logout, getAlphaCode, setAlphaCode, updateSettings } from '../api/auth'
 import { api } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -334,7 +334,7 @@ function AlphaCodeSection() {
 }
 
 
-export default function Settings({ onNavigate, onEndDay, user }) {
+export default function Settings({ onNavigate, onEndDay, user, onUserUpdate }) {
   function handleLogout() {
     logout().then(() => window.location.reload())
   }
@@ -382,6 +382,11 @@ export default function Settings({ onNavigate, onEndDay, user }) {
               </div>
             </Card>
           </div>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold text-ui-subtext uppercase tracking-wide mb-3">Self-care</h2>
+          <MedicationQuestionToggle user={user} onUserUpdate={onUserUpdate} />
         </section>
 
         {user?.role === 'primary' && (
@@ -487,6 +492,46 @@ function ThemePicker() {
             </button>
           )
         })}
+      </div>
+    </Card>
+  )
+}
+
+
+function MedicationQuestionToggle({ user, onUserUpdate }) {
+  const enabled = user?.medication_question_enabled !== false
+  const [saving, setSaving] = useState(false)
+
+  async function toggle() {
+    const next = !enabled
+    setSaving(true)
+    try {
+      const updated = await updateSettings({ medication_question_enabled: next })
+      onUserUpdate?.(updated)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card className="px-5 py-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-ui-text">Ask about medication at check-in</p>
+          <p className="text-xs text-ui-subtext mt-0.5">
+            Off = the question never shows, and nothing about medication is stored.
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={saving}
+          aria-pressed={enabled}
+          className="settings-toggle"
+        >
+          <span className="settings-toggle-knob" />
+        </button>
       </div>
     </Card>
   )
