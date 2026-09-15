@@ -1,4 +1,4 @@
-"""Task lifecycle helpers: timezone, carry-forward, snoozes, demote, promote."""
+"""Task lifecycle helpers: timezone, carry-forward, snoozes, demote."""
 
 from datetime import datetime, date, timedelta, timezone
 from unittest.mock import patch
@@ -6,7 +6,7 @@ from unittest.mock import patch
 from models import Task, TaskStatus, TaskType, User
 from routes.tasks import (
     _app_today, _day_start, _day_start_hour,
-    carry_forward, resolve_snoozes, demote_misclassified_today, promote_due_tasks,
+    carry_forward, resolve_snoozes, demote_misclassified_today,
     archive_past_appointments,
 )
 
@@ -162,25 +162,6 @@ def test_demote_ignores_routines(db_session):
     demote_misclassified_today(user, db_session)
     db_session.refresh(routine_task)
     assert routine_task.status == TaskStatus.today
-
-
-# ---------------------------------------------------------------------------
-# promote_due_tasks: inbox w/ due_date <= today → today
-# ---------------------------------------------------------------------------
-
-def test_promote_moves_overdue_inbox_to_today(db_session):
-    user = _user(db_session)
-    today = _app_today(user)
-    overdue = _mk_task(db_session, user.id, status=TaskStatus.inbox,
-                       due_date=today - timedelta(days=1))
-    future = _mk_task(db_session, user.id, status=TaskStatus.inbox,
-                      due_date=today + timedelta(days=1))
-
-    promote_due_tasks(user, db_session)
-    db_session.refresh(overdue)
-    db_session.refresh(future)
-    assert overdue.status == TaskStatus.today
-    assert future.status == TaskStatus.inbox
 
 
 # ---------------------------------------------------------------------------

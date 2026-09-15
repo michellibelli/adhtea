@@ -1,11 +1,9 @@
-"""Tasks route tests: auto-promote + daily cap."""
+"""Tasks route tests: daily cap."""
 
 from datetime import date, timedelta
 
 from models import Task, TaskStatus, TaskType, User
-from routes.tasks import (
-    promote_due_tasks, count_today, DAILY_CAP,
-)
+from routes.tasks import DAILY_CAP
 
 
 def _mk_user(db, username="testuser"):
@@ -21,20 +19,6 @@ def _mk_task(db, user_id, due=None, status=TaskStatus.inbox, task_type=TaskType.
     db.commit()
     db.refresh(t)
     return t
-
-
-# ---------------------------------------------------------------------------
-# Auto-promote of due tasks
-# ---------------------------------------------------------------------------
-
-def test_promote_due_tasks_promotes_overdue_inbox_task(client, auth_headers, db_session):
-    """An overdue inbox task promotes to Today when there's room."""
-    user = _mk_user(db_session)
-    today = date.today()
-    t = _mk_task(db_session, user.id, due=today - timedelta(days=1), status=TaskStatus.inbox)
-    promote_due_tasks(user, db_session)
-    db_session.refresh(t)
-    assert t.status == TaskStatus.today
 
 
 # ---------------------------------------------------------------------------
@@ -138,28 +122,6 @@ def test_schedule_today_ok_when_room(client, auth_headers, db_session):
     assert r.json()["status"] == "today"
 
 
-def test_promote_due_tasks_respects_cap(client, auth_headers, db_session):
-    user = _mk_user(db_session)
-    today = date.today()
-    _fill_today(db_session, user.id, DAILY_CAP)
-    overdue = _mk_task(db_session, user.id, due=today - timedelta(days=1), status=TaskStatus.inbox)
-    promote_due_tasks(user, db_session)
-    db_session.refresh(overdue)
-    assert overdue.status == TaskStatus.inbox              # full Today — waits in inbox
-    assert count_today(user, db_session) == DAILY_CAP
-
-
-def test_promote_due_appointment_admitted_when_today_full(client, auth_headers, db_session):
-    user = _mk_user(db_session)
-    today = date.today()
-    _fill_today(db_session, user.id, DAILY_CAP)
-    appt = _mk_task(db_session, user.id, due=today, status=TaskStatus.inbox,
-                    task_type=TaskType.appointment)
-    promote_due_tasks(user, db_session)
-    db_session.refresh(appt)
-    assert appt.status == TaskStatus.today                 # appointment bypasses the cap
-
-
 # ---------------------------------------------------------------------------
 # completed_at hygiene — the morning review filters on the stamp, not on status
 # ---------------------------------------------------------------------------
@@ -230,6 +192,36 @@ def test_defer_clears_stamp(client, auth_headers, db_session):
     assert r.status_code == 200
     db_session.expire_all()
     assert db_session.get(Task, t.id).completed_at is None
+
+
+# ---------------------------------------------------------------------------
+# Snooze carries due_date forward to the wake day
+# ---------------------------------------------------------------------------
+
+def test_snooze_pushes_due_date_to_the_wake_day(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    t = _mk_task(db_session, user.id, due=date.today() - timedelta(days=3), status=TaskStatus.inbox)
+    wake = date.today() + timedelta(days=2)
+    r = client.post(
+        f"/tasks/{t.id}/snooze",
+        json={"snooze_until": wake.isoformat() + "T14:00:00"},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["due_date"] == wake.isoformat()
+
+
+def test_snooze_never_pulls_a_later_due_date_backwards(client, auth_headers, db_session):
+    user = _mk_user(db_session)
+    far = date.today() + timedelta(days=30)
+    t = _mk_task(db_session, user.id, due=far, status=TaskStatus.inbox)
+    r = client.post(
+        f"/tasks/{t.id}/snooze",
+        json={"snooze_until": (date.today() + timedelta(days=2)).isoformat() + "T14:00:00"},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["due_date"] == far.isoformat()
 
 
 def test_unsnooze_clears_stamp(client, auth_headers, db_session):

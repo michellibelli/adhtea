@@ -8,8 +8,9 @@ from sqlalchemy import or_, and_, case
 from database import get_db
 from models import (
     Task, TaskStatus, TaskType, Priority, ActuatorCategory,
-    GoogleCalendarToken, utcnow, User,
+    CapacitySnapshot, utcnow, User,
 )
+from scoring import max_slots_for
 from schemas import (
     TaskCreate, TaskUpdate, TaskResponse,
     TaskSnoozeRequest, ScheduleTodayRequest, TaskReorderRequest,
@@ -24,7 +25,7 @@ from routes.task_lifecycle import (
     _tz, _day_start_hour, _app_today, _day_start, _day_end, _app_day_start_utc,
     DAILY_CAP, count_today, _exempt_from_cap,
     _is_routine_due, generate_routine_instances, run_daily_rollover,
-    carry_forward, resolve_snoozes, promote_due_tasks,
+    carry_forward, resolve_snoozes,
     demote_misclassified_today,
     archive_past_appointments,
 )
@@ -56,7 +57,6 @@ def get_critical_list(
 ):
     run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    promote_due_tasks(current_user, db)
     today_local = _app_today(current_user)
     active_statuses = [TaskStatus.inbox, TaskStatus.today]
     tasks = (
@@ -132,36 +132,6 @@ def create_task(
     db.commit()
     db.refresh(task)
     return task
-
-
-# ---------------------------------------------------------------------------
-# Google Calendar lazy morning sync helper
-# ---------------------------------------------------------------------------
-
-def _maybe_sync_gcal(user_id: int, db: Session):
-    """Pull today's Google Calendar events and create appointment Tasks — at most once every 30 minutes.
-
-    Called automatically when the user loads their Today or Inbox list so new calendar
-    events appear without the user having to manually press "Sync." The 30-minute throttle
-    prevents hammering the Google API on every page load.
-    """
-    token = db.query(GoogleCalendarToken).filter(
-        GoogleCalendarToken.user_id == user_id
-    ).first()
-    if not token:
-        return  # user hasn't connected Google Calendar
-    # Skip if synced recently — 1800 seconds = 30 minutes
-    if token.last_synced:
-        elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - token.last_synced).total_seconds()
-        if elapsed < 1800:
-            return
-    try:
-        from routes.gcal import sync_today_events
-        sync_today_events(user_id, db)
-    except Exception:
-        # Never let a GCal failure break the task list, but log it so issues
-        # like expired tokens or API outages are visible in the server logs
-        logger.exception("gcal auto-sync failed for user %s", user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -259,8 +229,6 @@ def get_inbox(
 ):
     run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    # Lazy gcal sync if token exists and not synced today
-    _maybe_sync_gcal(current_user.id, db)
     today = _app_today(current_user)
     priority_rank = case(
         (Task.priority == Priority.urgent, 0),
@@ -302,8 +270,6 @@ def get_today(
     run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
     demote_misclassified_today(current_user, db)
-    promote_due_tasks(current_user, db)
-    _maybe_sync_gcal(current_user.id, db)
 
     tasks = (
         db.query(Task)
@@ -331,11 +297,30 @@ def plan_day(
     """Mark the user's plan as committed for the current app-day. Flips Today
     from its planning state into its started state. Idempotent — calling it
     again the same app-day is a no-op. Resets automatically at the next
-    day_start_hour boundary because it's compared against _app_today."""
+    day_start_hour boundary because it's compared against _app_today.
+
+    Blocked until today's self-care log exists — the tea-box's slot count is
+    snapshotted here from that day's capacity, fixed for the rest of the
+    app-day, so there has to be a real number to snapshot."""
     today = _app_today(current_user)
+    snap = (
+        db.query(CapacitySnapshot)
+        .filter(CapacitySnapshot.user_id == current_user.id, CapacitySnapshot.log_date == today)
+        .first()
+    )
+    if snap is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Log today's self-care check-in before starting the day.",
+        )
     current_user.planned_on = today
+    current_user.day_capacity_slots = max_slots_for(snap.overall)
     db.commit()
-    return {"day_planned": True, "planned_on": today.isoformat()}
+    return {
+        "day_planned": True,
+        "planned_on": today.isoformat(),
+        "day_capacity_slots": current_user.day_capacity_slots,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -462,11 +447,10 @@ def snooze_task(
     task.scheduled_date = None
     task.push_count = (task.push_count or 0) + 1
 
-    # Carry due_date forward with the snooze. Without this the task returns to
-    # the inbox still due today, and promote_due_tasks puts it straight back in
-    # Today — the snooze undone by the sweep that runs a moment later. Only
-    # pushed forward, never pulled back: a task already due after the snooze
-    # target keeps its own later date.
+    # Carry due_date forward with the snooze, so the task doesn't resurface in
+    # Inbox sorted as if it's still due today. Only pushed forward, never
+    # pulled back: a task already due after the snooze target keeps its own
+    # later date.
     #
     # snooze_until is naive UTC; due_date is a local calendar date. Read the
     # wake date in the user's timezone or an evening snooze lands a day late

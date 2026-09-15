@@ -158,8 +158,7 @@ def commit_review(
             # push_count is deliberately left alone. Target is `inbox`, not
             # `today`: `today` is a tuple with scheduled_date/sort_order
             # governed by DAILY_CAP, and writing it from here would bypass the
-            # cap and inject yesterday's work into an unplanned day.
-            # `promote_due_tasks` gets the placement decision back.
+            # cap. She promotes it into Today by hand when she's ready.
             task.status = TaskStatus.inbox
             task.completed_at = None
             task.scheduled_date = None

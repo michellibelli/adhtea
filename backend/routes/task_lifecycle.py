@@ -9,7 +9,6 @@ every request:
   - generate_routine_instances : spawn today's Task rows from active Routines
   - carry_forward              : yesterday's unfinished Today items → Inbox
   - resolve_snoozes            : snoozed items whose date arrived → Inbox
-  - promote_due_tasks          : Inbox tasks due today → Today (within the cap)
   - demote_misclassified_today : Today tasks with a future due_date → Inbox
   - archive_past_appointments  : past appointments → done (stamped to their date)
 
@@ -168,10 +167,8 @@ def run_daily_rollover(user: User, db: Session) -> bool:
     the UPDATE only matches when the stored date is behind today, so exactly one
     concurrent caller flips it and proceeds; the rest see 0 rows and skip.
 
-    Intraday sweeps (resolve_snoozes, promote_due_tasks, the demotions) are NOT
-    run here — they run on every request. Note that "idempotent" for
-    promote_due_tasks means it won't duplicate rows, NOT that repeat calls are
-    inert: it refills freed slots, which is why it is gated on planned_on.
+    Intraday sweeps (resolve_snoozes, the demotions) are NOT run here — they
+    run on every request.
 
     Returns True if this call performed the rollover, False if it was already done.
     """
@@ -308,89 +305,5 @@ def resolve_snoozes(user: User, db: Session):
         db.commit()
     return len(snoozed)
 
-
-# ---------------------------------------------------------------------------
-# Auto-promote: inbox tasks with due_date <= today move into Today list
-# ---------------------------------------------------------------------------
-
-def _capacity_slots(user: User, db: Session) -> int:
-    """Today's capacity-driven slot count — the same number the `(X/N)` chip
-    shows. Falls back to DAILY_CAP before the self-care check-in exists, since
-    with no snapshot we have no basis to claim the day is a small one."""
-    from models import CapacitySnapshot
-    from scoring import max_slots_for
-
-    snap = (
-        db.query(CapacitySnapshot)
-        .filter(
-            CapacitySnapshot.user_id == user.id,
-            CapacitySnapshot.log_date == _app_today(user),
-        )
-        .first()
-    )
-    if snap is None:
-        return DAILY_CAP
-    return min(DAILY_CAP, max_slots_for(snap.overall))
-
-
-def promote_due_tasks(user: User, db: Session):
-    """Pull inbox tasks that are due into Today.
-
-    This is a PLANNING-time sweep. It stops once she commits the day with
-    "Start my day" (User.planned_on), and that gate is the whole point: `room`
-    below is recomputed live, so while promotion was running on every read, any
-    slot she freed was immediately refilled from the inbox. Completing a task
-    pulled in a replacement; pruning the plan down to capacity pulled the
-    prunings' replacements in behind her. The plan could never stay put.
-
-    After the commit, newly-due items wait in Up Next and she promotes them by
-    hand. Appointments are NOT special-cased here — a task appearing in Today
-    unbidden is the exact thing being fixed, and a synced appointment still
-    shows in Up Next with its time on it.
-    """
-    today_local = _app_today(user)
-
-    if user.planned_on == today_local:
-        return
-
-    due = (
-        db.query(Task)
-        .filter(
-            Task.owner_id == user.id,
-            Task.status == TaskStatus.inbox,
-            Task.task_type != TaskType.routine,
-            Task.due_date.isnot(None),
-            Task.due_date <= today_local,
-        )
-        .all()
-    )
-    if not due:
-        return
-
-    # Fill to the capacity-shaped slot count, not the hard 15: the plan she is
-    # about to prune should already be the size of the day she actually has.
-    # Appointments are time-bound and still bypass it.
-    room = _capacity_slots(user, db) - count_today(user, db)
-    promotable = []
-    for task in due:
-        if _exempt_from_cap(task.task_type):
-            promotable.append(task)
-        elif room > 0:
-            promotable.append(task)
-            room -= 1
-    if not promotable:
-        return
-
-    existing_count = (
-        db.query(Task)
-        .filter(Task.owner_id == user.id, Task.status == TaskStatus.today)
-        .count()
-    )
-    start = _day_start(user)
-    for i, task in enumerate(promotable):
-        task.status = TaskStatus.today
-        task.scheduled_date = start
-        task.sort_order = float(existing_count + i)
-    db.commit()
 
 
