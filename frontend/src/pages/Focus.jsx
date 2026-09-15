@@ -9,11 +9,10 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import { isTimedVisible } from '../utils/timing'
 import { orderTasks } from '../utils/ordering'
+import { elapsedMinutesSinceLastCompletion, markWorkCompletionNow } from '../utils/lastWorkCompletion'
 import TeaBox from '../components/TeaBox'
 import { PageError } from '../components/PageState'
-import NudgeModal from '../components/NudgeModal'
 import WeeklyInsightCard from '../components/WeeklyInsightCard'
-import { getNudge } from '../api/insights'
 import { ThemeContext } from '../context/ThemeContext'
 
 
@@ -134,12 +133,9 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
   const [showSnooze,    setShowSnooze]    = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
-  const [pendingNudge,  setPendingNudge]  = useState(null)
   const [pendingMinutes, setPendingMinutes] = useState(null)  // { taskId, title, defaultMinutes }
   const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title } — kettle-created task awaiting classification
-  const nudgeRef = useRef(null)
   const newTaskIdRef = useRef(null)          // kettle-created task awaiting its title before the work-ask fires
-  const lastCompletionAtRef = useRef(null)   // anchor for the next completion's elapsed-time default
   const minutesWaitRef = useRef(null)        // full { taskId, wasBonus } while the minutes prompt is up
   const { theme } = useContext(ThemeContext)
   const isLinen = theme === 'aria-linen'
@@ -206,14 +202,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     }
   }
 
-  function nudgeCooldownOk() {
-    // Keep in sync with NUDGE_COOLDOWN_SECONDS in routes/insights.py. The server
-    // enforces this too (and a one-a-day cap); this just avoids the round trip.
-    const COOLDOWN_MS = 6 * 60 * 60 * 1000
-    const last = Number(localStorage.getItem('aria_last_nudge_ts') || '0')
-    return Date.now() - last >= COOLDOWN_MS
-  }
-
   function finishTransition(pending) {
     setCelebrate(false)
     setLeaving(true)
@@ -221,37 +209,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       setTimeout(() => setLeaving(false), 300),
     ]
     if (pending && !pending.wasBonus) fetchAll()
-  }
-
-  // Elapsed minutes since the last completion, for the minutes prompt's
-  // default. First completion of the day anchors off "Start my day" instead
-  // (stamped in Today.jsx) — null if neither exists, so the field starts blank
-  // rather than guessing.
-  function elapsedDefaultMinutes() {
-    let anchor = lastCompletionAtRef.current
-    if (anchor == null) {
-      try {
-        const key = `aria_day_started_at_${new Date().toLocaleDateString('en-CA')}`
-        const v = Number(localStorage.getItem(key))
-        anchor = Number.isFinite(v) && v > 0 ? v : null
-      } catch { anchor = null }
-    }
-    if (anchor == null) return null
-    // eslint-disable-next-line react-hooks/purity -- handler, not render
-    const mins = Math.round((Date.now() - anchor) / 60000)
-    return mins >= 0 ? mins : null
-  }
-
-  // Nudge check + advance to the next task — shared tail for a completion
-  // that needed no minutes prompt, and one that just resolved its prompt.
-  function proceedAfterCompletion(pending) {
-    const nudge = nudgeRef.current
-    nudgeRef.current = null
-    if (nudge && nudgeCooldownOk()) {
-      setPendingNudge({ ...nudge, _pending: pending })
-      return
-    }
-    finishTransition(pending)
   }
 
   function skipCelebration() {
@@ -277,7 +234,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       return
     }
 
-    proceedAfterCompletion(pending)
+    finishTransition(pending)
   }
 
   function handleMinutesSave(minutes) {
@@ -287,24 +244,15 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     setPendingMinutes(null)
     if (!taskInfo) return
     updateTask(taskInfo.taskId, { minutes_spent: minutes }).catch((err) => console.error(err))
-    // eslint-disable-next-line react-hooks/purity -- handler, not render
-    lastCompletionAtRef.current = Date.now()
-    proceedAfterCompletion(pending)
+    markWorkCompletionNow()
+    finishTransition(pending)
   }
 
   function handleMinutesSkip() {
     const pending = minutesWaitRef.current
     minutesWaitRef.current = null
     setPendingMinutes(null)
-    // eslint-disable-next-line react-hooks/purity -- handler, not render
-    lastCompletionAtRef.current = Date.now()
-    proceedAfterCompletion(pending)
-  }
-
-  function handleNudgeDismiss() {
-    const pending = pendingNudge?._pending || null
-    localStorage.setItem('aria_last_nudge_ts', String(Date.now()))
-    setPendingNudge(null)
+    markWorkCompletionNow()
     finishTransition(pending)
   }
 
@@ -319,7 +267,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       taskId, wasBonus,
       title: task.title,
       isWork: task.is_work,
-      defaultMinutes: elapsedDefaultMinutes(),
+      defaultMinutes: elapsedMinutesSinceLastCompletion(),
     }
     // Each completed bonus task drops into the tea-box as a gold bag.
     if (wasBonus) {
@@ -330,10 +278,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       })
     }
     completeTask(taskId)
-    nudgeRef.current = null
-    if (!isBonusMode && nudgeCooldownOk()) {
-      getNudge().then((n) => { nudgeRef.current = n }).catch(() => {})
-    }
     setCelebrate('dunk')
     celebrationTimersRef.current.forEach(clearTimeout)
     celebrationTimersRef.current = [
@@ -750,7 +694,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
       {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
-      {pendingNudge && <NudgeModal nudge={pendingNudge} onDismiss={handleNudgeDismiss} />}
       {pendingMinutes && (
         <MinutesPrompt
           title={pendingMinutes.title}

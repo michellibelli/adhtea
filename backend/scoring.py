@@ -1,12 +1,10 @@
 """Shared capacity/scoring helpers.
 
 Extracted from the old triage scoring engine (routes/triage.py, removed
-when the Tournament page was retired). These helpers survived because live
-code still needs them:
+when the Tournament page was retired). Live code still needs:
 
   - `capacity_tier`  — selfcare.py buckets the day's capacity for UI copy.
   - `max_slots_for`  — the capacity-driven Today slot count.
-  - `effort_points`  — a finished task's contribution to a day's output.
 
 All are pure reads (no writes), so they live here free of any route layer.
 """
@@ -18,10 +16,10 @@ CAPACITY_TIER_HIGH = 70.0         # overall > this  → "high" day
 # Today slots at 100% capacity — the scale factor behind max_slots_for.
 CAPACITY_SLOTS_AT_FULL = 10
 
-# Effort weighting — a finished task's contribution to a day's output. The
-# single source of truth for the small/big ratio; the capacity-vs-output
-# analysis sums these instead of counting tasks equally. A big task is worth
-# two smalls. An unreviewed (null) effort scores as one small until tagged.
+# ORPHANED (4.20.0). Was the capacity-vs-output weighting for the small/big
+# effort tag, which the morning review no longer collects — see
+# Task.effort's docstring in models.py. Nothing calls effort_points; kept
+# only in case a future capacity model wants a per-task weight again.
 EFFORT_POINTS = {"small": 1, "big": 2}
 
 

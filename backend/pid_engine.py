@@ -1,8 +1,13 @@
-"""PID controller for behavior-change nudges.
+"""PID controller behind the weekly self-care insight line.
 
 Pure functions — no database, FastAPI, or project imports.
 Takes current week averages + prior snapshot → computes P/I/D per variable
-→ returns ranked nudge list.
+→ ranks variables → generate_weekly_insight picks the top one for the
+sunny insight_copy shown in the self-care gate.
+
+Used to also drive a daily popup nudge ("Have you eaten?" etc.) via
+/insights/nudge — removed in 4.20.0. rank_nudges stayed because
+generate_weekly_insight calls it internally.
 """
 
 Kp = 0.5
@@ -101,54 +106,6 @@ def _progress_tag(var: str, averages: dict | None) -> str:
         total = int(averages.get("weekdays", 5))
         return f" ({val} of {total} weekdays)"
     return ""
-
-
-# How recently a variable has to have been logged before nudging about it is just
-# noise. Sleep and meals reset daily, so only today counts. Exercise doesn't: the
-# target is 4 days a week — every other day — so having moved yesterday is a fine
-# reason not to be asked about it today.
-RECENCY_DAYS = {
-    "sleep": 0,
-    "meals": 0,
-    "checkin": 0,
-    "exercise": 1,
-}
-
-
-def satisfied_recently(logs_by_age: dict[int, dict]) -> set[str]:
-    """Variables already handled recently enough that nudging is noise.
-
-    `logs_by_age` maps days-ago (0 = today) to that day's self-care log.
-
-    Micro-nudges ask about *now* ("Have you eaten?"), but they are scored on the
-    week's rolling averages, where one good day barely dents a deficit. So a
-    variable she has already noted has to be dropped from the ranking outright, or
-    the app nudges her to do a thing she just told it she did. Any entry counts —
-    the questions are yes/no, and the pull toward the actual target lives in the
-    weekly insight, not in the micro-nudge.
-    """
-    done = set()
-
-    for var, window in RECENCY_DAYS.items():
-        for age in range(window + 1):
-            log = logs_by_age.get(age)
-            if not log:
-                continue
-
-            if var == "checkin":
-                done.add(var)   # a log row exists at all — that *is* the check-in
-            elif var == "meals":
-                meals = log.get("meals")
-                if meals is not None and meals >= 1:
-                    done.add(var)
-            elif var == "exercise":
-                if log.get("exercise"):
-                    done.add(var)
-            elif var == "sleep":
-                if log.get("sleep_hours") is not None:
-                    done.add(var)
-
-    return done
 
 
 def rank_nudges(

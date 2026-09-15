@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Task, TaskStatus, TaskType, SelfCareLog, User, Effort, utcnow
+from models import Task, TaskStatus, TaskType, SelfCareLog, User, utcnow
 from schemas import ReviewPendingResponse, ReviewCommitRequest
 from routes.auth import get_current_user
 from routes.task_lifecycle import _app_today, _app_day_start_utc, _tz, _day_start_hour
@@ -142,7 +142,6 @@ def commit_review(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    corrections = []
     ids = [item.id for item in body.tasks]
     owned = {
         t.id: t
@@ -163,15 +162,8 @@ def commit_review(
             # `promote_due_tasks` gets the placement decision back.
             task.status = TaskStatus.inbox
             task.completed_at = None
-            task.effort = None
             task.scheduled_date = None
             task.sort_order = None
-            # `continue` BEFORE corrections, deliberately: an un-flagged row must
-            # never reach record_corrections. Otherwise a wrong review list
-            # trains the effort guesser on work that never happened.
-            continue
-        task.effort = item.effort
-        corrections.append((task.title, item.effort.value))
 
     # Tasks she did but never had in the app — log them now, backdated to the
     # reviewed day (local noon → naive UTC, so they bucket into that app-day)
@@ -191,12 +183,8 @@ def commit_review(
                 title=title[:500],
                 task_type=TaskType.task,
                 status=TaskStatus.done,
-                effort=item.effort,
                 completed_at=completed,
             ))
-            corrections.append((title, item.effort.value))
-
-    review_engine.record_corrections(db, current_user.id, corrections)
 
     # Advance the reviewed-through watermark (never regress it).
     if current_user.reviewed_through is None or body.date > current_user.reviewed_through:

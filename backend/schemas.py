@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from typing import Optional, Annotated
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 Password = Annotated[str, Field(min_length=8, max_length=128)]
 from models import (
@@ -362,7 +362,7 @@ class CapacitySnapshotResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Insights / PID Nudge (Phase 6)
+# Insights — weekly PID snapshot
 # ---------------------------------------------------------------------------
 
 class WeeklySnapshotResponse(BaseModel):
@@ -384,20 +384,6 @@ class WeeklySnapshotResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class NudgeResponse(BaseModel):
-    id: int
-    nudge_type: str
-    variable: str
-    message: str
-    shown_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class NudgeRespondRequest(BaseModel):
-    response: str
-
-
 # ---------------------------------------------------------------------------
 # Morning Review (effort tagging of the prior day's finished tasks)
 # ---------------------------------------------------------------------------
@@ -405,7 +391,6 @@ class NudgeRespondRequest(BaseModel):
 class ReviewTaskGuess(BaseModel):
     id: int
     title: str
-    effort_guess: Effort
 
 
 class ReviewPendingResponse(BaseModel):
@@ -421,25 +406,19 @@ class ReviewCommitItem(BaseModel):
     `{id, effort}` payload may already be sitting in
     `localStorage.aria_pending_reviews`, and `commitReview` drops permanent 4xx
     without retrying — so a 422 here would silently discard a queued morning.
-    `effort` is only meaningful for a row she confirms; an un-flagged row has
-    nothing to tag.
+    `effort` is accepted but ignored (4.20.0 dropped the small/big gate — time
+    at completion replaced it); kept optional rather than removed so an old
+    queued `{id, effort}` payload still validates instead of 422ing forever.
     """
     id: int
     effort: Optional[Effort] = None
     done: bool = True
-
-    @model_validator(mode="after")
-    def _effort_required_when_done(self):
-        if self.done and self.effort is None:
-            raise ValueError("effort is required unless done is false")
-        return self
 
 
 class ReviewAddedItem(BaseModel):
     """A task she did yesterday that was never in the app — logged now,
     backdated to the reviewed day, so it counts toward the day's output."""
     title: str
-    effort: Effort
 
 
 class ReviewCommitRequest(BaseModel):

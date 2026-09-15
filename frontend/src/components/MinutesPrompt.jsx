@@ -5,7 +5,6 @@ import Button from './Button'
 
 // Post-completion ask — appears once the celebration animation finishes.
 // "Save" = work, minutes recorded. "Not work" = personal, no minutes kept.
-// Mirrors NudgeModal's portal/backdrop/Card shape for visual consistency.
 export default function MinutesPrompt({ title, defaultMinutes, onSave, onSkip }) {
   const [value, setValue] = useState(defaultMinutes != null ? String(defaultMinutes) : '')
 

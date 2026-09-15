@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getBacklog, completeTask, unsnoozeTask, deleteTask } from '../api/tasks'
+import { getBacklog, completeTask, unsnoozeTask, deleteTask, updateTask } from '../api/tasks'
 import Card from '../components/Card'
+import WorkAsk from '../components/WorkAsk'
+import MinutesPrompt from '../components/MinutesPrompt'
 import { PageLoading, PageError } from '../components/PageState'
 
 const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
@@ -118,6 +120,8 @@ export default function Waiting() {
   const [tasks,   setTasks]   = useState([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
+  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title }
+  const [pendingMinutes, setPendingMinutes] = useState(null)  // { id, title }
 
   const fetchTasks = useCallback(async () => {
     setLoading(true)
@@ -131,9 +135,36 @@ export default function Waiting() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
-  async function handleComplete(id)  { await completeTask(id);  fetchTasks() }
+  // Completing from the backlog view is catch-up, same as Today's Up Next
+  // gate — retroactive, asked work + minutes, excluded from the EOD work-log.
+  async function handleComplete(id) {
+    const task = tasks.find(t => t.id === id)
+    await completeTask(id)
+    updateTask(id, { completed_retroactively: true }).catch(() => {})
+    fetchTasks()
+    if (task?.task_type === 'task') {
+      setPendingWorkAsk({ id, title: task.title })
+    }
+  }
   async function handleUnsnooze(id)  { await unsnoozeTask(id);  fetchTasks() }
   async function handleDelete(id)    { await deleteTask(id);    fetchTasks() }
+
+  function handleWorkAnswer(isWork) {
+    const target = pendingWorkAsk
+    setPendingWorkAsk(null)
+    if (!target) return
+    updateTask(target.id, { is_work: isWork }).catch(() => {})
+    if (isWork) setPendingMinutes({ id: target.id, title: target.title })
+  }
+
+  function handleMinutesSave(minutes) {
+    const target = pendingMinutes
+    setPendingMinutes(null)
+    if (!target) return
+    updateTask(target.id, { minutes_spent: minutes }).catch(() => {})
+  }
+
+  function handleMinutesSkip() { setPendingMinutes(null) }
 
   if (loading) return <PageLoading />
   if (error)   return <PageError onRetry={fetchTasks} />
@@ -184,6 +215,15 @@ export default function Waiting() {
         )}
 
       </div>
+      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
+      {pendingMinutes && (
+        <MinutesPrompt
+          title={pendingMinutes.title}
+          defaultMinutes={null}
+          onSave={handleMinutesSave}
+          onSkip={handleMinutesSkip}
+        />
+      )}
     </div>
   )
 }

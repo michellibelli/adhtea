@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getInbox, scheduleToday, snoozeTask, deleteTask, completeTask } from '../api/tasks'
+import { getInbox, scheduleToday, snoozeTask, deleteTask, completeTask, updateTask } from '../api/tasks'
 import TaskCard from '../components/TaskCard'
 import Card from '../components/Card'
+import WorkAsk from '../components/WorkAsk'
+import MinutesPrompt from '../components/MinutesPrompt'
 import { PageLoading, PageError } from '../components/PageState'
 
 export default function Inbox({ onCountChange }) {
@@ -9,6 +11,8 @@ export default function Inbox({ onCountChange }) {
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
   const [notice,  setNotice]  = useState(null)
+  const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title }
+  const [pendingMinutes, setPendingMinutes] = useState(null)  // { id, title }
 
   // Store onCountChange in a ref so fetchTasks doesn't need it as a dependency.
   // Without this, every time the parent re-renders (creating a new function reference),
@@ -41,10 +45,36 @@ export default function Inbox({ onCountChange }) {
       setTimeout(() => setNotice(null), 4500)
     }
   }
+  // Completing straight from Inbox is backlog catch-up, same as Today's
+  // Up Next gate — retroactive, asked work + minutes, excluded from the EOD
+  // work-log (see Task.completed_retroactively). No elapsed-time guess and
+  // no anchor update, since this isn't a real-time work session.
   async function handleComplete(id) {
+    const task = tasks.find(t => t.id === id)
     setTasks(prev => prev.filter(t => t.id !== id))
     completeTask(id)
+    updateTask(id, { completed_retroactively: true }).catch(() => {})
+    if (task?.task_type === 'task') {
+      setPendingWorkAsk({ id, title: task.title })
+    }
   }
+
+  function handleWorkAnswer(isWork) {
+    const target = pendingWorkAsk
+    setPendingWorkAsk(null)
+    if (!target) return
+    updateTask(target.id, { is_work: isWork }).catch(() => {})
+    if (isWork) setPendingMinutes({ id: target.id, title: target.title })
+  }
+
+  function handleMinutesSave(minutes) {
+    const target = pendingMinutes
+    setPendingMinutes(null)
+    if (!target) return
+    updateTask(target.id, { minutes_spent: minutes }).catch(() => {})
+  }
+
+  function handleMinutesSkip() { setPendingMinutes(null) }
   async function handleSnooze(id, until) { await snoozeTask(id, until); fetchTasks() }
   async function handleDelete(id) { await deleteTask(id); fetchTasks() }
 
@@ -95,6 +125,15 @@ export default function Inbox({ onCountChange }) {
           </>
         )}
       </div>
+      {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
+      {pendingMinutes && (
+        <MinutesPrompt
+          title={pendingMinutes.title}
+          defaultMinutes={null}
+          onSave={handleMinutesSave}
+          onSkip={handleMinutesSkip}
+        />
+      )}
     </div>
   )
 }

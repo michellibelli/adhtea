@@ -193,9 +193,10 @@ class Task(Base):
     # Priority fields
     priority = Column(SAEnum(Priority), nullable=True)
     desire = Column(SAEnum(Desire), nullable=True)
-    # Retrospective effort tag. Null until the task is reviewed the next morning;
-    # set to small/big there. Feeds the capacity-vs-output analysis (see
-    # scoring.py::EFFORT_POINTS).
+    # ORPHANED (4.20.0). Was set retrospectively by the morning review;
+    # replaced by minutes_spent/is_work captured at actual completion.
+    # scoring.py::effort_points still reads it but nothing calls that
+    # function — see the ORPHANED note there. Kept declared, no migration.
     effort = Column(SAEnum(Effort), nullable=True)
     is_critical = Column(Boolean, default=False)        # always surface on low-focus list
     # Retrospective minutes spent, entered at end-of-day for the boss report.
@@ -255,14 +256,15 @@ class Task(Base):
 
 
 # ---------------------------------------------------------------------------
-# Effort Example (learning store for the morning-review guess engine)
+# Effort Example — ORPHANED (4.20.0)
 # ---------------------------------------------------------------------------
 
 class EffortExample(Base):
-    """One remembered (task title -> effort) correction per distinct title.
-    Doubles as an exact-title override cache and as few-shot examples fed to
-    Haiku, so the small/big guesses sharpen as she corrects them. Keyed on a
-    lowercased title so the same task re-uses her last answer."""
+    """ORPHANED. Backed the morning-review small/big guess engine, removed in
+    4.20.0 — time captured at completion (Task.minutes_spent / is_work)
+    replaced the effort tag. Nothing reads or writes this table anymore; kept
+    declared only so the ORM keeps matching the live Postgres table, same
+    pattern as Task.score/pinned_for. See HANDOFF "Known issues"."""
     __tablename__ = "effort_examples"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -413,7 +415,8 @@ class CapacitySnapshot(Base):
 
 
 # ---------------------------------------------------------------------------
-# Weekly Snapshot (Phase 6 — PID nudge system)
+# Weekly Snapshot — feeds the self-care gate's weekly insight line (pid_engine).
+# The daily popup nudge this also used to drive was removed in 4.20.0.
 # ---------------------------------------------------------------------------
 
 class WeeklySnapshot(Base):
@@ -436,10 +439,14 @@ class WeeklySnapshot(Base):
 
 
 # ---------------------------------------------------------------------------
-# Nudge Log (Phase 6 — tracks delivered nudges + user responses)
+# Nudge Log — ORPHANED (4.20.0)
 # ---------------------------------------------------------------------------
 
 class NudgeLog(Base):
+    """ORPHANED. Backed the daily popup nudge ("Have you eaten?" etc.),
+    removed in 4.20.0. Nothing reads or writes this table anymore; kept
+    declared only so the ORM keeps matching the live Postgres table, same
+    pattern as EffortExample. See HANDOFF "Known issues"."""
     __tablename__ = "nudge_logs"
 
     id = Column(Integer, primary_key=True, index=True)

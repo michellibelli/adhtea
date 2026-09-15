@@ -4,43 +4,16 @@ import { removeComplete } from '../api/client'
 import Card from '../components/Card'
 import Button from '../components/Button'
 
-// Effort toggle shared by reviewed + added rows.
-function EffortToggle({ value, onChange }) {
-  return (
-    <div className="flex gap-1.5 shrink-0">
-      {['small', 'big'].map(opt => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-            value === opt
-              ? 'bg-ui-primary text-ui-primary-text border-transparent'
-              : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-          }`}
-        >
-          {opt === 'small' ? 'Quick' : 'Big'}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // Morning review — first thing she sees on the day's first sign-in when there's
-// an unreviewed activity-day. A sunny greeting, then yesterday's finished tasks
-// pre-tagged small/big; she flips the wrong ones, adds anything she did that
-// wasn't in the app, then one button carries her into the self-care gate.
+// an unreviewed activity-day. A sunny greeting, then yesterday's finished tasks;
+// she flags anything mis-recorded, adds anything she did that wasn't in the
+// app, then one button carries her into the self-care gate. Small/big effort
+// tagging lived here until 4.20.0 — time captured at completion replaced it.
 export default function MorningReview({ data, onComplete }) {
-  const [efforts, setEfforts] = useState(() =>
-    Object.fromEntries((data.tasks || []).map(t => [t.id, t.effort_guess]))
-  )
   const [notDone, setNotDone] = useState(() => new Set())   // ids she says weren't done
-  const [added, setAdded] = useState([])   // {key, title, effort}
+  const [added, setAdded] = useState([])   // {key, title}
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
-
-  function setEffort(id, val) {
-    setEfforts(prev => ({ ...prev, [id]: val }))
-  }
 
   // A toggle, not a delete — a mis-tap has to be recoverable.
   function toggleNotDone(id) {
@@ -55,12 +28,8 @@ export default function MorningReview({ data, onComplete }) {
   function addItem() {
     const title = draft.trim()
     if (!title) return
-    setAdded(a => [...a, { key: Date.now() + Math.random(), title, effort: 'small' }])
+    setAdded(a => [...a, { key: Date.now() + Math.random(), title }])
     setDraft('')
-  }
-
-  function setAddedEffort(key, val) {
-    setAdded(a => a.map(x => (x.key === key ? { ...x, effort: val } : x)))
   }
 
   function removeAdded(key) {
@@ -81,9 +50,9 @@ export default function MorningReview({ data, onComplete }) {
       tasks: (data.tasks || []).map(t => (
         notDone.has(t.id)
           ? { id: t.id, done: false }
-          : { id: t.id, effort: efforts[t.id], done: true }
+          : { id: t.id, done: true }
       )),
-      added: added.map(x => ({ title: x.title, effort: x.effort })),
+      added: added.map(x => ({ title: x.title })),
     })
     onComplete()
   }
@@ -112,8 +81,7 @@ export default function MorningReview({ data, onComplete }) {
           <span className="text-xs text-ui-subtext">{dateLabel}</span>
         </div>
         <p className="text-xs text-ui-subtext mb-4">
-          A quick look back — tap to fix any that are off. Quick errand or a real effort?
-          Tap × if something on here wasn't actually done.
+          A quick look back — tap × if something on here wasn't actually done.
         </p>
 
         <div className="space-y-2.5">
@@ -134,9 +102,7 @@ export default function MorningReview({ data, onComplete }) {
                 <span className={`flex-1 text-sm ${off ? 'text-ui-subtext line-through' : 'text-ui-text'}`}>
                   {t.title}
                 </span>
-                {off
-                  ? <span className="text-xs text-ui-subtext shrink-0 pr-1">Not done</span>
-                  : <EffortToggle value={efforts[t.id]} onChange={v => setEffort(t.id, v)} />}
+                {off && <span className="text-xs text-ui-subtext shrink-0 pr-1">Not done</span>}
               </Card>
             )
           })}
@@ -152,7 +118,6 @@ export default function MorningReview({ data, onComplete }) {
                 ×
               </button>
               <span className="flex-1 text-sm text-ui-text">{x.title}</span>
-              <EffortToggle value={x.effort} onChange={v => setAddedEffort(x.key, v)} />
             </Card>
           ))}
         </div>

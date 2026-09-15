@@ -1,12 +1,14 @@
 """Morning review — /review/pending + /review/commit.
 
-No ANTHROPIC_API_KEY in the test env, so these exercise the heuristic +
-sunny-fallback path end to end (Haiku is never called).
+No ANTHROPIC_API_KEY in the test env, so these exercise the sunny-fallback
+greeting path end to end (Haiku is never called). Small/big effort tagging
+was removed in 4.20.0 — time captured at completion replaced it; these tests
+cover what's left: the greeting, the task list, and the not-done correction.
 """
 
 from datetime import datetime, timezone, timedelta
 
-from models import User, Task, TaskStatus, TaskType, Effort, EffortExample
+from models import User, Task, TaskStatus, TaskType
 from routes.task_lifecycle import _day_start, _app_day_start_utc
 
 
@@ -34,7 +36,7 @@ def test_pending_none_when_no_activity(client, auth_headers):
     assert r.json() is None
 
 
-def test_pending_surfaces_yesterday_with_guesses(client, auth_headers, db_session):
+def test_pending_surfaces_yesterday(client, auth_headers, db_session):
     u = _user(db_session)
     # Two tasks finished "yesterday" (2 days back to be safely before today's
     # app-day start regardless of the clock).
@@ -47,12 +49,11 @@ def test_pending_surfaces_yesterday_with_guesses(client, auth_headers, db_sessio
     data = r.json()
     assert data is not None
     assert data["greeting"]                      # always a sunny line
-    titles = {t["title"]: t["effort_guess"] for t in data["tasks"]}
-    assert titles["Call pharmacy"] == "small"    # heuristic
-    assert titles["Draft insurance email"] == "big"
+    titles = {t["title"] for t in data["tasks"]}
+    assert titles == {"Call pharmacy", "Draft insurance email"}
 
 
-def test_commit_stamps_effort_and_watermark_and_learns(client, auth_headers, db_session):
+def test_commit_stamps_watermark(client, auth_headers, db_session):
     u = _user(db_session)
     day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
     t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
@@ -60,20 +61,15 @@ def test_commit_stamps_effort_and_watermark_and_learns(client, auth_headers, db_
     pending = client.get("/review/pending", headers=auth_headers).json()
     review_date = pending["date"]
 
-    # She overrides the guess: this call was actually a big deal.
     r = client.post("/review/commit", headers=auth_headers, json={
         "date": review_date,
-        "tasks": [{"id": t1.id, "effort": "big"}],
+        "tasks": [{"id": t1.id}],
     })
     assert r.status_code == 200, r.text
     assert r.json()["reviewed_through"] == review_date
 
     db_session.expire_all()
-    assert db_session.get(Task, t1.id).effort == Effort.big
     assert db_session.get(User, u.id).reviewed_through.isoformat() == review_date
-    # Correction stored for future few-shot / override.
-    ex = db_session.query(EffortExample).filter_by(user_id=u.id).one()
-    assert ex.title_key == "call pharmacy" and ex.effort == Effort.big
 
 
 def test_commit_adds_backdated_done_tasks(client, auth_headers, db_session):
@@ -86,8 +82,8 @@ def test_commit_adds_backdated_done_tasks(client, auth_headers, db_session):
 
     r = client.post("/review/commit", headers=auth_headers, json={
         "date": review_date,
-        "tasks": [{"id": t1.id, "effort": "small"}],
-        "added": [{"title": "Folded all the laundry", "effort": "big"}],
+        "tasks": [{"id": t1.id}],
+        "added": [{"title": "Folded all the laundry"}],
     })
     assert r.status_code == 200, r.text
 
@@ -96,16 +92,10 @@ def test_commit_adds_backdated_done_tasks(client, auth_headers, db_session):
         owner_id=u.id, title="Folded all the laundry"
     ).one()
     assert new.status == TaskStatus.done
-    assert new.effort == Effort.big
     assert new.completed_at is not None
     # The added task now belongs to the reviewed day, so re-fetching pending
     # finds nothing (that day is stamped reviewed).
     assert client.get("/review/pending", headers=auth_headers).json() is None
-    # And its effort was learned.
-    ex = db_session.query(EffortExample).filter_by(
-        user_id=u.id, title_key="folded all the laundry"
-    ).one()
-    assert ex.effort == Effort.big
 
 
 def test_reviewed_day_not_resurfaced(client, auth_headers, db_session):
@@ -116,7 +106,7 @@ def test_reviewed_day_not_resurfaced(client, auth_headers, db_session):
     pending = client.get("/review/pending", headers=auth_headers).json()
     client.post("/review/commit", headers=auth_headers, json={
         "date": pending["date"],
-        "tasks": [{"id": t1.id, "effort": "small"}],
+        "tasks": [{"id": t1.id}],
     })
     # Same day already reviewed -> nothing pending now.
     again = client.get("/review/pending", headers=auth_headers)
@@ -141,20 +131,6 @@ def test_evening_completion_still_surfaces(client, auth_headers, db_session):
     assert any(t["title"] == "Bath and lights-out routine" for t in data["tasks"])
 
 
-def test_stored_override_beats_heuristic(client, auth_headers, db_session):
-    u = _user(db_session)
-    # Teach the store that "Call pharmacy" is big (opposite of the heuristic).
-    db_session.add(EffortExample(user_id=u.id, title_key="call pharmacy", effort=Effort.big))
-    db_session.commit()
-
-    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
-    _mk_done(db_session, u.id, "Call pharmacy", day)
-
-    data = client.get("/review/pending", headers=auth_headers).json()
-    guess = {t["title"]: t["effort_guess"] for t in data["tasks"]}
-    assert guess["Call pharmacy"] == "big"   # override wins over heuristic "small"
-
-
 # ---------------------------------------------------------------------------
 # "Not done" — she corrects a task the app wrongly recorded as finished.
 # ---------------------------------------------------------------------------
@@ -175,30 +151,10 @@ def test_commit_uncompletes_flagged_item(client, auth_headers, db_session):
     t = db_session.get(Task, t1.id)
     assert t.status == TaskStatus.inbox
     assert t.completed_at is None
-    assert t.effort is None
     assert t.scheduled_date is None
     assert t.sort_order is None
     # She corrected a mis-record; she did not push the work forward.
     assert (t.push_count or 0) == 0
-
-
-def test_uncompleted_item_is_not_learned(client, auth_headers, db_session):
-    """The anti-training pin. An un-flagged row must never reach
-    record_corrections — otherwise a wrong review list actively trains the
-    effort guesser on work that never happened, which is the compounding half
-    of this bug."""
-    u = _user(db_session)
-    day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
-    t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
-
-    pending = client.get("/review/pending", headers=auth_headers).json()
-    client.post("/review/commit", headers=auth_headers, json={
-        "date": pending["date"],
-        "tasks": [{"id": t1.id, "done": False}],
-    })
-
-    db_session.expire_all()
-    assert db_session.query(EffortExample).filter_by(user_id=u.id).count() == 0
 
 
 def test_commit_mixes_done_and_not_done(client, auth_headers, db_session):
@@ -211,7 +167,7 @@ def test_commit_mixes_done_and_not_done(client, auth_headers, db_session):
     r = client.post("/review/commit", headers=auth_headers, json={
         "date": pending["date"],
         "tasks": [
-            {"id": kept.id, "effort": "big"},
+            {"id": kept.id},
             {"id": wrong.id, "done": False},
         ],
     })
@@ -219,10 +175,7 @@ def test_commit_mixes_done_and_not_done(client, auth_headers, db_session):
 
     db_session.expire_all()
     assert db_session.get(Task, kept.id).status == TaskStatus.done
-    assert db_session.get(Task, kept.id).effort == Effort.big
     assert db_session.get(Task, wrong.id).status == TaskStatus.inbox
-    # Only the confirmed row was learned from.
-    keys = {e.title_key for e in db_session.query(EffortExample).filter_by(user_id=u.id)}
 
 
 def test_uncompleted_task_absent_from_future_pending(client, auth_headers, db_session):
@@ -235,7 +188,7 @@ def test_uncompleted_task_absent_from_future_pending(client, auth_headers, db_se
     pending = client.get("/review/pending", headers=auth_headers).json()
     client.post("/review/commit", headers=auth_headers, json={
         "date": pending["date"],
-        "tasks": [{"id": t1.id, "done": False}, {"id": t2.id, "effort": "small"}],
+        "tasks": [{"id": t1.id, "done": False}, {"id": t2.id}],
     })
 
     # Rewind the watermark so the same day is eligible again — this isolates the
@@ -250,11 +203,11 @@ def test_uncompleted_task_absent_from_future_pending(client, auth_headers, db_se
     assert "Sort mail" in titles
 
 
-def test_legacy_payload_without_done_still_commits(client, auth_headers, db_session):
-    """Back-compat pin. A pre-4.17.0 `{id, effort}` commit can be sitting in
+def test_legacy_payload_with_effort_still_commits(client, auth_headers, db_session):
+    """Back-compat pin. A pre-4.20.0 `{id, effort}` commit can be sitting in
     localStorage.aria_pending_reviews at deploy time, and commitReview drops a
     permanent 4xx without retrying — a 422 here would silently discard a
-    queued morning."""
+    queued morning. `effort` is accepted and ignored, not rejected."""
     u = _user(db_session)
     day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
     t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
@@ -266,10 +219,11 @@ def test_legacy_payload_without_done_still_commits(client, auth_headers, db_sess
     })
     assert r.status_code == 200, r.text
     db_session.expire_all()
-    assert db_session.get(Task, t1.id).effort == Effort.small
+    assert db_session.get(Task, t1.id).status == TaskStatus.done
 
 
-def test_done_row_without_effort_is_rejected(client, auth_headers, db_session):
+def test_done_row_without_effort_commits(client, auth_headers, db_session):
+    """effort is no longer required — a bare {id} row commits fine."""
     u = _user(db_session)
     day = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
     t1 = _mk_done(db_session, u.id, "Call pharmacy", day)
@@ -279,7 +233,7 @@ def test_done_row_without_effort_is_rejected(client, auth_headers, db_session):
         "date": pending["date"],
         "tasks": [{"id": t1.id}],
     })
-    assert r.status_code == 422
+    assert r.status_code == 200, r.text
 
 
 def test_uncomplete_ignores_unowned_ids(client, auth_headers, db_session):
@@ -295,7 +249,7 @@ def test_uncomplete_ignores_unowned_ids(client, auth_headers, db_session):
     pending = client.get("/review/pending", headers=auth_headers).json()
     r = client.post("/review/commit", headers=auth_headers, json={
         "date": pending["date"],
-        "tasks": [{"id": mine.id, "effort": "small"},
+        "tasks": [{"id": mine.id},
                   {"id": theirs.id, "done": False}],
     })
     assert r.status_code == 200, r.text

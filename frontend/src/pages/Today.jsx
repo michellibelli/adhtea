@@ -22,6 +22,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import WorkAsk from '../components/WorkAsk'
 import MinutesPrompt from '../components/MinutesPrompt'
+import { elapsedMinutesSinceLastCompletion, markWorkCompletionNow } from '../utils/lastWorkCompletion'
 import { PageLoading, PageError } from '../components/PageState'
 import { isTimedVisible } from '../utils/timing'
 
@@ -101,7 +102,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   const [newTitle, setNewTitle]     = useState('')
   const [adding, setAdding]         = useState(false)
   const [pendingWorkAsk, setPendingWorkAsk] = useState(null)  // { id, title, source: 'promote'|'gate' }
-  const [pendingGateMinutes, setPendingGateMinutes] = useState(null)  // { id, title } — gate completion, work confirmed
+  const [pendingCompletionMinutes, setPendingCompletionMinutes] = useState(null)  // { id, title, defaultMinutes, updatesAnchor }
 
   async function handleStartDay() {
     setApplying(true)
@@ -183,6 +184,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     : 0
 
   async function handleComplete(id) {
+    const task = todayTasks.find(t => t.id === id)
     setCompletingId(id)
     completeTask(id)
     setTimeout(() => {
@@ -191,6 +193,15 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
       getDoneToday().then(setDone).catch(() => {})
       getTodayCapacity().then(setCapacity).catch(() => {})
     }, 350)
+    // Same ask as Focus.jsx's completion flow — only fires for a task the
+    // gate/capture/promote flow already marked work.
+    if (task?.is_work === true) {
+      setPendingCompletionMinutes({
+        id, title: task.title,
+        defaultMinutes: elapsedMinutesSinceLastCompletion(),
+        updatesAnchor: true,
+      })
+    }
   }
 
   async function handleSnooze(id, until) {
@@ -277,21 +288,25 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     setTodayTasks(updater)
     // Gate completions (backlog cleared from Up Next) still get minutes asked
     // so the duration isn't lost — promoted-to-today tasks get minutes later,
-    // at actual completion time via Focus.jsx, so they stop here.
+    // at actual completion time (here or Focus.jsx), so they stop here.
+    // No elapsed-time guess and no anchor update: a gate completion isn't a
+    // real-time work session, so it shouldn't skew the next real one's default.
     if (target.source === 'gate' && isWork) {
-      setPendingGateMinutes({ id: target.id, title: target.title })
+      setPendingCompletionMinutes({ id: target.id, title: target.title, defaultMinutes: null, updatesAnchor: false })
     }
   }
 
-  function handleGateMinutesSave(minutes) {
-    const target = pendingGateMinutes
-    setPendingGateMinutes(null)
+  function handleCompletionMinutesSave(minutes) {
+    const target = pendingCompletionMinutes
+    setPendingCompletionMinutes(null)
     if (!target) return
     updateTask(target.id, { minutes_spent: minutes }).catch((err) => console.error(err))
+    if (target.updatesAnchor) markWorkCompletionNow()
   }
 
-  function handleGateMinutesSkip() {
-    setPendingGateMinutes(null)
+  function handleCompletionMinutesSkip() {
+    if (pendingCompletionMinutes?.updatesAnchor) markWorkCompletionNow()
+    setPendingCompletionMinutes(null)
   }
 
   async function handleDragEnd(event) {
@@ -586,12 +601,12 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
       )}
 
       {pendingWorkAsk && <WorkAsk title={pendingWorkAsk.title} onAnswer={handleWorkAnswer} />}
-      {pendingGateMinutes && (
+      {pendingCompletionMinutes && (
         <MinutesPrompt
-          title={pendingGateMinutes.title}
-          defaultMinutes={null}
-          onSave={handleGateMinutesSave}
-          onSkip={handleGateMinutesSkip}
+          title={pendingCompletionMinutes.title}
+          defaultMinutes={pendingCompletionMinutes.defaultMinutes}
+          onSave={handleCompletionMinutesSave}
+          onSkip={handleCompletionMinutesSkip}
         />
       )}
     </div>

@@ -1,33 +1,20 @@
 import json
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from database import get_db
 from models import (
     SelfCareLog, CapacitySnapshot, Task, TaskStatus, WeeklySnapshot,
-    NudgeLog, User, utcnow,
+    User, utcnow,
 )
-from schemas import WeeklySnapshotResponse, NudgeResponse, NudgeRespondRequest
+from schemas import WeeklySnapshotResponse
 from routes.auth import get_current_user
-from pid_engine import (
-    compute_pid_state, rank_nudges, generate_weekly_insight, satisfied_recently,
-    RECENCY_DAYS,
-)
+from pid_engine import compute_pid_state, generate_weekly_insight
 
 router = APIRouter(prefix="/insights", tags=["insights"])
-
-# One nudge a day, at most. Three a day on a two-hour cooldown trained her to swat
-# the modal shut without reading it, which is worse than not nudging at all — a
-# nudge she doesn't read is a nudge that can't work.
-NUDGE_COOLDOWN_SECONDS = 6 * 60 * 60
-NUDGE_DAILY_CAP = 1
-
-# A dismissal is an answer: not now. Asking about the same thing again tomorrow is
-# how a nudge becomes wallpaper, so a dismissed variable goes quiet for a few days.
-DISMISSAL_BACKOFF_DAYS = 3
 
 
 def _tz(user: User) -> ZoneInfo:
@@ -197,12 +184,11 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
 def _ensure_current_snapshot(db: Session, user: User) -> WeeklySnapshot | None:
     """Build this week's snapshot, or rebuild it if self-care has been logged since.
 
-    The snapshot is the only thing /nudge and /weekly read. It used to be written
-    once — the first time the week was touched — and then left alone, so every
-    self-care entry logged after that was invisible to the nudge engine for the
-    rest of the week. Recompute whenever a log in the window is newer than the
-    snapshot; there is no cron, so this lazy path is the only thing keeping the
-    numbers honest.
+    The snapshot is the only thing /weekly reads. It used to be written once —
+    the first time the week was touched — and then left alone, so every
+    self-care entry logged after that was invisible for the rest of the week.
+    Recompute whenever a log in the window is newer than the snapshot; there
+    is no cron, so this lazy path is the only thing keeping the numbers honest.
     """
     today = _user_today(user)
     ws = _week_start(today)
@@ -277,138 +263,3 @@ def get_weekly(
     }
     insight_copy = generate_weekly_insight(pid_state, averages)
     return _serialize_snapshot(snap, insight_copy)
-
-
-@router.get("/nudge", response_model=NudgeResponse | None)
-def get_nudge(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    today = _user_today(current_user)
-
-    if today.weekday() >= 5:
-        return None
-
-    _ensure_current_snapshot(db, current_user)
-
-    snap = (
-        db.query(WeeklySnapshot)
-        .filter(WeeklySnapshot.user_id == current_user.id)
-        .order_by(WeeklySnapshot.week_start.desc())
-        .first()
-    )
-    if not snap or not snap.pid_state:
-        return None
-    age_days = (today - snap.week_start).days
-    if age_days > 14:
-        return None
-
-    now = utcnow()
-    cooldown_cutoff = now - timedelta(seconds=NUDGE_COOLDOWN_SECONDS)
-    recent = (
-        db.query(NudgeLog)
-        .filter(
-            NudgeLog.user_id == current_user.id,
-            NudgeLog.shown_at > cooldown_cutoff,
-        )
-        .first()
-    )
-    if recent:
-        return None
-
-    today_start = datetime(today.year, today.month, today.day)
-    today_count = (
-        db.query(func.count(NudgeLog.id))
-        .filter(
-            NudgeLog.user_id == current_user.id,
-            NudgeLog.shown_at >= today_start,
-        )
-        .scalar()
-    ) or 0
-    if today_count >= NUDGE_DAILY_CAP:
-        return None
-
-    pid_state = json.loads(snap.pid_state)
-    averages = {
-        "sleep": snap.avg_sleep or 0,
-        "meals": snap.avg_meals or 0,
-        "exercise": snap.exercise_days or 0,
-        "checkin_days": snap.check_in_days or 0,
-        "weekdays": snap.weekdays_in_period or 5,
-    }
-
-    # Never nudge for something she already logged recently — today for sleep,
-    # meals and the check-in; today or yesterday for exercise.
-    lookback = max(RECENCY_DAYS.values())
-    logs = (
-        db.query(SelfCareLog)
-        .filter(
-            SelfCareLog.user_id == current_user.id,
-            SelfCareLog.log_date >= today - timedelta(days=lookback),
-            SelfCareLog.log_date <= today,
-        )
-        .all()
-    )
-    logs_by_age = {
-        (today - l.log_date).days: {
-            "meals": l.meals,
-            "exercise": l.exercise,
-            "sleep_hours": l.sleep_hours,
-        }
-        for l in logs
-    }
-    handled = satisfied_recently(logs_by_age)
-
-    # A dismissal is an answer. Stay off that subject for a few days.
-    backoff_cutoff = now - timedelta(days=DISMISSAL_BACKOFF_DAYS)
-    dismissed = (
-        db.query(NudgeLog.variable)
-        .filter(
-            NudgeLog.user_id == current_user.id,
-            NudgeLog.response == "dismissed",
-            NudgeLog.response_at > backoff_cutoff,
-        )
-        .distinct()
-        .all()
-    )
-    handled |= {v for (v,) in dismissed}
-
-    ranked = rank_nudges(pid_state, averages, exclude=handled)
-    if not ranked:
-        return None
-
-    top = ranked[0]
-    nudge = NudgeLog(
-        user_id=current_user.id,
-        nudge_type="micro",
-        variable=top["variable"],
-        message=top["message"],
-    )
-    db.add(nudge)
-    db.commit()
-    db.refresh(nudge)
-    return nudge
-
-
-@router.post("/nudge/{nudge_id}/respond")
-def respond_nudge(
-    nudge_id: int,
-    body: NudgeRespondRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    nudge = (
-        db.query(NudgeLog)
-        .filter(
-            NudgeLog.id == nudge_id,
-            NudgeLog.user_id == current_user.id,
-        )
-        .first()
-    )
-    if not nudge:
-        raise HTTPException(status_code=404, detail="Nudge not found")
-
-    nudge.response = body.response
-    nudge.response_at = utcnow()
-    db.commit()
-    return {"status": "ok"}
