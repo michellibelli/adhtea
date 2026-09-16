@@ -6,12 +6,10 @@ import EditTaskSheet from '../components/EditTaskSheet'
 import MinutesPrompt from '../components/MinutesPrompt'
 import Card from '../components/Card'
 import Button from '../components/Button'
-import { isTimedVisible } from '../utils/timing'
 import { orderTasks } from '../utils/ordering'
 import { elapsedMinutesSinceLastCompletion, markWorkCompletionNow } from '../utils/lastWorkCompletion'
 import TeaBox from '../components/TeaBox'
 import { PageError } from '../components/PageState'
-import WeeklyInsightCard from '../components/WeeklyInsightCard'
 import { ThemeContext } from '../context/ThemeContext'
 
 
@@ -45,7 +43,7 @@ const PRIORITY_BADGE = {
   high:   { background: 'rgba(181,137,0,0.22)', color: '#7A5C00' },
 }
 const TAG_NAMES = {
-  task: 'Task', appointment: 'Appt', routine: 'Routine', note: 'Note',
+  task: 'Task', routine: 'Routine', note: 'Note',
 }
 
 function seededRandom(seed) {
@@ -88,14 +86,10 @@ function tomorrowISO() {
 }
 
 function pickNext(tasks, manual = false) {
-  // Step 1 — apply the time-of-day window. Appointments only appear near their
-  // due time (see utils/timing.js for the windows).
-  const visible = tasks.filter(isTimedVisible)
-
-  // Step 2 — take the top of the shared today-order, the same order the tea-box
-  // packs its bags in (see utils/ordering.js). Once she's hand-ordered the box,
+  // Take the top of the shared today-order, the same order the tea-box packs
+  // its bags in (see utils/ordering.js). Once she's hand-ordered the box,
   // that's the order — the front bag is the card.
-  return orderTasks(visible, manual)[0] ?? null  // null → list empty → "all done" celebration
+  return orderTasks(tasks, manual)[0] ?? null  // null → list empty → "all done" celebration
 }
 
 // localStorage key for today's completed-bonus-task count — drives the gold
@@ -223,8 +217,8 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     setCelebrate(false)
 
     // Only a task the gate/capture/promote flow already marked as work gets
-    // asked for minutes — everything else (not-work, routines, appointments,
-    // anything never classified) goes straight through, unchanged.
+    // asked for minutes — everything else (not-work, routines, anything
+    // never classified) goes straight through, unchanged.
     if (pending && pending.isWork === true) {
       minutesWaitRef.current = pending
       setPendingMinutes({ taskId: pending.taskId, title: pending.title, defaultMinutes: pending.defaultMinutes })
@@ -264,8 +258,8 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       taskId, wasBonus,
       title: task.title,
       // Plain tasks default to work at creation now — missing/null reads the
-      // same as true (covers pre-4.21.0 tasks too). Routines/appointments
-      // never get classified, so they're excluded by type, not by value.
+      // same as true (covers pre-4.21.0 tasks too). Routines never get
+      // classified, so they're excluded by type, not by value.
       isWork: task.task_type === 'task' && task.is_work !== false,
       defaultMinutes: elapsedMinutesSinceLastCompletion(),
     }
@@ -638,8 +632,6 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
 
           </div>{/* end relative wrapper */}
         </div>{/* end teabag zone */}
-
-        {!celebrate && <WeeklyInsightCard />}
 
         {/* Tea box flanked by Capture (left) and Done (right) */}
         <div className="w-full mx-auto relative flex items-end gap-3" style={{ maxWidth: isLinen ? 220 : 380, zIndex: 5 }}>

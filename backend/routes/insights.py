@@ -12,7 +12,7 @@ from models import (
 )
 from schemas import WeeklySnapshotResponse
 from routes.auth import get_current_user
-from pid_engine import compute_pid_state, generate_weekly_insight
+from pid_engine import compute_pid_state
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 
@@ -39,7 +39,7 @@ def _count_weekdays(start: date, end: date) -> int:
     return count
 
 
-def _serialize_snapshot(snap: WeeklySnapshot, insight_copy: str | None = None) -> dict:
+def _serialize_snapshot(snap: WeeklySnapshot) -> dict:
     d = {
         "id": snap.id,
         "user_id": snap.user_id,
@@ -54,12 +54,11 @@ def _serialize_snapshot(snap: WeeklySnapshot, insight_copy: str | None = None) -
         "overall_capacity_avg": snap.overall_capacity_avg,
         "pid_state": json.loads(snap.pid_state) if snap.pid_state else None,
         "computed_at": snap.computed_at,
-        "insight_copy": insight_copy,
     }
     return d
 
 
-def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklySnapshot, str]:
+def _compute_snapshot(db: Session, user: User, target_ws: date) -> WeeklySnapshot:
     today = _user_today(user)
     window_end = min(target_ws + timedelta(days=6), today)
 
@@ -137,9 +136,6 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
     }
     pid_state = compute_pid_state(current_averages, prior_pid)
 
-    averages_for_insight = {**current_averages, "weekdays_in_period": weekdays}
-    insight_copy = generate_weekly_insight(pid_state, averages_for_insight)
-
     snap = (
         db.query(WeeklySnapshot)
         .filter(
@@ -178,7 +174,7 @@ def _compute_snapshot(db: Session, user: User, target_ws: date) -> tuple[WeeklyS
 
     db.commit()
     db.refresh(snap)
-    return snap, insight_copy
+    return snap
 
 
 def _ensure_current_snapshot(db: Session, user: User) -> WeeklySnapshot | None:
@@ -217,8 +213,7 @@ def _ensure_current_snapshot(db: Session, user: User) -> WeeklySnapshot | None:
     if existing and existing.computed_at and existing.computed_at >= latest_log_at:
         return None
 
-    snap, _ = _compute_snapshot(db, user, ws)
-    return snap
+    return _compute_snapshot(db, user, ws)
 
 
 @router.post("/compute-weekly", response_model=WeeklySnapshotResponse)
@@ -228,8 +223,8 @@ def compute_weekly(
     week_start: date | None = None,
 ):
     ws = week_start if week_start else _week_start(_user_today(current_user))
-    snap, insight_copy = _compute_snapshot(db, current_user, ws)
-    return _serialize_snapshot(snap, insight_copy)
+    snap = _compute_snapshot(db, current_user, ws)
+    return _serialize_snapshot(snap)
 
 
 @router.get("/weekly", response_model=WeeklySnapshotResponse | None)
@@ -253,13 +248,4 @@ def get_weekly(
     if age_days > 14:
         return None
 
-    pid_state = json.loads(snap.pid_state) if snap.pid_state else {}
-    averages = {
-        "sleep": snap.avg_sleep or 0,
-        "meals": snap.avg_meals or 0,
-        "exercise": snap.exercise_days or 0,
-        "checkin": snap.check_in_days or 0,
-        "weekdays_in_period": snap.weekdays_in_period or 5,
-    }
-    insight_copy = generate_weekly_insight(pid_state, averages)
-    return _serialize_snapshot(snap, insight_copy)
+    return _serialize_snapshot(snap)

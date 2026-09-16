@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getTodayLog, upsertLog, getTodayCapacity } from '../api/selfcare'
 import { createTask } from '../api/tasks'
-import { getWeekly } from '../api/insights'
 import CapacityBar from '../components/CapacityBar'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -76,7 +75,6 @@ export default function SelfCare({ medicationQuestionEnabled = true, gateMode = 
   const [checkinText,   setCheckinText]   = useState('')
   const [checkinSaving, setCheckinSaving] = useState(false)
   const [checkinDone,   setCheckinDone]   = useState(false)
-  const [insightCopy,   setInsightCopy]   = useState(null)
 
   // `background` mode (used when preloaded) refreshes data without the blocking
   // spinner and without clobbering the form the user may already be editing.
@@ -99,17 +97,6 @@ export default function SelfCare({ medicationQuestionEnabled = true, gateMode = 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll(hasPreload) }, [])
-
-  useEffect(() => {
-    if (!gateMode) return
-    let cancelled = false
-    getWeekly()
-      .then((data) => {
-        if (!cancelled && data?.insight_copy) setInsightCopy(data.insight_copy)
-      })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [gateMode])
 
   async function handleSave() {
     setSaving(true)
@@ -153,11 +140,6 @@ export default function SelfCare({ medicationQuestionEnabled = true, gateMode = 
               Quick log first — your capacity for today drives how many tasks
               land on your plate.
             </p>
-            {insightCopy && (
-              <p className="text-xs text-ui-text mt-2 pt-2 border-t border-ui-accent/20 leading-relaxed">
-                {insightCopy}
-              </p>
-            )}
           </div>
         )}
 

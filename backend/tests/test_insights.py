@@ -1,16 +1,17 @@
-"""Tests for the weekly PID insight: pid_engine + /insights endpoints.
+"""Tests for the weekly PID data pipeline: pid_engine + /insights endpoints.
 
-The nudge popup (rank_nudges' consumer via /insights/nudge) was removed in
-4.20.0 — compute_pid_state, rank_nudges and generate_weekly_insight all stay
-live because the weekly insight_copy (shown in the self-care gate) still
-uses them.
+The nudge popup (/insights/nudge) was removed in 4.20.0; the weekly
+insight_copy line (shown on Focus and the self-care gate) was removed
+2026-09-16 — same nagging, different surface. compute_pid_state and the
+WeeklySnapshot pipeline stay: half-built groundwork for a future
+productivity-vs-self-care analysis, not user-facing yet.
 """
 
 from datetime import date, timedelta
 
 import pytest
 
-from pid_engine import compute_pid_state, rank_nudges, generate_weekly_insight, TARGETS
+from pid_engine import compute_pid_state, TARGETS
 
 
 # ---------------------------------------------------------------------------
@@ -56,39 +57,6 @@ class TestPidEngine:
             expected_no_decay = week1[var]["i"] + (TARGETS[var]["target"] - better[var]) / TARGETS[var]["max_error"]
             assert week2[var]["i"] < expected_no_decay
 
-    def test_negative_d_suppresses_low_score(self):
-        avgs_w1 = {"sleep": 7.0, "meals": 2.8, "exercise": 3, "checkin": 0.85}
-        w1 = compute_pid_state(avgs_w1, None)
-        avgs_w2 = {"sleep": 7.4, "meals": 2.9, "exercise": 3.5, "checkin": 0.88}
-        w2 = compute_pid_state(avgs_w2, w1)
-        ranked = rank_nudges(w2)
-        variables = [n["variable"] for n in ranked]
-        for var in TARGETS:
-            if w2[var]["d"] < 0 and w2[var]["score"] < 0.1:
-                assert var not in variables
-
-    def test_rank_order_matches_score_desc(self):
-        avgs = {"sleep": 3.0, "meals": 1.0, "exercise": 0, "checkin": 0.1}
-        state = compute_pid_state(avgs, None)
-        ranked = rank_nudges(state)
-        scores = [n["score"] for n in ranked]
-        assert scores == sorted(scores, reverse=True)
-
-    def test_generate_insight_worsening(self):
-        avgs_w1 = {"sleep": 7.0, "meals": 2.5, "exercise": 3, "checkin": 0.8}
-        w1 = compute_pid_state(avgs_w1, None)
-        avgs_w2 = {"sleep": 5.0, "meals": 1.5, "exercise": 1, "checkin": 0.4}
-        w2 = compute_pid_state(avgs_w2, w1)
-        insight = generate_weekly_insight(w2, {**avgs_w2, "weekdays_in_period": 5})
-        assert "\U0001f49b" in insight
-        assert len(insight) > 10
-
-    def test_generate_insight_all_perfect(self):
-        avgs = {"sleep": 7.5, "meals": 3.0, "exercise": 4, "checkin": 0.9}
-        state = compute_pid_state(avgs, None)
-        insight = generate_weekly_insight(state, {**avgs, "weekdays_in_period": 5})
-        assert "steady" in insight.lower() or "pace" in insight.lower()
-
 
 # ---------------------------------------------------------------------------
 # /insights/compute-weekly
@@ -126,7 +94,6 @@ class TestComputeWeekly:
         assert data["avg_meals"] == 2.0
         assert data["check_in_days"] == len(offsets)
         assert data["pid_state"] is not None
-        assert data["insight_copy"] is not None
 
     def test_idempotent(self, client, auth_headers):
         ws = self._week_start()
