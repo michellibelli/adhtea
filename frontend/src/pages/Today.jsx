@@ -23,7 +23,6 @@ import Button from '../components/Button'
 import MinutesPrompt from '../components/MinutesPrompt'
 import { elapsedMinutesSinceLastCompletion, markWorkCompletionNow } from '../utils/lastWorkCompletion'
 import { PageLoading, PageError } from '../components/PageState'
-import { isTimedVisible } from '../utils/timing'
 
 const FALLBACK_MAX_TODAY = 10
 const MAX_TOTAL = 20
@@ -159,8 +158,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
   const maxToday = capacity?.max_slots ?? FALLBACK_MAX_TODAY
 
   const timed = todayTasks
-    .filter(t => t.task_type === 'appointment' || t.task_type === 'routine')
-    .filter(isTimedVisible)
+    .filter(t => t.task_type === 'routine')
     .sort((a, b) => {
       const at = a.due_time || '99:99'
       const bt = b.due_time || '99:99'
@@ -169,17 +167,13 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     })
 
   const regular = sortTasks(
-    todayTasks.filter(t => t.task_type !== 'appointment' && t.task_type !== 'routine'),
+    todayTasks.filter(t => t.task_type !== 'routine'),
     sortBy
   )
   const overCapacity = regular.length > maxToday
 
   const upNextSlots = Math.max(0, MAX_TOTAL - regular.length - timed.length)
-  // Appointments belong here too now. Auto-promotion stops once the day is
-  // planned (backend gates on planned_on), so a synced appointment that used to
-  // walk straight into Today now waits here — filtering to task-only would have
-  // left it with nowhere to appear at all.
-  const upNextAll = inboxTasks.filter(t => t.task_type === 'task' || t.task_type === 'appointment')
+  const upNextAll = inboxTasks.filter(t => t.task_type === 'task')
   const upNext = upNextAll.slice(0, upNextSlots)
 
   // Things that came due while she was working. Held back deliberately so the
@@ -201,8 +195,8 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     }, 350)
     // Same ask as Focus.jsx's completion flow. Plain tasks default to work at
     // creation — missing/null reads the same as true (covers pre-4.21.0
-    // tasks too); routines/appointments never get classified, excluded by
-    // type rather than value.
+    // tasks too); routines never get classified, excluded by type rather
+    // than value.
     if (task?.task_type === 'task' && task.is_work !== false) {
       setPendingCompletionMinutes({
         id, title: task.title,
@@ -381,7 +375,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
         ) : (
           <div className="space-y-6">
 
-            {/* Schedule — appointments + routines */}
+            {/* Schedule — routines */}
             {timed.length > 0 && (
               <div>
                 <p className="text-[10px] font-medium text-ui-subtext uppercase tracking-wider mb-2 px-0.5">Schedule</p>

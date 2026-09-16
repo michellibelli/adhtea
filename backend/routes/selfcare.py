@@ -234,25 +234,17 @@ def get_daily_summary(
         Task.task_type == TaskType.routine,
     ).all()
 
-    done_appointments = db.query(Task).filter(
-        Task.owner_id == current_user.id,
-        Task.status == TaskStatus.done,
-        Task.completed_at >= today_start,
-        Task.task_type == TaskType.appointment,
-    ).all()
-
     log = db.query(SelfCareLog).filter(
         SelfCareLog.user_id == current_user.id,
         SelfCareLog.log_date == today,
     ).first()
 
-    all_done = done_tasks + done_routines + done_appointments
+    all_done = done_tasks + done_routines
     total_minutes = sum(t.minutes_spent for t in all_done if t.minutes_spent)
 
     return {
         "tasks_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_tasks],
         "routines_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_routines],
-        "appointments_done": [{"id": t.id, "title": t.title, "minutes_spent": t.minutes_spent} for t in done_appointments],
         "tasks_done_count": len(done_tasks),
         "routines_done_count": len(done_routines),
         # Kept as an int (0 or 1), not a bool — the EOD summary card already

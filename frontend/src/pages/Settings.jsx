@@ -246,8 +246,8 @@ export default function Settings({ onNavigate, onEndDay, user, onUserUpdate }) {
             <p className="text-sm font-medium text-ui-text mb-1">Export to CSV</p>
             <p className="text-xs text-ui-subtext mb-4 leading-relaxed">
               Download every task — dates, status, tags, notes — as a spreadsheet.
-              Routine check-offs are one row per day and synced appointments one row
-              per occurrence, so leave those out for just the tasks you wrote.
+              Routine check-offs are one row per day, so leave those out for just
+              the tasks you wrote.
             </p>
             <CSVExportForm />
           </Card>
@@ -455,15 +455,13 @@ function CSVImportForm() {
 }
 
 
-// Routine check-offs and synced calendar events are one row per day / per
-// occurrence, so they swamp the hand-written tasks in a long export. Both are
-// droppable here; everything is included until she says otherwise.
-const ALL_EXPORT_TYPES = ['task', 'appointment', 'routine', 'note']
+// Routine check-offs are one row per day, so they swamp the hand-written
+// tasks in a long export. Droppable here; included until she says otherwise.
+const ALL_EXPORT_TYPES = ['task', 'routine', 'note']
 
 function CSVExportForm() {
   const [includeDeleted,  setIncludeDeleted]  = useState(false)
   const [skipRoutines,    setSkipRoutines]    = useState(false)
-  const [skipAppointments, setSkipAppointments] = useState(false)
   const [since,   setSince]   = useState('')
   const [loading, setLoading] = useState(false)
   const [done,    setDone]    = useState(null)
@@ -477,10 +475,8 @@ function CSVExportForm() {
     try {
       const params = new URLSearchParams()
       if (includeDeleted) params.set('include_deleted', 'true')
-      if (skipRoutines || skipAppointments) {
-        const types = ALL_EXPORT_TYPES.filter(t =>
-          !(skipRoutines && t === 'routine') && !(skipAppointments && t === 'appointment')
-        )
+      if (skipRoutines) {
+        const types = ALL_EXPORT_TYPES.filter(t => t !== 'routine')
         params.set('types', types.join(','))
       }
       if (since) params.set('since', since)
@@ -512,7 +508,6 @@ function CSVExportForm() {
     <div>
       <div className="space-y-2 mb-3">
         {checkbox(skipRoutines, setSkipRoutines, 'Leave out routine check-offs')}
-        {checkbox(skipAppointments, setSkipAppointments, 'Leave out calendar appointments')}
         {checkbox(includeDeleted, setIncludeDeleted, 'Include deleted tasks')}
       </div>
       <label className="block text-xs text-ui-subtext mb-3">

@@ -36,7 +36,7 @@ def create_routine(
         title=body.title.strip(),
         notes=body.notes,
         frequency=body.frequency,
-        time_of_day=body.time_of_day,
+        bucket=body.bucket,
         days_of_week=body.days_of_week,
         only_when_present=body.only_when_present,
         exact_time=body.exact_time,

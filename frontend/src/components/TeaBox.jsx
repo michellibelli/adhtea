@@ -170,13 +170,16 @@ function chunk(items, size) {
 // that the time-of-day window would otherwise keep off the card.
 //
 // The box is sized to the day's capacity (capacitySlots, snapshotted at
-// "Start my day"): that many task/appointment bags get real slots, padded
-// with dashed empty-slot outlines if she's under plan. Routines don't count
-// against that number — they ride along additively, appended after the
-// capacity section, because a routine isn't optional work she chose to take
-// on today. Nothing is ever hidden: if a day's bags don't fit in one box tier,
-// a second complete tier stacks below it (see BoxTier/ROW_CAPACITY) — no
-// scrollbar, which read as too "app" for a screen meant to feel chill.
+// "Start my day"): that many task bags count against the plan, padded with
+// dashed empty-slot outlines if she's under plan. Routines don't count
+// against that number — a routine isn't optional work she chose to take on
+// today — but unlike the old tasks-then-routines layout, they're not just
+// appended at the end either: orderTasks interleaves them by time-bucket
+// (First/Morning/Mid Day/Afternoon) with capped slices of easy/hard tasks
+// between them (see utils/ordering.js). Nothing is ever hidden: if a day's
+// bags don't fit in one box tier, a second complete tier stacks below it
+// (see BoxTier/ROW_CAPACITY) — no scrollbar, which read as too "app" for a
+// screen meant to feel chill.
 //
 // Dragging a bag hands the day's order to her: onReorder persists the new
 // sort_order and flips the box into manual mode, where the clock stops
@@ -187,14 +190,14 @@ function chunk(items, size) {
 // every automatic rule elsewhere in the app.
 export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, capacitySlots = null, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate, showDrawers = false }) {
   const ordered = orderTasks(tasks, manualOrder)
-  // Routines are additive, not counted against capacity — pulled out and
-  // appended after the capacity-sized task section rather than interleaved.
-  const slotBags = ordered.filter(t => t.task_type !== 'routine')
-  const routineBags = ordered.filter(t => t.task_type === 'routine')
+  // Routines are additive, not counted against capacity — the count below
+  // only tallies plain tasks, independent of where they land in the
+  // bucket-interleaved display order.
+  const taskCount = ordered.filter(t => t.task_type !== 'routine').length
   const slots = capacitySlots ?? FALLBACK_SLOTS
-  const overCapacity = slotBags.length > slots
+  const overCapacity = taskCount > slots
 
-  const sortableIds = [...slotBags, ...routineBags].map(t => t.id)
+  const sortableIds = ordered.map(t => t.id)
 
   // A drag ends with a click event on the bag the user let go of, which would
   // otherwise focus it. Set on drag start, cleared on the macrotask after drop —
@@ -254,12 +257,12 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
     }
   }
 
-  // Build the flat visual sequence (slot bags → routines → gold), then split
-  // it into box-tier-sized chunks. Whether an item is a real task or a bonus
-  // bag, it's still a bag-sized thing taking up room in the box.
+  // Build the flat visual sequence (already bucket-interleaved by orderTasks,
+  // plus trailing gold bags), then split it into box-tier-sized chunks.
+  // Whether an item is a real task or a bonus bag, it's still a bag-sized
+  // thing taking up room in the box.
   const visual = [
-    ...slotBags.map(t => ({ kind: 'slot', task: t })),
-    ...routineBags.map(t => ({ kind: 'routine', task: t })),
+    ...ordered.map(t => ({ kind: t.task_type === 'routine' ? 'routine' : 'slot', task: t })),
     ...Array.from({ length: goldCount }, (_, i) => ({ kind: 'gold', key: `gold-${i}` })),
   ]
   const tiers = chunk(visual, ROW_CAPACITY)
@@ -284,7 +287,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
       {overCapacity ? (
         <p className="text-center mb-1.5">
           <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
-            {slotBags.length - slots} over today's {slots}-task plan
+            {taskCount - slots} over today's {slots}-task plan
           </span>
         </p>
       ) : goldCount >= slots && slots > 0 ? (

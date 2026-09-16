@@ -10,7 +10,6 @@ every request:
   - carry_forward              : yesterday's unfinished Today items → Inbox
   - resolve_snoozes            : snoozed items whose date arrived → Inbox
   - demote_misclassified_today : Today tasks with a future due_date → Inbox
-  - archive_past_appointments  : past appointments → done (stamped to their date)
 
 plus the user-day/time helpers (`_app_today`, `_day_start`, …) they all share.
 """
@@ -69,8 +68,8 @@ def _day_end(user: User) -> datetime:
 
 
 # Hard cap on how many items may sit in Today. A plain task aimed at a full
-# day is snapped to the next day instead; appointments and routines are
-# time-bound and always admitted.
+# day is snapped to the next day instead; routines are time-bound and always
+# admitted.
 DAILY_CAP = 15
 
 
@@ -84,8 +83,8 @@ def count_today(user: User, db: Session) -> int:
 
 
 def _exempt_from_cap(task_type) -> bool:
-    """Appointments and routines are time-bound — they bypass the daily cap."""
-    return task_type in (TaskType.appointment, TaskType.routine)
+    """Routines are time-bound — they bypass the daily cap."""
+    return task_type == TaskType.routine
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +145,7 @@ def generate_routine_instances(user: User, db: Session):
                 routine_id=routine.id,
                 scheduled_date=today_dt,
                 due_time=routine.exact_time,
+                bucket=routine.bucket,
             ))
             created += 1
     if created:
@@ -158,7 +158,7 @@ def generate_routine_instances(user: User, db: Session):
 
 def run_daily_rollover(user: User, db: Session) -> bool:
     """Run the sweeps that only change at the day boundary — carry-forward, routine
-    generation, appointment archival — at most once per app-day per user.
+    generation — at most once per app-day per user.
 
     These are triggered lazily from the read endpoints (there is no background
     scheduler), so without a guard two concurrent first-of-day page loads would
@@ -187,7 +187,6 @@ def run_daily_rollover(user: User, db: Session) -> bool:
 
     carry_forward(user, db)
     generate_routine_instances(user, db)
-    archive_past_appointments(user, db)
     return True
 
 
@@ -245,39 +244,6 @@ def demote_misclassified_today(user: User, db: Session):
         task.status = TaskStatus.inbox
         task.scheduled_date = None
         task.sort_order = None
-    if stale:
-        db.commit()
-    return len(stale)
-
-
-# ---------------------------------------------------------------------------
-# Archive past appointments: an appointment is date-and-time bound, so once
-# its day has passed it is over. Auto-complete + archive it (same as any other
-# completed task) so it stops bouncing between inbox and Today. completed_at is
-# stamped to the appointment's own date, not now, so it archives as a past
-# completion rather than landing in today's Done list.
-# ---------------------------------------------------------------------------
-
-def archive_past_appointments(user: User, db: Session):
-    today_local = _app_today(user)
-    stale = (
-        db.query(Task)
-        .filter(
-            Task.owner_id == user.id,
-            Task.task_type == TaskType.appointment,
-            Task.due_date.isnot(None),
-            Task.due_date < today_local,
-            Task.status.notin_([TaskStatus.done, TaskStatus.deleted]),
-        )
-        .all()
-    )
-    for task in stale:
-        task.status = TaskStatus.done
-        task.scheduled_date = None
-        task.sort_order = None
-        if task.completed_at is None:
-            d = task.due_date
-            task.completed_at = datetime(d.year, d.month, d.day)
     if stale:
         db.commit()
     return len(stale)

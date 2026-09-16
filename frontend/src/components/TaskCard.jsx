@@ -6,7 +6,7 @@ import Button from './Button'
 import Card from './Card'
 import { Input, Textarea } from './Input'
 
-const TYPE_ICONS  = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+const TYPE_ICONS  = { task: '✦', routine: '↻', note: '◈' }
 
 
 function formatDueDate(iso) {
@@ -20,26 +20,15 @@ function formatDueDate(iso) {
   return { label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), overdue: false }
 }
 
-const LOCATION_TYPES = [
-  { id: 'zoom',    label: 'Zoom' },
-  { id: 'signal',  label: 'Signal' },
-  { id: 'phone',   label: 'Phone' },
-  { id: 'office',  label: 'Office' },
-  { id: 'address', label: 'Address' },
-  { id: 'other',   label: 'Other' },
-]
-
 // ── Inline edit form ─────────────────────────────────────────────────────────
 
 function EditForm({ task, onSave, onCancel }) {
   const [form, setForm] = useState({
-    title:           task.title ?? '',
-    notes:           task.notes ?? '',
-    due_date:        task.due_date ?? '',
-    due_time:        task.due_time ?? '',
-    location_type:   task.location_type ?? '',
-    location_detail: task.location_detail ?? '',
-    tags:            task.tags ?? '',
+    title:    task.title ?? '',
+    notes:    task.notes ?? '',
+    due_date: task.due_date ?? '',
+    due_time: task.due_time ?? '',
+    tags:     task.tags ?? '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -53,13 +42,11 @@ function EditForm({ task, onSave, onCancel }) {
       // Build the patch object: empty strings become null so the API clears the field.
       // .trim() removes accidental leading/trailing spaces before saving.
       const patch = {
-        title:           form.title.trim(),
-        notes:           form.notes.trim() || null,
-        due_date:        form.due_date        || null,
-        due_time:        form.due_time        || null,
-        location_type:   form.location_type   || null,
-        location_detail: form.location_detail.trim() || null,
-        tags:            form.tags.trim()     || null,
+        title:    form.title.trim(),
+        notes:    form.notes.trim() || null,
+        due_date: form.due_date     || null,
+        due_time: form.due_time     || null,
+        tags:     form.tags.trim()  || null,
       }
       const updated = await updateTask(task.id, patch)
       onSave(updated)
@@ -70,7 +57,6 @@ function EditForm({ task, onSave, onCancel }) {
     }
   }
 
-  const isAppt    = task.task_type === 'appointment'
   const isTask    = task.task_type === 'task'
   const isNote    = task.task_type === 'note'
   const isRoutine = task.task_type === 'routine'
@@ -87,55 +73,18 @@ function EditForm({ task, onSave, onCancel }) {
       />
 
       {/* Date / time */}
-      {(isTask || isAppt) && (
+      {isTask && (
         <div className="grid grid-cols-2 gap-2">
           <div>
             <p className="text-[10px] text-ui-subtext mb-1">
-              Date{(isTask || isAppt) && <span className="ml-0.5" style={{ color: '#B04A1D' }}>*</span>}
+              Date<span className="ml-0.5" style={{ color: '#B04A1D' }}>*</span>
             </p>
             <Input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
           </div>
           <div>
-            <p className="text-[10px] text-ui-subtext mb-1">Time{isAppt && <span className="ml-0.5" style={{ color: '#B04A1D' }}>*</span>}</p>
+            <p className="text-[10px] text-ui-subtext mb-1">Time</p>
             <Input type="time" value={form.due_time} onChange={(e) => set('due_time', e.target.value)} />
           </div>
-        </div>
-      )}
-
-      {/* Location (appointments) */}
-      {isAppt && (
-        <div>
-          <p className="text-[10px] text-ui-subtext mb-1">Location</p>
-          <div className="flex flex-wrap gap-1 mb-1.5">
-            {LOCATION_TYPES.map((loc) => (
-              <button
-                key={loc.id}
-                type="button"
-                onClick={() => set('location_type', form.location_type === loc.id ? '' : loc.id)}
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-medium border transition-all ${
-                  form.location_type === loc.id
-                    ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                    : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-                }`}
-              >
-                {loc.label}
-              </button>
-            ))}
-          </div>
-          {form.location_type && (
-            <Input
-              value={form.location_detail}
-              onChange={(e) => set('location_detail', e.target.value)}
-              placeholder={
-                form.location_type === 'zoom'    ? 'Meeting link' :
-                form.location_type === 'signal'  ? 'Phone number' :
-                form.location_type === 'phone'   ? 'Phone number' :
-                form.location_type === 'office'  ? 'Room or building' :
-                form.location_type === 'address' ? 'Street address' :
-                                                   'Details'
-              }
-            />
-          )}
         </div>
       )}
 

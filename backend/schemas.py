@@ -1,12 +1,15 @@
 from datetime import datetime, date
-from typing import Optional, Annotated
+from typing import Optional, Annotated, Literal
 from pydantic import BaseModel, Field
 
 Password = Annotated[str, Field(min_length=8, max_length=128)]
 from models import (
     UserRole, TaskType, TaskStatus, Priority,
-    Desire, Effort, RoutineFrequency, TimeOfDay, LocationType
+    Desire, Effort, RoutineFrequency, LocationType
 )
+
+RoutineBucket = Literal["first", "morning", "midday", "afternoon"]
+TaskDifficulty = Literal["easy", "hard"]
 
 
 # ---------------------------------------------------------------------------
@@ -149,8 +152,6 @@ class TaskCreate(BaseModel):
     is_critical: bool = False
     due_date: Optional[date] = None
     due_time: Optional[str] = None          # HH:MM
-    location_type: Optional[LocationType] = None
-    location_detail: Optional[str] = None
     tags: Optional[str] = None              # comma-separated
     is_work: Optional[bool] = None
 
@@ -202,6 +203,8 @@ class TaskResponse(BaseModel):
     priority: Optional[Priority]
     desire: Optional[Desire]
     effort: Optional[Effort]
+    difficulty: Optional[TaskDifficulty]
+    bucket: Optional[RoutineBucket]
     is_critical: bool
     due_date: Optional[date]
     due_time: Optional[str]
@@ -237,7 +240,7 @@ class RoutineCreate(BaseModel):
     title: str
     notes: Optional[str] = None
     frequency: RoutineFrequency = RoutineFrequency.daily
-    time_of_day: TimeOfDay = TimeOfDay.anytime
+    bucket: RoutineBucket = "morning"
     days_of_week: Optional[str] = None
     exact_time: Optional[str] = None        # HH:MM
     is_critical: bool = False
@@ -248,7 +251,7 @@ class RoutineUpdate(BaseModel):
     title: Optional[str] = None
     notes: Optional[str] = None
     frequency: Optional[RoutineFrequency] = None
-    time_of_day: Optional[TimeOfDay] = None
+    bucket: Optional[RoutineBucket] = None
     days_of_week: Optional[str] = None
     exact_time: Optional[str] = None
     is_critical: Optional[bool] = None
@@ -262,7 +265,7 @@ class RoutineResponse(BaseModel):
     title: str
     notes: Optional[str]
     frequency: RoutineFrequency
-    time_of_day: TimeOfDay
+    bucket: Optional[RoutineBucket]
     days_of_week: Optional[str]
     exact_time: Optional[str]
     is_critical: bool
@@ -346,7 +349,6 @@ class WeeklySnapshotResponse(BaseModel):
     overall_capacity_avg: Optional[float]
     pid_state: Optional[dict] = None
     computed_at: datetime
-    insight_copy: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

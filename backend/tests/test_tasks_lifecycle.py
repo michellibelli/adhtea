@@ -7,7 +7,6 @@ from models import Task, TaskStatus, TaskType, User
 from routes.tasks import (
     _app_today, _day_start, _day_start_hour,
     carry_forward, resolve_snoozes, demote_misclassified_today,
-    archive_past_appointments,
 )
 
 
@@ -162,45 +161,6 @@ def test_demote_ignores_routines(db_session):
     demote_misclassified_today(user, db_session)
     db_session.refresh(routine_task)
     assert routine_task.status == TaskStatus.today
-
-
-# ---------------------------------------------------------------------------
-# archive_past_appointments: a missed appointment is over — auto-complete and
-# archive it (same as any completed task) instead of letting it resurface.
-# ---------------------------------------------------------------------------
-
-def test_archive_past_appointments_completes_them(db_session):
-    user = _user(db_session)
-    today = _app_today(user)
-    missed_today = _mk_task(db_session, user.id, status=TaskStatus.today,
-                            task_type=TaskType.appointment,
-                            due_date=today - timedelta(days=2))
-    missed_inbox = _mk_task(db_session, user.id, status=TaskStatus.inbox,
-                            task_type=TaskType.appointment,
-                            due_date=today - timedelta(days=5))
-    todays_appt = _mk_task(db_session, user.id, status=TaskStatus.today,
-                           task_type=TaskType.appointment, due_date=today)
-
-    n = archive_past_appointments(user, db_session)
-    assert n == 2
-    db_session.refresh(missed_today)
-    db_session.refresh(missed_inbox)
-    db_session.refresh(todays_appt)
-    assert missed_today.status == TaskStatus.done
-    assert missed_today.completed_at is not None
-    assert missed_inbox.status == TaskStatus.done
-    assert todays_appt.status == TaskStatus.today   # today's appointment untouched
-
-
-def test_archive_past_appointments_ignores_plain_tasks(db_session):
-    user = _user(db_session)
-    today = _app_today(user)
-    overdue_task = _mk_task(db_session, user.id, status=TaskStatus.inbox,
-                            task_type=TaskType.task,
-                            due_date=today - timedelta(days=3))
-    archive_past_appointments(user, db_session)
-    db_session.refresh(overdue_task)
-    assert overdue_task.status == TaskStatus.inbox   # overdue tasks stay actionable
 
 
 def test_daily_rollover_generates_only_once_per_day(db_session, monkeypatch):

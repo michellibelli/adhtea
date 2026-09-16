@@ -11,6 +11,7 @@ from models import (
     CapacitySnapshot, utcnow, User,
 )
 from scoring import max_slots_for
+from difficulty_engine import classify_difficulty
 from schemas import (
     TaskCreate, TaskUpdate, TaskResponse,
     TaskSnoozeRequest, ScheduleTodayRequest, TaskReorderRequest,
@@ -27,7 +28,6 @@ from routes.task_lifecycle import (
     _is_routine_due, generate_routine_instances, run_daily_rollover,
     carry_forward, resolve_snoozes,
     demote_misclassified_today,
-    archive_past_appointments,
 )
 
 router = APIRouter()
@@ -47,7 +47,7 @@ def own_task(task_id: int, user: User, db: Session) -> Task:
 
 # ---------------------------------------------------------------------------
 # Critical list — shown when triage is skipped (low-focus fallback)
-# Returns: urgent tasks + today's appointments + is_critical routine instances
+# Returns: urgent tasks + is_critical routine instances
 # ---------------------------------------------------------------------------
 
 @router.get("/tasks/critical-list", response_model=list[TaskResponse])
@@ -57,7 +57,6 @@ def get_critical_list(
 ):
     run_daily_rollover(current_user, db)
     resolve_snoozes(current_user, db)
-    today_local = _app_today(current_user)
     active_statuses = [TaskStatus.inbox, TaskStatus.today]
     tasks = (
         db.query(Task)
@@ -66,10 +65,6 @@ def get_critical_list(
             Task.status.in_(active_statuses),
             or_(
                 Task.priority == Priority.urgent,
-                and_(
-                    Task.task_type == TaskType.appointment,
-                    Task.due_date == today_local,
-                ),
                 and_(
                     Task.task_type == TaskType.routine,
                     Task.is_critical == True,
@@ -100,7 +95,7 @@ def create_task(
     due_today = due_date is not None and due_date <= today_local
 
     # Daily cap: a plain task aimed at a full Today is snapped to the next
-    # day instead. Appointments and routines are time-bound — always admitted.
+    # day instead. Routines are time-bound — always admitted.
     today_count = count_today(current_user, db)
     place_today = due_today
     if due_today and not _exempt_from_cap(body.task_type) and today_count >= DAILY_CAP:
@@ -118,15 +113,16 @@ def create_task(
         actuator_category_id=body.actuator_category_id,
         is_critical=body.is_critical,
         # Plain tasks default to work — no popup ask, correct it on the card
-        # afterward. Routines/appointments/notes never get classified.
+        # afterward. Routines/notes never get classified.
         is_work=body.is_work if body.is_work is not None else (
             True if body.task_type == TaskType.task else None
         ),
         due_date=due_date,
         due_time=body.due_time,
-        location_type=body.location_type,
-        location_detail=body.location_detail,
         tags=body.tags,
+        # Tea-box interleave placement only (utils/ordering.js) — routines/
+        # notes never classified, same as is_work above.
+        difficulty=classify_difficulty(body.title.strip()) if body.task_type == TaskType.task else None,
     )
     db.add(task)
     db.commit()
@@ -375,8 +371,8 @@ def schedule_today(
     db: Session = Depends(get_db),
 ):
     task = own_task(task_id, current_user, db)
-    # Daily cap: block a plain task from entering a full Today. Appointments
-    # and routines are exempt; a task already in Today isn't a new arrival.
+    # Daily cap: block a plain task from entering a full Today. Routines are
+    # exempt; a task already in Today isn't a new arrival.
     if (
         task.status != TaskStatus.today
         and not _exempt_from_cap(task.task_type)

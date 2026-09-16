@@ -8,7 +8,7 @@ gets a direct pass.
 from datetime import date
 
 from models import (
-    Routine, RoutineFrequency, Task, TaskStatus, TaskType, TimeOfDay, User,
+    Routine, RoutineFrequency, Task, TaskStatus, TaskType, User,
 )
 from routes.tasks import _is_routine_due, generate_routine_instances
 
@@ -27,7 +27,7 @@ def _seed_user(primary_user_token):
 def _mk_routine(db, user_id, frequency=RoutineFrequency.daily, days_of_week=None, is_critical=False):
     r = Routine(
         user_id=user_id, title="Brush teeth", frequency=frequency,
-        time_of_day=TimeOfDay.morning, days_of_week=days_of_week,
+        bucket="morning", days_of_week=days_of_week,
         is_critical=is_critical, active=True,
     )
     db.add(r)
@@ -44,7 +44,7 @@ def test_create_routine_persists_flags(client, auth_headers):
     r = client.post("/routines", json={
         "title": "Take meds",
         "frequency": "daily",
-        "time_of_day": "morning",
+        "bucket": "morning",
         "only_when_present": True,
         "exact_time": "08:00",
     }, headers=auth_headers)

@@ -24,7 +24,6 @@ class UserRole(str, enum.Enum):
 
 class TaskType(str, enum.Enum):
     task = "task"
-    appointment = "appointment"
     routine = "routine"
     note = "note"
 
@@ -216,9 +215,20 @@ class Task(Base):
     # Work vs personal. Defaults to True at creation for plain tasks
     # (routes/tasks.py create_task) — no ask, correct it with the cup-icon
     # toggle on the task card. Null only on tasks pre-dating this default or
-    # on routines/appointments/notes, which are never classified; treated the
-    # same as True everywhere is_work is read, so old data isn't stranded.
+    # on routines/notes, which are never classified; treated the same as
+    # True everywhere is_work is read, so old data isn't stranded.
     is_work = Column(Boolean, nullable=True)
+    # Easy/hard, for tea-box interleave placement only (frontend/src/utils/
+    # ordering.js) — explicitly separate from the removed effort/billing
+    # classifier above. Classified once via Haiku at creation for task_type
+    # == task (routes/tasks.py create_task); null reads as 'easy'. Plain
+    # String, not a DB enum, same reasoning as Routine.bucket.
+    difficulty = Column(String(4), nullable=True)
+    # Copied from Routine.bucket at generation time (task_lifecycle.py
+    # generate_routine_instances), same convention as due_time <- exact_time.
+    # Only ever set on task_type == routine rows — the tea-box interleave
+    # order groups by this (frontend/src/utils/ordering.js).
+    bucket = Column(String(10), nullable=True)
     # Set when a task is completed from the once-daily forced inbox-sort gate
     # (Today.jsx handleCompleteUpNext) rather than actually finished today —
     # completed_at still stamps "now" (correct for streaks/capacity/TeaBox
@@ -228,13 +238,15 @@ class Task(Base):
     completed_retroactively = Column(Boolean, nullable=True)
 
     # Deadline / scheduling
-    due_date = Column(Date, nullable=True)              # hard deadline date (tasks, appointments)
-    due_time = Column(String(5), nullable=True)         # HH:MM, required for appointments
+    due_date = Column(Date, nullable=True)              # hard deadline date
+    due_time = Column(String(5), nullable=True)         # HH:MM, optional; routines copy exact_time
     scheduled_date = Column(DateTime, nullable=True)    # which day it's on Today list
     snooze_until = Column(DateTime, nullable=True)
     sort_order = Column(Float, nullable=True)           # drag-to-reorder position
 
-    # Appointment location
+    # ORPHANED (2026-09-16, appointment type removed) — was appointment-only,
+    # never queried for other types. Kept, not dropped: any existing appointment
+    # rows (now task_type=task after migration) keep their location visible.
     location_type = Column(SAEnum(LocationType), nullable=True)
     location_detail = Column(String(500), nullable=True)  # URL, phone, address, etc.
 
@@ -299,7 +311,13 @@ class Routine(Base):
     title = Column(String(500), nullable=False)
     notes = Column(Text, nullable=True)
     frequency = Column(SAEnum(RoutineFrequency), default=RoutineFrequency.daily, nullable=False)
+    # ORPHANED (2026-09-16) — superseded by `bucket` below. Kept, not dropped:
+    # was never queried, just a decorative label, no migration needed.
     time_of_day = Column(SAEnum(TimeOfDay), default=TimeOfDay.anytime, nullable=False)
+    # Plain String, not a DB enum — sidesteps Postgres ALTER TYPE friction for
+    # a value set that might still shift. Valid: first/morning/midday/afternoon.
+    # Drives the tea-box interleave order (frontend/src/utils/ordering.js).
+    bucket = Column(String(10), nullable=True)
     # For weekly/custom: comma-separated day numbers 0=Mon … 6=Sun
     days_of_week = Column(String(20), nullable=True)
     exact_time = Column(String(5), nullable=True)       # HH:MM optional exact time

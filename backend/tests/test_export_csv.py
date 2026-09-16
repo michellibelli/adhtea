@@ -172,16 +172,14 @@ def test_export_round_trips_through_the_importer(client, auth_headers, db_sessio
 
 
 # ---------------------------------------------------------------------------
-# Filters — the row count is dominated by generated history (one routine row per
-# day, one appointment row per occurrence), so these are what make the export
-# usable for "just my actual tasks".
+# Filters — the row count is dominated by generated history (one routine row
+# per day), so these are what make the export usable for "just my actual tasks".
 # ---------------------------------------------------------------------------
 
 def test_export_types_filter_drops_the_generated_rows(client, auth_headers, db_session):
     user = _mk_user(db_session)
     _mk_task(db_session, user.id, title="Real task")
     _mk_task(db_session, user.id, title="Daily meds", task_type=TaskType.routine)
-    _mk_task(db_session, user.id, title="Dentist", task_type=TaskType.appointment)
     _mk_task(db_session, user.id, title="A thought", task_type=TaskType.note)
 
     titles = [r["title"] for r in _rows(

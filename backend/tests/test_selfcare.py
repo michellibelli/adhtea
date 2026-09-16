@@ -130,7 +130,7 @@ def test_daily_summary_aggregates_completed_work(client, auth_headers, db_sessio
     user = _user(db_session)
     today_start = datetime(date.today().year, date.today().month, date.today().day)
 
-    for kind in [TaskType.task, TaskType.task, TaskType.routine, TaskType.appointment]:
+    for kind in [TaskType.task, TaskType.task, TaskType.routine]:
         db_session.add(Task(
             owner_id=user.id, title="x", task_type=kind,
             status=TaskStatus.done, completed_at=today_start,
@@ -150,7 +150,6 @@ def test_daily_summary_aggregates_completed_work(client, auth_headers, db_sessio
     body = r.json()
     assert body["tasks_done_count"] == 2
     assert body["routines_done_count"] == 1
-    assert len(body["appointments_done"]) == 1
     assert body["medications_taken"] == 1
     assert body["mood"] == 4
     assert body["notes"] == "ok"

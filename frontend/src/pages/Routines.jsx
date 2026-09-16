@@ -5,10 +5,10 @@ import Button from '../components/Button'
 import { Input } from '../components/Input'
 import { InlineSkeletonCards, PageError } from '../components/PageState'
 
-const FREQ_LABELS  = { daily: 'Daily', weekdays: 'Weekdays', weekends: 'Weekends', weekly: 'Weekly', custom: 'Custom' }
-const TIME_LABELS  = { anytime: 'Anytime', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' }
+const FREQ_LABELS   = { daily: 'Daily', weekdays: 'Weekdays', weekends: 'Weekends', weekly: 'Weekly', custom: 'Custom' }
+const BUCKET_LABELS = { first: 'First', morning: 'Morning', midday: 'Mid Day', afternoon: 'Afternoon' }
 const DAY_NAMES    = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const EMPTY_FORM   = { title: '', notes: '', frequency: 'daily', time_of_day: 'anytime', days_of_week: '', only_when_present: false, exact_time: '' }
+const EMPTY_FORM   = { title: '', notes: '', frequency: 'daily', bucket: 'morning', days_of_week: '', only_when_present: false, exact_time: '' }
 
 
 // ---------------------------------------------------------------------------
@@ -94,12 +94,12 @@ function RoutineForm({ form, setForm, onSave, onCancel, editing = false }) {
       )}
 
       <div>
-        <p className="text-xs text-ui-subtext mb-1.5">Time of day</p>
+        <p className="text-xs text-ui-subtext mb-1.5">When</p>
         <PillPicker
-          options={['anytime', 'morning', 'afternoon', 'evening']}
-          labels={['Anytime', 'Morning', 'Afternoon', 'Evening']}
-          value={form.time_of_day}
-          onChange={v => setForm(f => ({ ...f, time_of_day: v }))}
+          options={['first', 'morning', 'midday', 'afternoon']}
+          labels={['First', 'Morning', 'Mid Day', 'Afternoon']}
+          value={form.bucket}
+          onChange={v => setForm(f => ({ ...f, bucket: v }))}
         />
       </div>
 
@@ -133,9 +133,9 @@ function RoutineItem({ routine, onEdit, onDeactivate }) {
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-ui-primary/10 text-ui-accent font-medium">
               {FREQ_LABELS[routine.frequency]}
             </span>
-            {routine.time_of_day !== 'anytime' && !routine.exact_time && (
+            {!routine.exact_time && (
               <span className="text-[10px] px-2 py-0.5 rounded-full border border-ui-border text-ui-subtext font-medium">
-                {TIME_LABELS[routine.time_of_day]}
+                {BUCKET_LABELS[routine.bucket]}
               </span>
             )}
             {routine.exact_time && (
@@ -207,7 +207,7 @@ export default function Routines() {
       title: r.title,
       notes: r.notes || '',
       frequency: r.frequency,
-      time_of_day: r.time_of_day,
+      bucket: r.bucket,
       days_of_week: r.days_of_week || '',
       only_when_present: r.only_when_present,
       exact_time: r.exact_time || '',

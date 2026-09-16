@@ -48,7 +48,7 @@ export default function EditTaskSheet({ task, onSave, onClose }) {
               onChange={e => setDueDate(e.target.value)}
               className="flex-1 text-sm bg-ui-input border border-ui-input-border rounded-xl px-3 py-2.5 text-ui-text outline-none focus:border-ui-accent transition-colors"
             />
-            {(task.task_type === 'appointment' || task.task_type === 'routine') && (
+            {task.task_type === 'routine' && (
               <input
                 type="time"
                 value={dueTime}

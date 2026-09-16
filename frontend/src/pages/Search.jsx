@@ -4,7 +4,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
 
-const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+const TYPE_ICONS = { task: '✦', routine: '↻', note: '◈' }
 
 const STATUS_LABEL = {
   inbox:   { label: 'Inbox',   color: 'bg-ui-border text-ui-subtext' },

@@ -5,7 +5,7 @@ import { Input } from '../components/Input'
 import ConfirmModal from '../components/ConfirmModal'
 import { InlineSkeletonCards, PageError } from '../components/PageState'
 
-const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+const TYPE_ICONS = { task: '✦', routine: '↻', note: '◈' }
 
 function fmtDate(iso) {
   if (!iso) return null

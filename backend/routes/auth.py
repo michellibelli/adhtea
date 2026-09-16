@@ -12,7 +12,7 @@ from rate_limit import limiter
 from routes.task_lifecycle import _app_today
 from models import (
     User, SessionToken, ActuatorCategory, InviteToken, SiteConfig, UserRole, utcnow,
-    Task, Routine, TaskType, TaskStatus, RoutineFrequency, TimeOfDay,
+    Task, Routine, TaskType, TaskStatus, RoutineFrequency,
     SelfCareLog, MedicationSchedule, MedicationLog, GoogleCalendarToken,
     CapacitySnapshot, WeeklySnapshot, NudgeLog, OAuthState,
 )
@@ -579,7 +579,7 @@ def onboard_seed(current_user: User = Depends(get_current_user), db: Session = D
         user_id=current_user.id,
         title="15 minutes of self-care",
         frequency=RoutineFrequency.daily,
-        time_of_day=TimeOfDay.anytime,
+        bucket="morning",
         active=True,
     ))
 

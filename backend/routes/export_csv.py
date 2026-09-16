@@ -105,9 +105,9 @@ def _row(task: Task, routine_titles: dict[int, str], tz) -> list[str]:
 def _row_date(task: Task, tz) -> date:
     """The day a row *belongs to*, for the since/until window.
 
-    A routine check-off or an archived appointment is about the day it happened,
-    an open task is about the day it's due, and anything else falls back to when
-    it was captured. Computed in Python rather than SQL because the three columns
+    A routine check-off is about the day it happened, an open task is about the
+    day it's due, and anything else falls back to when it was captured.
+    Computed in Python rather than SQL because the three columns
     use two different storage conventions (naive UTC vs local midnight) and
     COALESCE across them would silently compare apples to oranges.
     """
@@ -127,8 +127,8 @@ def export_tasks_csv(
     include_deleted: bool = Query(False, description="Include soft-deleted tasks"),
     types: str | None = Query(
         None,
-        description="Comma-separated task types to include: task, appointment, "
-                    "routine, note. Omit for all.",
+        description="Comma-separated task types to include: task, routine, "
+                    "note. Omit for all.",
     ),
     since: date | None = Query(None, description="Only rows on/after this date"),
     until: date | None = Query(None, description="Only rows on/before this date"),
@@ -139,8 +139,7 @@ def export_tasks_csv(
 
     Everything by default. The filters exist because the row count is dominated
     by machine-generated history — a daily routine is one row per day since it
-    was created, and a recurring calendar event is one row per occurrence — so
-    "just my actual tasks" needs a way to drop those.
+    was created — so "just my actual tasks" needs a way to drop those.
 
     Soft-deleted tasks are excluded by default (they're deleted from her point of
     view); `?include_deleted=true` gives the true full dump.

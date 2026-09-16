@@ -69,6 +69,7 @@ def _migrate(target_engine=None):
             tasks_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(tasks)")).fetchall()}
             users_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
             med_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(medication_schedules)")).fetchall()}
+            routines_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(routines)")).fetchall()}
             if "dose" in med_cols:
                 # Privacy: drop dose column. Pre-3.9.11 rows held real dose strings
                 # ("10 mg", etc.) which are identifying. SQLite supports DROP COLUMN
@@ -154,6 +155,27 @@ def _migrate(target_engine=None):
             # Security: every self-signup used to be created as `primary` (admin).
             # Demote all non-owner primaries to plain members. Owner keeps admin.
             conn.execute(text("UPDATE users SET role='member' WHERE is_owner=0 AND role='primary'"))
+            # Routine time-bucket redesign (2026-09-16): bucket replaces time_of_day
+            # for tea-box interleave placement. Backfill existing routines to a
+            # sane default she can immediately reassign.
+            if "bucket" not in routines_cols:
+                conn.execute(text("ALTER TABLE routines ADD COLUMN bucket VARCHAR(10)"))
+                conn.execute(text("UPDATE routines SET bucket='morning' WHERE bucket IS NULL"))
+            if "difficulty" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN difficulty VARCHAR(4)"))
+            if "bucket" not in tasks_cols:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN bucket VARCHAR(10)"))
+            # Backfill bucket onto already-generated routine Task rows (any
+            # generated before this column existed) from their parent Routine —
+            # generate_routine_instances only copies it down for newly-created rows.
+            conn.execute(text(
+                "UPDATE tasks SET bucket = (SELECT bucket FROM routines WHERE routines.id = tasks.routine_id) "
+                "WHERE task_type='routine' AND bucket IS NULL AND routine_id IS NOT NULL"
+            ))
+            # Appointment task type removed (2026-09-16) — convert existing rows
+            # rather than orphan them; due_date/due_time/location_detail carry over
+            # unchanged so nothing in her history disappears.
+            conn.execute(text("UPDATE tasks SET task_type='task' WHERE task_type='appointment'"))
             conn.commit()
         else:
             # Add the new `member` label to the native Postgres `userrole` enum.
@@ -219,6 +241,27 @@ def _migrate(target_engine=None):
             conn.execute(text("UPDATE users SET role='member' WHERE is_owner=FALSE AND role='primary'"))
             # Privacy: drop dose column. Pre-3.9.11 rows held real dose strings.
             conn.execute(text("ALTER TABLE medication_schedules DROP COLUMN IF EXISTS dose"))
+            # Routine time-bucket redesign (2026-09-16): bucket replaces time_of_day
+            # for tea-box interleave placement. Backfill existing routines to a
+            # sane default she can immediately reassign.
+            conn.execute(text("ALTER TABLE routines ADD COLUMN IF NOT EXISTS bucket VARCHAR(10)"))
+            conn.execute(text("UPDATE routines SET bucket='morning' WHERE bucket IS NULL"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS difficulty VARCHAR(4)"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS bucket VARCHAR(10)"))
+            # Backfill bucket onto already-generated routine Task rows (any
+            # generated before this column existed) from their parent Routine —
+            # generate_routine_instances only copies it down for newly-created rows.
+            conn.execute(text(
+                "UPDATE tasks SET bucket = routines.bucket FROM routines "
+                "WHERE routines.id = tasks.routine_id AND tasks.task_type = 'routine' "
+                "AND tasks.bucket IS NULL"
+            ))
+            # Appointment task type removed (2026-09-16) — convert existing rows
+            # rather than orphan them; due_date/due_time/location_detail carry over
+            # unchanged so nothing in her history disappears. Native enum type still
+            # has 'appointment' as a valid label at the DB level (Postgres can't
+            # shrink an enum), which is harmless — nothing writes that value anymore.
+            conn.execute(text("UPDATE tasks SET task_type='task' WHERE task_type='appointment'"))
             # Security: enable Row-Level Security on every table. The backend
             # connects as the `postgres` owner role, which bypasses RLS, so this
             # is a no-op for the app. But it shuts Supabase's auto-generated

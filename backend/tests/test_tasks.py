@@ -45,20 +45,6 @@ def test_create_task_due_today_snaps_when_today_full(client, auth_headers, db_se
     assert date.fromisoformat(body["due_date"]) > today    # snapped to a later day
 
 
-def test_create_appointment_due_today_admitted_when_today_full(client, auth_headers, db_session):
-    user = _mk_user(db_session)
-    _fill_today(db_session, user.id, DAILY_CAP)
-    today = date.today()
-    r = client.post(
-        "/tasks",
-        json={"title": "meeting", "task_type": "appointment",
-              "due_date": today.isoformat(), "due_time": "10:00"},
-        headers=auth_headers,
-    )
-    assert r.status_code == 200, r.text
-    assert r.json()["status"] == "today"                   # appointments bypass the cap
-
-
 # ---------------------------------------------------------------------------
 # is_work defaults to True for plain tasks (4.21.0) — no popup ask, corrected
 # afterward with the cup-icon toggle on the task card.
@@ -86,7 +72,7 @@ def test_create_task_respects_explicit_is_work_false(client, auth_headers):
     assert r.json()["is_work"] is False
 
 
-def test_create_routine_and_appointment_leave_is_work_null(client, auth_headers):
+def test_create_routine_leaves_is_work_null(client, auth_headers):
     r_routine = client.post(
         "/tasks",
         json={"title": "stretch", "task_type": "routine"},
@@ -94,15 +80,6 @@ def test_create_routine_and_appointment_leave_is_work_null(client, auth_headers)
     )
     assert r_routine.status_code == 200, r_routine.text
     assert r_routine.json()["is_work"] is None
-
-    r_appt = client.post(
-        "/tasks",
-        json={"title": "dentist", "task_type": "appointment",
-              "due_date": date.today().isoformat(), "due_time": "10:00"},
-        headers=auth_headers,
-    )
-    assert r_appt.status_code == 200, r_appt.text
-    assert r_appt.json()["is_work"] is None
 
 
 def test_schedule_today_blocked_when_today_full(client, auth_headers, db_session):

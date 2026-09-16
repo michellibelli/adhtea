@@ -5,19 +5,9 @@ import Button from '../components/Button'
 import { Input, Textarea } from '../components/Input'
 
 const TASK_TYPES = [
-  { id: 'task',        label: 'Task',    icon: '✦' },
-  { id: 'appointment', label: 'Appt',   icon: '◷' },
-  { id: 'routine',     label: 'Routine', icon: '↻' },
-  { id: 'note',        label: 'Note',    icon: '◈' },
-]
-
-const LOCATION_TYPES = [
-  { id: 'zoom',    label: 'Zoom' },
-  { id: 'signal',  label: 'Signal' },
-  { id: 'phone',   label: 'Phone' },
-  { id: 'office',  label: 'Office' },
-  { id: 'address', label: 'Address' },
-  { id: 'other',   label: 'Other' },
+  { id: 'task',    label: 'Task',    icon: '✦' },
+  { id: 'routine', label: 'Routine', icon: '↻' },
+  { id: 'note',    label: 'Note',    icon: '◈' },
 ]
 
 const FREQUENCIES = [
@@ -28,11 +18,11 @@ const FREQUENCIES = [
   { id: 'custom',   label: 'Custom' },
 ]
 
-const TIMES_OF_DAY = [
+const BUCKETS = [
+  { id: 'first',     label: 'First' },
   { id: 'morning',   label: 'Morning' },
+  { id: 'midday',    label: 'Mid Day' },
   { id: 'afternoon', label: 'Afternoon' },
-  { id: 'evening',   label: 'Evening' },
-  { id: 'anytime',   label: 'Any time' },
 ]
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
@@ -122,11 +112,9 @@ const BLANK = {
   notes: '',
   due_date: '',
   due_time: '',
-  location_type: '',
-  location_detail: '',
   tags: '',
   frequency: 'daily',
-  time_of_day: 'anytime',
+  bucket: 'morning',
   days_of_week: '',
   exact_time: '',
 }
@@ -134,7 +122,6 @@ const BLANK = {
 function isValid(taskType, form) {
   if (!form.title.trim()) return false
   if (taskType === 'task') return !!form.due_date
-  if (taskType === 'appointment') return !!form.due_date && !!form.due_time
   if (taskType === 'routine') {
     const needsDays = form.frequency === 'weekly' || form.frequency === 'custom'
     return needsDays ? !!form.days_of_week : true
@@ -171,7 +158,7 @@ export default function Capture({ onNavigate }) {
           title: form.title.trim(),
           notes: form.notes.trim() || undefined,
           frequency: form.frequency,
-          time_of_day: form.time_of_day,
+          bucket: form.bucket,
           days_of_week: form.days_of_week || undefined,
           exact_time: form.exact_time || undefined,
         }
@@ -189,8 +176,6 @@ export default function Capture({ onNavigate }) {
           notes: form.notes.trim() || undefined,
           due_date: form.due_date || undefined,
           due_time: form.due_time || undefined,
-          location_type: form.location_type || undefined,
-          location_detail: form.location_detail.trim() || undefined,
           tags: form.tags.trim() || undefined,
         }
         const created = await createTask(payload)
@@ -269,10 +254,9 @@ export default function Capture({ onNavigate }) {
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
               placeholder={
-                taskType === 'task'        ? 'What needs doing?' :
-                taskType === 'appointment' ? 'What appointment?' :
-                taskType === 'routine'     ? 'What routine?' :
-                                             'What do you want to remember?'
+                taskType === 'task'    ? 'What needs doing?' :
+                taskType === 'routine' ? 'What routine?' :
+                                         'What do you want to remember?'
               }
             />
           </FieldRow>
@@ -285,53 +269,6 @@ export default function Capture({ onNavigate }) {
               </FieldRow>
               <FieldRow label="Due time (optional)">
                 <Input type="time" value={form.due_time} onChange={(e) => set('due_time', e.target.value)} />
-              </FieldRow>
-            </>
-          )}
-
-          {/* ── APPOINTMENT fields ── */}
-          {taskType === 'appointment' && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="Date" required>
-                  <Input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
-                </FieldRow>
-                <FieldRow label="Time" required>
-                  <Input type="time" value={form.due_time} onChange={(e) => set('due_time', e.target.value)} />
-                </FieldRow>
-              </div>
-
-              <FieldRow label="Location (optional)">
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {LOCATION_TYPES.map((loc) => (
-                    <button
-                      key={loc.id}
-                      type="button"
-                      onClick={() => set('location_type', form.location_type === loc.id ? '' : loc.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                        form.location_type === loc.id
-                          ? 'bg-ui-primary text-ui-primary-text border-transparent'
-                          : 'border-ui-border text-ui-subtext hover:text-ui-accent'
-                      }`}
-                    >
-                      {loc.label}
-                    </button>
-                  ))}
-                </div>
-                {form.location_type && (
-                  <Input
-                    value={form.location_detail}
-                    onChange={(e) => set('location_detail', e.target.value)}
-                    placeholder={
-                      form.location_type === 'zoom'    ? 'Meeting link' :
-                      form.location_type === 'signal'  ? 'Phone number' :
-                      form.location_type === 'phone'   ? 'Phone number' :
-                      form.location_type === 'office'  ? 'Room or building' :
-                      form.location_type === 'address' ? 'Street address' :
-                                                         'Details'
-                    }
-                  />
-                )}
               </FieldRow>
             </>
           )}
@@ -349,10 +286,10 @@ export default function Capture({ onNavigate }) {
                 <DayPicker value={form.days_of_week} onChange={(v) => set('days_of_week', v)} />
               )}
               <PillRow
-                label="Time of day *"
-                options={TIMES_OF_DAY}
-                value={form.time_of_day}
-                onChange={(v) => set('time_of_day', v)}
+                label="When *"
+                options={BUCKETS}
+                value={form.bucket}
+                onChange={(v) => set('bucket', v)}
               />
               <FieldRow label="Exact time (optional)">
                 <Input type="time" value={form.exact_time} onChange={(e) => set('exact_time', e.target.value)} />
@@ -371,7 +308,7 @@ export default function Capture({ onNavigate }) {
             </FieldRow>
           )}
 
-          {/* Notes — task / appointment / note only */}
+          {/* Notes — task / note only */}
           {taskType !== 'routine' && (
             <FieldRow label="Notes (optional)">
               <Textarea
@@ -385,9 +322,8 @@ export default function Capture({ onNavigate }) {
 
           <div className="flex items-center justify-between pt-1">
             <p className="text-xs text-ui-subtext">
-              {taskType === 'task'        && 'Due date required'}
-              {taskType === 'appointment' && 'Date and time required'}
-              {taskType === 'routine'     && (needsDays ? 'Days required' : '')}
+              {taskType === 'task'    && 'Due date required'}
+              {taskType === 'routine' && (needsDays ? 'Days required' : '')}
             </p>
 
             {taskType === 'routine' ? (

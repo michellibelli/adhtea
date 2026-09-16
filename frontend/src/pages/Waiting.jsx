@@ -4,7 +4,7 @@ import Card from '../components/Card'
 import MinutesPrompt from '../components/MinutesPrompt'
 import { PageLoading, PageError } from '../components/PageState'
 
-const TYPE_ICONS = { task: '✦', appointment: '◷', routine: '↻', note: '◈' }
+const TYPE_ICONS = { task: '✦', routine: '↻', note: '◈' }
 
 const STATUS_BADGE = {
   today:   { label: 'Today',   color: 'bg-ui-accent/20 text-ui-accent' },
