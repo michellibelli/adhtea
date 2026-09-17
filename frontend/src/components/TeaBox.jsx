@@ -16,10 +16,6 @@ import { TAG_COLORS } from '../utils/taskColors'
 import { orderTasks } from '../utils/ordering'
 import { SmartPointerSensor } from '../utils/dnd'
 
-// Pre-plan fallback slot count — mirrors Today.jsx's FALLBACK_MAX_TODAY, used
-// until "Start my day" snapshots a real capacity-driven number.
-const FALLBACK_SLOTS = 10
-
 // Fallback bags-per-tier, used only before the box's real width has been
 // measured (see tierCapacity below). Once a day's bags (real + routine +
 // bonus) outgrow one tier, a second complete box tier stacks below it. Not a
@@ -178,11 +174,9 @@ function chunk(items, size) {
 // so the user can act on a specific item — e.g. an 8am routine done at 9am
 // that the time-of-day window would otherwise keep off the card.
 //
-// The box is sized to the day's capacity (capacitySlots, snapshotted at
-// "Start my day"): that many task bags count against the plan, padded with
-// dashed empty-slot outlines if she's under plan. Routines don't count
-// against that number — a routine isn't optional work she chose to take on
-// today — but unlike the old tasks-then-routines layout, they're not just
+// Routines don't count against the day's capacity plan — a routine isn't
+// optional work she chose to take on today — but unlike the old
+// tasks-then-routines layout, they're not just
 // appended at the end either: orderTasks interleaves them by time-bucket
 // (First/Morning/Mid Day/Afternoon) with capped slices of easy/hard tasks
 // between them (see utils/ordering.js). Nothing is ever hidden: if a day's
@@ -197,9 +191,8 @@ function chunk(items, size) {
 // routine bags share one sortable list, so a bag can be dragged across tiers
 // or between the task and routine sections — manual order already outranks
 // every automatic rule elsewhere in the app.
-export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, capacitySlots = null, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate, showDrawers = false }) {
+export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate, showDrawers = false }) {
   const ordered = orderTasks(tasks, manualOrder)
-  const slots = capacitySlots ?? FALLBACK_SLOTS
 
   const sortableIds = ordered.map(t => t.id)
 
@@ -306,14 +299,6 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
 
   return (
     <>
-      {goldCount >= slots && slots > 0 ? (
-        <p className="text-center mb-1.5">
-          <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
-            Box full — time for some well-earned self care
-          </span>
-        </p>
-      ) : null}
-
       <div
         ref={stackRef}
         className={`relative w-full select-none cursor-pointer transition-transform${dragging ? '' : ' active:scale-[0.98]'}`}

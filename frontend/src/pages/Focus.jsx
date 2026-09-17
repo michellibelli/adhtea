@@ -112,7 +112,7 @@ function TeaCup() {
 
 
 
-export default function Focus({ onGoToList, onNavigate, boxManual = false, onBoxOrdered, daySlots = null }) {
+export default function Focus({ onGoToList, onNavigate, boxManual = false, onBoxOrdered }) {
   const [manualOrder, setManualOrder] = useState(boxManual)
   const [tasks,       setTasks]       = useState([])
   const [bonusTasks,  setBonusTasks]  = useState([])
@@ -686,7 +686,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
                 )}
               </button>
               <div className="flex-1 min-w-0">
-                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} capacitySlots={daySlots} manualOrder={manualOrder} onOpen={onGoToList} onSelectTask={setSelectedId} onReorder={handleReorder} onNavigate={onNavigate} />
+                <TeaBox tasks={tasks} activeTaskId={task?.id} goldCount={bonusDone} manualOrder={manualOrder} onOpen={onGoToList} onSelectTask={setSelectedId} onReorder={handleReorder} onNavigate={onNavigate} />
               </div>
               <button
                 onClick={handleComplete}
