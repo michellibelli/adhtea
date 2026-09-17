@@ -152,7 +152,7 @@ export default function SelfCare({ medicationQuestionEnabled = true, gateMode = 
             <textarea
               value={checkinText}
               onChange={e => setCheckinText(e.target.value)}
-              placeholder="thoughts, feelings, anything on your mind..."
+              placeholder="What am I grateful for? What do I like about myself?"
               rows={4}
               className="w-full rounded-lg border border-ui-border bg-ui-input px-3 py-2 text-sm text-ui-text placeholder-ui-subtext/50 resize-none focus:outline-none focus:border-ui-accent transition-colors mb-3"
             />

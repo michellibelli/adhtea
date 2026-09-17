@@ -84,6 +84,14 @@ export default function MorningReview({ data, onComplete }) {
           A quick look back — tap × if something on here wasn't actually done.
         </p>
 
+        {data.routines_total > 0 && (
+          <p className="text-xs font-medium text-ui-accent mb-4">
+            {data.routines_done >= data.routines_total
+              ? 'Routines: all done ✓'
+              : `Routines: ${data.routines_done}/${data.routines_total} done`}
+          </p>
+        )}
+
         <div className="space-y-2.5">
           {(data.tasks || []).map(t => {
             const off = notDone.has(t.id)

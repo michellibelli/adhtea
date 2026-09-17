@@ -77,6 +77,24 @@ def _pending_day_and_tasks(user: User, db: Session):
     return target_day, day_tasks
 
 
+def _routines_status(user: User, day: date, db: Session) -> tuple[int, int]:
+    """(total, done) routine instances scheduled for that app-day. Mirrors
+    generate_routine_instances' scheduled_date convention (local midnight)."""
+    day_dt = datetime(day.year, day.month, day.day)
+    routines = (
+        db.query(Task)
+        .filter(
+            Task.owner_id == user.id,
+            Task.task_type == TaskType.routine,
+            Task.scheduled_date == day_dt,
+            Task.status != TaskStatus.deleted,
+        )
+        .all()
+    )
+    done = sum(1 for r in routines if r.status == TaskStatus.done)
+    return len(routines), done
+
+
 def _build_context(user: User, day: date, tasks, db: Session) -> dict:
     """Sunny-greeting context: weekday, done count, a cheap trend, and the day's
     self-care if she logged it."""
@@ -133,7 +151,14 @@ def get_pending_review(
         return None
     context = _build_context(current_user, day, tasks, db)
     payload = review_engine.build_review(db, current_user, tasks, context)
-    return {"date": day, "greeting": payload["greeting"], "tasks": payload["tasks"]}
+    routines_total, routines_done = _routines_status(current_user, day, db)
+    return {
+        "date": day,
+        "greeting": payload["greeting"],
+        "tasks": payload["tasks"],
+        "routines_total": routines_total,
+        "routines_done": routines_done,
+    }
 
 
 @router.post("/review/commit")

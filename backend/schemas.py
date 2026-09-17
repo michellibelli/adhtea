@@ -366,6 +366,8 @@ class ReviewPendingResponse(BaseModel):
     date: date                    # the app-day being reviewed
     greeting: str                 # sunny one-liner
     tasks: list[ReviewTaskGuess]
+    routines_total: int = 0       # routine instances scheduled that day (0 = none scheduled)
+    routines_done: int = 0        # of those, how many she finished
 
 
 class ReviewCommitItem(BaseModel):

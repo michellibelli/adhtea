@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -20,11 +20,20 @@ import { SmartPointerSensor } from '../utils/dnd'
 // until "Start my day" snapshots a real capacity-driven number.
 const FALLBACK_SLOTS = 10
 
-// Bags per box tier — width-tuned to what one wood-panel box comfortably
-// holds. Once a day's bags (real + empty + routine + bonus) outgrow one box,
-// a second complete box tier stacks below it. Not a scrollbar, not one box
-// stretched taller — an honest second box for an honest bigger day.
+// Fallback bags-per-tier, used only before the box's real width has been
+// measured (see tierCapacity below). Once a day's bags (real + routine +
+// bonus) outgrow one tier, a second complete box tier stacks below it. Not a
+// scrollbar, not one box stretched taller — an honest second box for an
+// honest bigger day.
 const ROW_CAPACITY = 9
+
+// Bag width (see Bag's `width: 20`) and BoxTier's horizontal padding
+// (`px-3` = 12px per side) — used to derive how many bags actually fit
+// across the box's real measured width, so a tier fills edge-to-edge before
+// wrapping instead of splitting off a second box while the first still has
+// visible room.
+const BAG_WIDTH = 20
+const TIER_PADDING = 24
 
 // Keeps a dragged bag inside the stack of boxes rather than letting it fly
 // off into the middle of the page. Inset by SIDE_INSET horizontally — the
@@ -208,6 +217,24 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
   const [dragging, setDragging] = useState(false)
   const stackRef = useRef(null)
   const containerRectRef = useRef(null)
+
+  // How many bags actually fit across one tier's real rendered width. Measured
+  // (not assumed) so the box always looks genuinely full right before it
+  // wraps to a second tier, instead of splitting off a new box while the
+  // first still has a visible gap.
+  const [tierCapacity, setTierCapacity] = useState(ROW_CAPACITY)
+  useEffect(() => {
+    const el = stackRef.current
+    if (!el) return
+    const measure = () => {
+      const width = el.getBoundingClientRect().width
+      if (width > 0) setTierCapacity(Math.max(1, Math.floor((width - TIER_PADDING) / BAG_WIDTH)))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
   const sensors = useSensors(
     useSensor(SmartPointerSensor, { activationConstraint: { distance: 6 } }),
   )
@@ -265,7 +292,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
     ...ordered.map(t => ({ kind: t.task_type === 'routine' ? 'routine' : 'slot', task: t })),
     ...Array.from({ length: goldCount }, (_, i) => ({ kind: 'gold', key: `gold-${i}` })),
   ]
-  const tiers = chunk(visual, ROW_CAPACITY)
+  const tiers = chunk(visual, tierCapacity)
 
   function renderItem(item) {
     if (item.kind === 'gold') return <Bag key={item.key} colors={GOLD} gold title="Bonus task done" />

@@ -125,6 +125,7 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
   const celebrationTimersRef = useRef([])
   const [showSnooze,    setShowSnooze]    = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
+  const [editIsNew,     setEditIsNew]     = useState(false)  // opened straight from the kettle
   const [selectedId,    setSelectedId]    = useState(null)  // bag tapped in the tea-box
   const [pendingMinutes, setPendingMinutes] = useState(null)  // { taskId, title, defaultMinutes }
   const minutesWaitRef = useRef(null)        // full { taskId, wasBonus } while the minutes prompt is up
@@ -325,20 +326,38 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
     }
   }
 
-  // Kettle press — a blank bag, due today and top of the box, ready to name.
+  // Kettle press — a blank bag, ready to name, dropped in right after whatever
+  // routine currently sits topmost in the box (or at the very front if there's
+  // no routine yet). Reindexes sort_order over the current visual order and
+  // switches to manual mode, the same as a hand-drag would, so the placement
+  // sticks regardless of what the automatic bucket order would've picked.
   // Full Capture stays reachable from the "all done" screen for anything that
   // needs a due date, notes, or type other than a plain task.
   async function handleQuickAdd() {
     const todayIso = new Date().toISOString().slice(0, 10)
     try {
-      const created = await createTask({ title: 'New task', task_type: 'task', due_date: todayIso, is_critical: true })
-      const minOrder = tasks.reduce((min, t) => t.sort_order != null ? Math.min(min, t.sort_order) : min, 0)
-      const topOrder = minOrder - 1
+      const created = await createTask({ title: 'New task', task_type: 'task', due_date: todayIso })
       if (created.status === 'today') {
-        await updateTask(created.id, { sort_order: topOrder })
-        setTasks(prev => [{ ...created, sort_order: topOrder }, ...prev])
+        const currentOrder = orderTasks(tasks, manualOrder)
+        const routineIdx = currentOrder.findIndex(t => t.task_type === 'routine')
+        const insertAt = routineIdx === -1 ? 0 : routineIdx + 1
+        const reordered = [
+          ...currentOrder.slice(0, insertAt),
+          created,
+          ...currentOrder.slice(insertAt),
+        ].map((t, i) => ({ ...t, sort_order: i }))
+        setTasks(reordered)
+        setManualOrder(true)
         setSelectedId(created.id)
+        setEditIsNew(true)
         setShowEdit(true)
+        try {
+          await reorderTasks(reordered.map(t => t.id), true)
+          onBoxOrdered?.()
+        } catch (err) {
+          console.error(err)
+          fetchAll()
+        }
       } else {
         // Today was full — backend snapped it to tomorrow. Refetch so bonus/
         // capacity counts stay right; she'll find and name it in Inbox.
@@ -700,7 +719,14 @@ export default function Focus({ onGoToList, onNavigate, boxManual = false, onBox
       </div>
 
       {showSnooze && <SnoozeSheet onSnooze={handleSnooze} onClose={() => setShowSnooze(false)} />}
-      {showEdit && task && <EditTaskSheet task={task} onSave={handleEditSave} onClose={() => setShowEdit(false)} />}
+      {showEdit && task && (
+        <EditTaskSheet
+          task={task}
+          isNew={editIsNew}
+          onSave={handleEditSave}
+          onClose={() => { setShowEdit(false); setEditIsNew(false) }}
+        />
+      )}
       {pendingMinutes && (
         <MinutesPrompt
           title={pendingMinutes.title}

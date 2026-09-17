@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import Button from './Button'
 
-export default function EditTaskSheet({ task, onSave, onClose }) {
-  const [title,   setTitle]   = useState(task.title)
+export default function EditTaskSheet({ task, onSave, onClose, isNew = false }) {
+  // Fresh from quick-add: start the title blank with the placeholder standing
+  // in for it, so she can click the kettle and start typing straight away
+  // instead of selecting-and-clearing "New task" first. Blank saves fall back
+  // to task.title (below), so an untouched field still saves as "New task".
+  const [title,   setTitle]   = useState(isNew ? '' : task.title)
   const [notes,   setNotes]   = useState(task.notes || '')
   const [dueDate, setDueDate] = useState(task.due_date || '')
   const [dueTime, setDueTime] = useState(task.due_time || '')
@@ -31,7 +35,7 @@ export default function EditTaskSheet({ task, onSave, onClose }) {
             value={title}
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose() }}
-            placeholder="Task title"
+            placeholder={isNew ? task.title : 'Task title'}
             autoFocus
           />
           <textarea
