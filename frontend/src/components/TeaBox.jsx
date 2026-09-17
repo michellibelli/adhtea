@@ -199,12 +199,7 @@ function chunk(items, size) {
 // every automatic rule elsewhere in the app.
 export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0, capacitySlots = null, manualOrder = false, onOpen, onSelectTask, onReorder, onNavigate, showDrawers = false }) {
   const ordered = orderTasks(tasks, manualOrder)
-  // Routines are additive, not counted against capacity — the count below
-  // only tallies plain tasks, independent of where they land in the
-  // bucket-interleaved display order.
-  const taskCount = ordered.filter(t => t.task_type !== 'routine').length
   const slots = capacitySlots ?? FALLBACK_SLOTS
-  const overCapacity = taskCount > slots
 
   const sortableIds = ordered.map(t => t.id)
 
@@ -311,13 +306,7 @@ export default function TeaBox({ tasks = [], activeTaskId = null, goldCount = 0,
 
   return (
     <>
-      {overCapacity ? (
-        <p className="text-center mb-1.5">
-          <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
-            {taskCount - slots} over today's {slots}-task plan
-          </span>
-        </p>
-      ) : goldCount >= slots && slots > 0 ? (
+      {goldCount >= slots && slots > 0 ? (
         <p className="text-center mb-1.5">
           <span className="inline-block px-2.5 py-0.5 rounded-full bg-ui-surface/85 text-[10px] font-semibold text-ui-text">
             Box full — time for some well-earned self care
