@@ -3,6 +3,14 @@
 *Each phase is independently deployable and testable.*
 *Last updated: 2026-05-07*
 
+> **Historical planning doc — not current status.** Written before several major pivots: Triage
+> (Phase 2) was later merged into Today (4.4.0) and the merge itself was eventually torn out
+> further; Google Calendar (Phase 3.5) was removed entirely (2026-09-15); Phase 6 (Pattern
+> Learning/nudges) was built, then almost entirely deleted after the nudge UI proved unwanted;
+> Phase 7 (deployment) is done and the app has been live at adh-tea.fun for months. For what's
+> actually true today, read **`HANDOFF.md`**. This file is kept for the reasoning behind early
+> decisions, not as a status tracker.
+
 ---
 
 ## Phase 1 — The Core Loop ✅ COMPLETE

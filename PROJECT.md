@@ -1,5 +1,5 @@
 # adhTea — Design Documentation
-*Last updated: 2026-08-20 (BUILD 4.13.1)*
+*Last updated: 2026-09-17 (BUILD 4.24.3)*
 
 > **Scope.** This file covers the *why* and the *look*: design philosophy and the
 > design system. Everything operational — architecture, file maps, deployment,
@@ -51,9 +51,13 @@ being deleted to protect it:
 - **The order is hers on request.** Computed time-tiers order the tea-box until
   she drags a bag; from that first drag until the 4am rollover, her hand-order
   wins outright.
-- **Nudges are rare and warm.** One a day, 6h cooldown, weekday-only. A
-  dismissal mutes that variable for days. Three-a-day nudges became wallpaper
-  and were swatted shut on sight — frequency destroyed the signal.
+- **Nudges are rare and warm — so rare the surface itself is gone.** Three-a-day
+  nudges became wallpaper; the fix was one-a-day, then a dismissal-aware
+  cooldown, and eventually removing `NudgeModal` and `WeeklyInsightCard`
+  outright (4.20.0–4.21.0, and the weekly-insight line's second hiding spot in
+  4.24.x). The commitment held all the way to "no nudge is better than a
+  frequent one" — `pid_engine.py`/`WeeklySnapshot` groundwork survives unused
+  in case a future micro-nudge earns a second try.
 
 **What gets deleted.** This codebase has removed more features than most add:
 the tournament/triage page, project domains, the difficulty/weight system, and

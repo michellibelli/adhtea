@@ -1,5 +1,5 @@
 # adhTea — Handoff Doc
-*Last updated: 2026-09-09 (BUILD 4.16.1)*
+*Last updated: 2026-09-17 (BUILD 4.24.3)*
 
 > This file is the source of truth for architecture and operations.
 > Design philosophy + the design system live in `PROJECT.md`.
@@ -59,11 +59,31 @@ vercel ls / vercel inspect <url> / vercel logs <url>
 
 ---
 
-## Current status — BUILD 4.16.1 (2026-09-09)
+## Current status — BUILD 4.24.3 (2026-09-17)
 
-`master` clean, synced with origin. Backend suite **179 passed** (was 188 — the Projects tests went with the feature). `npm run build` clean. Live.
+`master` clean, synced with origin. Backend suite **146 passed**. `npm run build` clean. Live.
 
-The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stopped hiding the load time and cleared the dead scoring code. **4.15.0 ends the Render trial in the affirmative and deletes the machinery it made obsolete. 4.16.x removes Projects entirely.**
+The 4.9–4.11 run did three things: unified every daily boundary onto one 4am rollover, handed the tea-box order to the user's hand, and added the morning review. 4.12.0 made the committed plan actually hold. 4.13.0 added the data-export side. 4.13.2 hardened the offline queue alongside the move to Render Starter. 4.14.0 stopped hiding the load time and cleared the dead scoring code. 4.15.0 ended the Render trial in the affirmative and deleted the machinery it made obsolete. 4.16.x removed Projects entirely.
+
+**Since then (4.17–4.24.3), the app kept getting simpler rather than bigger.** Retro time tracking shipped much leaner than its design doc (4.18.0 — see the time-tracking section below). Work/not-work classification landed, then most of the machinery built around it (effort gate, nudge popup) was removed within the same run of releases once it proved to be friction rather than help (4.19–4.21.0). Medication went from per-medication schedules to one yes/no toggle (4.22.0). Google Calendar was removed outright after a "task I didn't add" bug report led back to `promote_due_tasks`, which was also killed (2026-09-15). The weekly-insight nudge line was found hiding in a second surface and removed from both (2026-09-16) — between that and `NudgeModal`'s removal in 4.21.0, **the Phase 6 nudge UI is now gone entirely**; only `pid_engine.py`/`WeeklySnapshot` groundwork remains, unused. The routine time-bucket redesign shipped (fb221f7, 2026-09-16), replacing `due_time` ordering with four coarse buckets plus Haiku-classified easy/hard task interleave, and the appointment task type was dropped in the same push. 4.23.0–4.24.3 rewrote TeaBox's capacity-tier sizing against real rendered width and then, per direct follow-up requests, removed its capacity messaging entirely — the tea box now shows no over-capacity pill and no "box full" note (the `(X/N)` slot chip survives on the **Today** page, which is a separate surface from the box).
+
+**Net effect worth internalizing:** this codebase's habit of deleting features rather than tuning them (see PROJECT.md) hit the nudge/effort system hardest of anything so far — a whole PID-driven behavior-change subsystem shipped in 4.3.0 is now UI-dead. Don't assume anything described as "nudge," "insight card," or "effort" below this point is still live; it's kept as history because the pattern (surface removed twice, in two places) is worth knowing if it recurs a third time.
+
+### Big shifts since BUILD 4.16.1
+
+**Retro time tracking (4.18.0, 2026-09-14) — shipped much leaner than its design doc.** `docs/time-tracking.md` specced a full Matter/TimeEntry schema with a hard submit gate and auto-email to an office manager. What actually shipped: `Task.minutes_spent` (nullable int) plus a new first screen in `EODGate` — today's done tasks with a per-row minutes input, autosaved via the existing generic `PATCH /tasks/{id}` — and a "Copy for boss" button that builds `Title - Xm` lines + a total onto the clipboard. No Matter table, no hard gate, no email infra. `EODGate` also gained a manual trigger (Settings → Tasks → "End of day"). Same commit added a faster kettle quick-add: pressing the kettle on Focus creates a blank "New task" and opens `EditTaskSheet` directly instead of the full Capture form.
+
+**Work/not-work classification, then most of its own scaffolding removed (4.19.0–4.21.0, 2026-09-14–15).** `Task.is_work` landed with an inbox-sort ask-gate and a minutes-prompt, both removed within days once they proved to be friction: 4.20.0 dropped the effort gate + nudge popup, 4.21.0 defaulted `is_work=true` and replaced the ask with a plain card toggle. `NudgeModal.jsx` was deleted in this pass.
+
+**Medication simplified to one yes/no (4.22.0, 2026-09-15).** Per-medication schedules/logs replaced with a single toggle, gated in Settings. `medication.py`, `medicationStore.js`, `api/medication.js` deleted; `MedicationSchedule`/`MedicationLog` models left ORPHANED in prod (not dropped) — same treatment as the earlier score columns.
+
+**Google Calendar removed entirely (2026-09-15, commits 5939397/a55db46).** Root-caused from a "task I didn't add" report: `promote_due_tasks()` was refilling Today from Inbox on every read even after "Start my day," independent of gcal. Fixed by killing it outright rather than gating it better. Investigating gcal's own silent-auto-import (`_maybe_sync_gcal`, same anti-pattern) led to removing the whole integration per direct request ("more trouble than help"). `GoogleCalendarToken` model ORPHANED.
+
+**Weekly-insight line removed, Phase 6 nudge UI now fully gone (2026-09-16, commit 9c6e2f6).** `WeeklyInsightCard` was found still surfacing the exact nudge copy that had already been asked to be removed once — it had relocated from Focus to the self-care gate. Both instances are gone now. Combined with `NudgeModal`'s removal in 4.21.0, **there is no live nudge/weekly-insight UI left anywhere in the app.** `pid_engine.py`, `WeeklySnapshot`, and `compute_pid_state` survive as unused groundwork per the north-star notes — nothing renders their output.
+
+**Routine time-bucket redesign + appointment type dropped (2026-09-16, commit fb221f7).** Tea-box order rebuilt around four coarse buckets — `First → 1-2 easy tasks → Morning → 1-2 hard tasks → Mid Day → 1-2 hard tasks → Afternoon → rest` — replacing the old due/due_time sort. `Routine.bucket` (plain string) replaces the decorative `time_of_day`. `Task.difficulty` (easy/hard) is classified once via Haiku at creation (`backend/difficulty_engine.py`, same lazy-import/fallback pattern as `review_engine.py`); null reads as easy, so a missing `ANTHROPIC_API_KEY` on Render silently flattens bucket order rather than erroring. Appointment task type dropped entirely per direct request ("more trouble than help, I never use it") — existing rows convert to `task_type=task` in the migration.
+
+**TeaBox capacity sizing rewritten, then its own messaging removed (4.23.0–4.24.3, 2026-09-16–17).** 4.23.0 added dynamic capacity sizing to the box; 4.24.0 replaced the hardcoded 9-bag-per-tier guess with a `ResizeObserver` measuring the box's actual rendered width, so a tier fills genuinely edge-to-edge before splitting. Same release: kettle quick-add's title field now starts blank with a ghost placeholder instead of literal text to clear, dropped an unwanted auto-critical-flag on quick-added tasks, and inserts new tasks after the topmost routine instead of always jumping to the absolute front. Morning review gained a "Routines: X/Y done" line. PWA update-check staleness capped at ~20min (4.24.1). Then, per two follow-up requests, both pieces of capacity messaging on the box were removed — the over-capacity pill (4.24.2) and the "box full" self-care note (4.24.3) — along with the now-dead `capacitySlots`/`daySlots` prop chain (`TeaBox` → `Focus` → `App`). **The `(X/N)` slot chip still exists, but only on the Today page** — a separate surface from the tea box.
 
 ### Big shifts since BUILD 4.9.1
 
@@ -130,7 +150,7 @@ New with it: `Task.effort` (small|big, nullable), `User.reviewed_through`, `Effo
 
 Two trigger bugs were fixed in 4.11.3/4.11.6, both worth knowing since the pattern recurs. **Durability:** the commit was a fire-and-forget POST whose failure was swallowed, so on a napping Render backend `reviewed_through` never advanced and the same day resurfaced forever. It's now durable like completions/snoozes — persisted on transient failure, flushed on wake, only permanent 4xx dropped. **Timezone:** `completed_at` is naive UTC but the "exclude today" boundary used `_day_start` (naive *local* midnight); west of UTC that lands ~7–8h early and dropped yesterday-evening completions, so an evening-heavy day surfaced nothing. `_app_day_start_utc` now handles anything compared against `completed_at`; `_day_start` stays for `scheduled_date`, which shares the local-midnight convention.
 
-**Medication adherence feeds capacity (4.11.2).** Marking meds moves the executive-capacitor term (and so overall capacity / slot count) the way sleep and meals do — the formula previously ignored meds entirely. Adherence = distinct active schedules logged that day / active count. Full adherence leaves executive as-is, zero knocks 40% off, no regimen (`None`) is untouched. Logging a med recomputes today's snapshot immediately.
+**Medication adherence feeds capacity (4.11.2; simplified 4.22.0).** Marking meds moves the executive-capacitor term (and so overall capacity / slot count) the way sleep and meals do. Originally adherence was distinct active schedules logged / active count; since 4.22.0's move to a single yes/no toggle, `_med_adherence` (`backend/routes/selfcare.py`) is just `1.0`/`0.0` off `SelfCareLog.medication_taken`, feeding the same `exec_cap *= (0.6 + 0.4 * med_adherence)` term — full adherence leaves executive as-is, "no" knocks 40% off, unlogged (`None`) is untouched. Logging a med recomputes today's snapshot immediately.
 
 **Nudges dialed back (4.9.6, 4.9.9).** Three a day on a 2h cooldown had become wallpaper — swatted shut on sight. Now **one a day, 6h cooldown**. A dismissal is finally read back and mutes that variable for `DISMISSAL_BACKOFF_DAYS` (an affirmative answer doesn't — "on it" isn't a request for silence). Suppression widened from today to a per-variable window (`satisfied_recently`): sleep/meals/check-in reset daily, exercise looks back a day, since its target is 4 days a week. The weekly snapshot is also rebuilt whenever a log in the window is newer than it — it used to be written once and never again, making every later self-care entry invisible to the engine.
 
@@ -176,30 +196,31 @@ Also lost, deliberately: the sibling due-date cascade (moving a project sub-task
 backend/
   main.py             app setup, CORS, router registration, _migrate() auto-migration
   database.py         SQLAlchemy engine + session
-  models.py           all ORM models
+  models.py           all ORM models (incl. ORPHANED: MedicationSchedule/Log, GoogleCalendarToken)
   schemas.py          Pydantic schemas
   rate_limit.py       shared slowapi Limiter (keyed on client IP)
-  pid_engine.py       pure PID math for nudges (no DB imports)
+  pid_engine.py       pure PID math for nudges — UNUSED groundwork, no live UI reads it (see 4.16.1+ shifts)
   scoring.py          shared capacity_tier + max_slots_for + EFFORT_POINTS
-  review_engine.py    morning-review effort classification (Haiku + learned corrections + keyword fallback)
+  difficulty_engine.py  Haiku easy/hard task classification for tea-box bucket placement (added fb221f7)
+  review_engine.py    morning-review greeting only — effort classification removed (4.20.0)
   routes/
     auth.py           login (rate-limited), session tokens (hashed), settings, invite codes
     tasks.py          CRUD + today/inbox/bonus/search/plan-day endpoints
     task_lifecycle.py lifecycle engine extracted from tasks.py (carry-forward, rollover, promote/demote)
     routines.py       routine CRUD + lazy daily instance generation (rollover-race guarded)
     selfcare.py       SelfCareLog + CapacitySnapshot + /capacity/today (user-tz dates)
-    medication.py     MedicationSchedule + MedicationLog (names pseudonymized client-side)
-    gcal.py           Google Calendar OAuth 2.0 + lazy sync (OAuth state persisted in DB)
-    insights.py       Phase 6 — PID nudges, weekly snapshots, compute-weekly/nudge/respond
+    insights.py       Phase 6 groundwork — PID/weekly-snapshot compute endpoints; nothing in the UI calls them
     review.py         morning review — /review/pending + /review/commit
     import_csv.py     Notion CSV import
     export_csv.py     CSV export — GET /export/tasks.csv (+ types / since / until filters)
-  tests/              188 pytest tests (conftest + 18 test files); CI on every push/PR
+  tests/              146 pytest tests (conftest + 13 test files); CI on every push/PR
   requirements-dev.txt  pytest + httpx + tzdata
 ```
 
+**Deleted from this map since 4.16.1:** `routes/medication.py` (4.22.0), `routes/gcal.py` (2026-09-15). Their test files (`test_medication.py`, `test_med_capacity.py`, `test_gcal.py`) and `test_promotion_gate.py` went with the features they tested.
+
 Run tests: `cd backend && python -m pip install -r requirements-dev.txt && python -m pytest tests/ -v`
-Test files: auth, box_order, export_csv, gcal, import_csv, insights, med_capacity, medication, migrate, plan_day, promotion_gate, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
+Test files: auth, box_order, export_csv, import_csv, insights, migrate, plan_day, review, routines, selfcare, tasks, tasks_lifecycle, today_merge.
 
 ## Frontend file map
 
@@ -210,32 +231,35 @@ frontend/src/
   pages/
     Focus.jsx          home — pickNext(), bonus mode, watercolor dunk celebration, tap-bag-to-focus
     Today.jsx          Today / Up Next split, capacity slots, drag-reorder, planning gate
-    MorningReview.jsx  first-sign-in review — effort tags, add-what-you-did, durable commit
-    Capture.jsx        type-aware (task/appt/note/routine), two-button submit
-    Routines.jsx       CRUD, frequency/time-of-day/critical flags
+    MorningReview.jsx  first-sign-in review — greeting + add-what-you-did + durable commit (effort tags removed 4.20.0)
+    Capture.jsx        type-aware (task/note/routine — appointment type dropped fb221f7), two-button submit
+    Routines.jsx       CRUD, frequency/time-bucket/critical flags (bucket replaces time_of_day, fb221f7)
     SelfCare.jsx       foundation log + capacity bar
-    EODGate.jsx        evening mood gate + summary
+    EODGate.jsx        evening mood gate + per-task minutes capture + "Copy for boss" (4.18.0) + summary
     AllTasks / Inbox / Waiting / Search   list surfaces, batch ops
-    Settings.jsx       integrations, CSV import + export, display/theme
+    Settings.jsx       integrations, CSV import + export, display/theme, manual EOD trigger
     Login / Signup / Register / AlphaChallenge / OnboardingWelcome   auth + onboarding
   components/
     TaskCard.jsx       inline edit, done/snooze; used across surfaces
-    TeaBox.jsx         Focus tea-box bags, ordered by due then due_time
+    TeaBox.jsx         Focus tea-box bags — bucket-interleaved order, ResizeObserver real-width tier sizing (4.24.0), no capacity messaging (4.24.2/.3)
     EditTaskSheet.jsx  shared edit modal (Focus + others)
-    CapacityBar.jsx    compact + full
-    NudgeModal.jsx / WeeklyInsightCard.jsx   Phase 6 nudge UI
-    CafeShelf.jsx      Cafe-theme animated shelf
+    CapacityBar.jsx    compact + full — still the only place the `(X/N)` slot chip renders (on SelfCare/Today, not the box)
+    MinutesPrompt.jsx  work/not-work + minutes ask; used from Focus, Inbox, Today, and Waiting
     Card / Button / Input / Logo / ConfirmModal / HamburgerMenu / PageState / PageProgress / SnoozeSheet
   context/
     ThemeContext.jsx   two themes — Cafe (default) + Linen — reads aria_theme localStorage
   utils/
-    ordering.js        THE today-order rule — shared by TeaBox + Focus; computed tiers vs. manual
+    ordering.js        today-order rule — shared by TeaBox + Focus; computed tiers vs. manual
+    lastWorkCompletion.js  (added 4.18.0 alongside MinutesPrompt — check current call sites before relying on it)
     prefetch.js        theme-aware off-DOM image warm-up during login
     loadTimer.js       ms-since-navigation marks for the build chip (see 4.14.0)
-    dnd.js             SmartPointerSensor (blocks drag on inputs/buttons)
-    medicationStore.js localStorage med-name pseudonymization (server stores placeholders)
+    dnd.js             SmartPointerSensor (blocks drag on inputs/buttons); TeaBox now owns its own drag-containment modifier locally (looseInBox/loosePlay removed)
+    taskColors.js      task-type/tag color mapping, used by TeaBox
+    timing.js          shared timing helpers, used by App.jsx + loadTimer.js + ordering.js
     snooze.js          weekend-aware snooze date math
 ```
+
+**Deleted from this map since 4.16.1:** `NudgeModal.jsx`, `WeeklyInsightCard.jsx` (Phase 6 nudge UI, gone 4.21.0 + 2026-09-16), `CafeShelf.jsx` (was already dead code), `medicationStore.js` + `api/medication.js` + `api/gcal.js`-equivalent (medication/gcal removal, 4.22.0 / 2026-09-15).
 
 ---
 
@@ -244,7 +268,7 @@ frontend/src/
 1. **~~Docs cleanup~~ — done 2026-08-20.** `PROJECT.md` was rewritten as a design-only doc (philosophy + design system); every operational section it duplicated from this file was deleted rather than refreshed, so there is now exactly one home for each fact. Don't re-add an architecture section there.
 2. **Orphan score columns — code side cleared 2026-08-28 (4.14.0).** `Task.score`, `score_components`, `score_updated_at`, `pinned_for` no longer ship in `TaskResponse`, `_migrate` no longer `ADD COLUMN`s them (both branches), and the unreachable `ScoreChip`/`WhyTooltip` UI is out of `TaskCard.jsx` — it had defaulted `showScore`/`showWhy` to false with no caller ever setting them. What remains, deliberately: the four `models.py` declarations (so the ORM keeps matching prod, and `create_all` keeps building a matching fresh DB) plus the orphaned prod columns themselves, including the never-read `max_tasks_per_day`/`max_total_per_day`. Dropping indexed columns from a live single-user Postgres with no staging buys nothing; if you ever do it, do it as one deliberate migration alongside the retention sweep.
 3. **Settings visual pass** — pending since May.
-4. **Phase 6 Week 2/3** — I-term escalation needs 3+ weekly snapshots; Levels 3–4 text/email escalation (Twilio/SendGrid) unbuilt.
+4. **Phase 6 nudge UI is gone, not just Week 2/3 unbuilt.** `NudgeModal.jsx` and `WeeklyInsightCard.jsx` were both deleted (4.21.0, 2026-09-16) after repeatedly reading as unwanted nagging. `pid_engine.py`/`WeeklySnapshot`/`compute_pid_state` survive as unused backend groundwork. Don't resume "Week 2/3 escalation" as if picking up where Week 1 left off — Week 1's own surface is gone, so this would be a fresh product decision, not a continuation.
 5. **Render cold starts** — **resolved 2026-08-27** by the Starter plan; trial concluded 2026-09-09, keep Starter, and the wake *UI* was deleted in 4.15.0. The history below is kept because it applies again if the plan is ever reverted — in which case the covers would have to be rebuilt, deliberately. Note the free tier hibernates, and a wake goes through Render's build/deploy path — so a Render deploy incident takes the *live* app down, not just deploys. Seen 2026-08-20: every request returned `503` with `x-render-routing: hibernate-wake-error` during a platform-wide "Deployment Issues" incident, which presents in the UI as **"Failed to fetch" on login** (the `OPTIONS /login` preflight 503s, so the browser never gets CORS headers). Diagnose by reading that header — it distinguishes a Render fault from a Supabase or CORS fault. Paid tier removes hibernation and with it this whole failure mode.
 6. **Cloudflare challenge on `api.adh-tea.fun`** — **closed 2026-08-28, won't fix.** The API host intermittently serves a managed-challenge interstitial ("Just a moment…") to non-browser clients, so `scripts/deploy-check.sh` and `scripts/aria-api.sh` fail every so often. Browser traffic passes transparently. The old advice here — "add a WAF bypass rule for `/health`" — is not actionable, because that Cloudflare is **Render's**, not ours:
 
@@ -257,7 +281,8 @@ frontend/src/
 
     Render fronts every custom domain this way. There is no zone we control and no skip rule to add. The motivation is gone regardless: the rule only ever existed so an UptimeRobot keep-alive could pass, Starter needs no keep-alive, and Render already polls `/health` itself every ~5s (see the access-log filter in 4.13.2). If a script needs to be reliable, retry it.
 7. **Naive-UTC vs. local-midnight boundaries** — `_day_start` (local midnight, for `scheduled_date`) and `_app_day_start_utc` (for `completed_at`) are easy to swap by accident; west of UTC the wrong one is off by 7–8h. This bit the review trigger in 4.11.6. Check which convention a column uses before comparing against it.
-8. **No data retention** — nothing purges generated rows. `generate_routine_instances` writes one Task per active routine per day and `sync_today_events` one per calendar occurrence, forever; soft-deleted rows are never reaped. ~2,200 rows/year at six routines. Not urgent (single user, small for Postgres) but it already forced the 4.13.1 export filters. Analysis + proposed design in **`docs/retention.md`**, which got materially simpler in 4.16.1 — the `project_stall_map` N+1 and the unbounded-lookback trap it warned about no longer exist.
+8. **No data retention — closed 2026-09-14, verdict: do not build.** `generate_routine_instances` still writes one Task per active routine per day forever (soft-deleted rows never reaped); `sync_today_events` is gone along with the rest of Google Calendar (2026-09-15). A real prod row count was taken against `docs/retention.md`'s own design gate: 807 total rows, and the bucket the design existed to sweep (`routine`/`deleted`) is only 50 of them — 6%, dominated instead by real completed-work history (`task,done` 452, `routine,done` 164). Not worth the engineering cost. Re-run the `GROUP BY` query in `docs/retention.md` if `routine,deleted` grows materially; otherwise leave this alone.
+9. **Medication + Google Calendar orphaned models** — `MedicationSchedule`, `MedicationLog`, `GoogleCalendarToken` are ORPHANED (code deleted, prod columns/tables left in place), same pattern as the earlier score columns. A deliberate future DELETE (backup + preflight + human-reviewed SQL, Projects-Stage-3-style) is explicitly deferred — not to be done unilaterally.
 
 Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
 

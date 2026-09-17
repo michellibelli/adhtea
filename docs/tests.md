@@ -2,6 +2,14 @@
 
 *Human-readable acceptance criteria. Each phase must pass all its tests before being considered complete and before the next phase begins. Tests from earlier phases must continue to pass in all later phases.*
 
+> **Historical planning doc, written against `docs/phases.md`'s original plan — not current
+> status.** Checkboxes below were never maintained as the app evolved, and several features they
+> describe were later built differently or removed outright (Triage, Google Calendar, per-item
+> priority fields, medication reminders, actuator categories, the circuit visualization). The real
+> automated test suite is `backend/tests/` (146 pytest tests, run via
+> `cd backend && python -m pytest tests/ -v`) — that's what CI actually gates on. Read
+> **`HANDOFF.md`** for current status.
+
 ---
 
 ## Phase 1 — The Core Loop

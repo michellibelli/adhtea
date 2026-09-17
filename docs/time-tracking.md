@@ -1,5 +1,14 @@
 # Billable time tracking — analysis and proposed design
-*Written 2026-08-27 (BUILD 4.13.1). **Design only — nothing here is implemented.***
+*Written 2026-08-27 (BUILD 4.13.1).*
+
+> **2026-09-14 (4.18.0) — shipped, but much leaner than this design.** What actually landed:
+> `Task.minutes_spent` (nullable int) plus a new first screen in `EODGate` — today's done tasks
+> with a per-row minutes input, autosaved via the existing generic `PATCH /tasks/{id}` — and a
+> "Copy for boss" button that builds `Title - Xm` lines + a total onto the clipboard. **No Matter
+> table, no TimeEntry table, no hard gate, no auto-email** — none of that below this point was
+> built. Treat everything past here as background on *why* (billable hours, fail-closed reasoning,
+> the employer's undefined process) rather than a spec to resume. If a hard gate or auto-email is
+> ever revisited, it's a fresh build against the current schema, not a continuation of this one.
 
 ## The problem
 

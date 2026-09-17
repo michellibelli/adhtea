@@ -3,6 +3,13 @@
 
 *Last updated: 2026-05-07*
 
+> **Historical vision doc — not current status.** The capacitor/battery model and the "who it
+> serves" section below are still the honest reasoning behind the app (see PROJECT.md's design
+> philosophy for the version that survived contact with real use). But specific mechanics
+> interfaces — were deferred indefinitely or never built, and the capacity formula has been
+> simplified since. For current architecture and status, read **`HANDOFF.md`**; for current design
+> philosophy and the actual design system, read **`PROJECT.md`**.
+
 ---
 
 ## Vision
