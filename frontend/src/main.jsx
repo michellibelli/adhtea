@@ -50,12 +50,21 @@ if ('serviceWorker' in navigator) {
     reloading = true
     window.location.reload()
   })
+  const checkForUpdate = () => navigator.serviceWorker.ready.then(r => r.update()).catch(() => {})
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return
     // Kick an update check — installed PWAs don't navigate, so the browser
     // never gets a natural opportunity to detect a new service worker.
-    navigator.serviceWorker.ready.then(r => r.update()).catch(() => {})
+    checkForUpdate()
   })
+  // A mobile tab left open for days (OS session-restore across reboots, an
+  // installed PWA never force-quit) may never re-fire visibilitychange or a
+  // real navigation, so it can sit on a build that's many releases stale
+  // until someone manually clears site data. Also check immediately on load
+  // and on a standing interval so staleness caps out at ~20 minutes instead
+  // of "however long this tab happens to stay open."
+  checkForUpdate()
+  setInterval(checkForUpdate, 20 * 60 * 1000)
 }
 
 createRoot(document.getElementById('root')).render(
