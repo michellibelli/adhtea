@@ -284,7 +284,9 @@ frontend/src/
 8. **No data retention — closed 2026-09-14, verdict: do not build.** `generate_routine_instances` still writes one Task per active routine per day forever (soft-deleted rows never reaped); `sync_today_events` is gone along with the rest of Google Calendar (2026-09-15). A real prod row count was taken against `docs/retention.md`'s own design gate: 807 total rows, and the bucket the design existed to sweep (`routine`/`deleted`) is only 50 of them — 6%, dominated instead by real completed-work history (`task,done` 452, `routine,done` 164). Not worth the engineering cost. Re-run the `GROUP BY` query in `docs/retention.md` if `routine,deleted` grows materially; otherwise leave this alone.
 9. **Medication + Google Calendar orphaned models** — `MedicationSchedule`, `MedicationLog`, `GoogleCalendarToken` are ORPHANED (code deleted, prod columns/tables left in place), same pattern as the earlier score columns. A deliberate future DELETE (backup + preflight + human-reviewed SQL, Projects-Stage-3-style) is explicitly deferred — not to be done unilaterally.
 
-Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the user's cards.
+## Deferred: multi-user delegation
+
+Deferred indefinitely per user (2026-05-17). Do not start without explicit greenlight. Groundwork in place: `User.role` (primary/child) + `User.parent_id`, `Task.assigned_to_id`, invite-token flow in `auth.py`, `AlphaChallenge.jsx` + `OnboardingWelcome.jsx`. To build: child-task filtering, `POST /tasks/{id}/delegate`, simplified child home view, delegation UI on the primary user's cards.
 
 ## Further roadmap
 - **Play Store** — PWA ready; wrap with Bubblewrap for Android TWA ($25). iOS via Capacitor ($99/yr).

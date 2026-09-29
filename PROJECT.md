@@ -22,7 +22,7 @@ meds, mood), and warm behavior-change nudges.
 
 Live at **[adh-tea.fun](https://adh-tea.fun)**.
 
-(see HANDOFF, "Deferred: Phase 4"). Do not start it without an explicit greenlight.
+A multi-user delegation mode was scoped but deferred indefinitely — see HANDOFF.md.
 
 ---
 
