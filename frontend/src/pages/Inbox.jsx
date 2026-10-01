@@ -111,6 +111,7 @@ export default function Inbox({ onCountChange }) {
                   onScheduleToday={handleScheduleToday}
                   onSnooze={handleSnooze}
                   onDelete={handleDelete}
+                  onUpdate={(u) => setTasks(prev => prev.map(t => t.id === u.id ? { ...t, ...u } : t))}
                 />
               ))}
             </div>

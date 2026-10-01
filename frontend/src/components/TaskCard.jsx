@@ -135,6 +135,7 @@ export default function TaskCard({
   onDefer,
   onDelete,
   onScheduleToday,
+  onUpdate,
 }) {
   const [task,        setTask]        = useState(initialTask)
   const [showSnooze,  setShowSnooze]  = useState(false)
@@ -158,6 +159,7 @@ export default function TaskCard({
 
   function handleSaved(updated) {
     setTask(updated)
+    onUpdate?.(updated)
     setEditing(false)
     setShowActions(false)
   }
@@ -169,6 +171,9 @@ export default function TaskCard({
     e.stopPropagation()
     const next = task.is_work === false
     setTask((t) => ({ ...t, is_work: next }))
+    // Parent lists hold their own copy; without this a move/remount re-seeds
+    // the card from the stale copy and the cup flips back on.
+    onUpdate?.({ ...task, is_work: next })
     updateTask(task.id, { is_work: next }).catch((err) => console.error(err))
   }
 

@@ -51,7 +51,7 @@ function sortTasks(tasks, sortBy) {
   return copy.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
 }
 
-function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete, completing }) {
+function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete, onUpdate, completing }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
   const style = {
@@ -76,6 +76,7 @@ function SortableTaskRow({ task, onComplete, onSnooze, onDefer, onDelete, comple
         onSnooze={onSnooze}
         onDefer={onDefer}
         onDelete={onDelete}
+        onUpdate={onUpdate}
       />
     </div>
   )
@@ -266,6 +267,14 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
     finally { setAdding(false) }
   }
 
+  // TaskCard keeps its own copy of the task; mirror its edits (work cup, edit
+  // form) into the lists so a move doesn't re-seed it from stale data.
+  function handleTaskUpdated(updated) {
+    const merge = (prev) => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t)
+    setTodayTasks(merge)
+    setInboxTasks(merge)
+  }
+
   async function handlePromote(task) {
     setInboxTasks(prev => prev.filter(t => t.id !== task.id))
     setTodayTasks(prev => [...prev, task])
@@ -384,6 +393,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                     <TaskCard key={task.id} task={task} variant="today"
                       onComplete={handleComplete} onSnooze={handleSnooze}
                       onDefer={handleDefer} onDelete={handleDelete}
+                      onUpdate={handleTaskUpdated}
                     />
                   ))}
                 </div>
@@ -431,7 +441,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                       {regular.map(task => (
                         <SortableTaskRow key={task.id} task={task}
                           onComplete={handleComplete} onSnooze={handleSnooze}
-                          onDefer={handleDefer} onDelete={handleDelete}
+                          onDefer={handleDefer} onDelete={handleDelete} onUpdate={handleTaskUpdated}
                           completing={completingId === task.id}
                         />
                       ))}
@@ -445,6 +455,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                       <TaskCard task={task} variant="today"
                         onComplete={handleComplete} onSnooze={handleSnooze}
                         onDefer={handleDefer} onDelete={handleDelete}
+                      onUpdate={handleTaskUpdated}
                       />
                     </div>
                   ))}
@@ -485,6 +496,7 @@ export default function Today({ carriedOver = false, onNavigate, dayPlanned = tr
                             setInboxTasks(prev => prev.filter(t => t.id !== id))
                             deleteTask(id).catch(() => fetchAll())
                           }}
+                          onUpdate={handleTaskUpdated}
                         />
                       </div>
                       <button
